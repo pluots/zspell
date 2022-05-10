@@ -4,7 +4,7 @@ name: Full CI Run
 
 jobs:
   check:
-    name: cargo-check: Package validation
+    name: "cargo-check: Package validation"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -18,7 +18,7 @@ jobs:
           command: check
 
   test:
-    name: cargo-test: Test Suite 
+    name: "cargo-test: Test Suite"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
@@ -32,7 +32,7 @@ jobs:
           command: test
 
   fmt:
-    name: rustfmt: Check format
+    name: "rustfmt: Check format"
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
