@@ -6,7 +6,6 @@
 /// let b = "aaadefa";
 /// assert_eq!(hamming(a, b), 3);
 /// ```
-
 pub fn hamming(a: &str, b: &str) -> u32 {
     assert_eq!(
         a.len(),

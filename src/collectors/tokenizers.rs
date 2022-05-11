@@ -6,16 +6,30 @@ macro_rules! ll_to_vec {
     }};
 }
 
-/// Run ngram() on a string and collect the results into a Vec<String>
+/// Runs ngram() on an input string and collect the resulting tokens into a
+/// Vec<String>.
+///
+/// This macro takes the same arguments as ['ngram'], with the exception thart
+/// arg[0] should be a String or &str (anything that implements ['chars']).
+///
+/// # Examples
+///
+/// ```
+/// use textdistance::str_ngram_vec;
+/// let vv = str_ngram_vec!("abcdef", 4, 4);
+/// assert_eq!(vv, ["abcd", "bcde", "cdef"]);
+/// ```
 #[macro_export]
 macro_rules! str_ngram_vec {
     ($a:expr,$b:expr,$c:expr) => {{
-        ngram($a.chars(), $b, $c)
+        $crate::collectors::ngram($a.chars(), $b, $c)
             .map(|x| x.iter().collect::<String>())
             .collect::<Vec<String>>()
     }};
 }
 
+/// An [`Iterator`] implementation for calculating a n-gram
+#[derive(Debug)]
 pub struct NGram<I>
 where
     I: Iterator,
@@ -68,14 +82,50 @@ where
     }
 }
 
-/// Supply an iterator of any type and this will return a windowed token
-/// iterator.
+/// Calculate an ngram on any iterable
+///
+/// When provided
+///
+/// [Wikipedia](https://en.wikipedia.org/wiki/N-gram) really says it best:
+///
+/// > In the fields of computational linguistics and probability, an n-gram
+/// > (sometimes also called Q-gram) is a contiguous sequence of n items from a
+/// > given sample of text or speech. The items can be phonemes, syllables,
+/// > letters, words or base pairs according to the application. The n-grams
+/// > typically are collected from a text or speech corpus. When the items are
+/// > words, n-grams may also be called shingles
+///
+///
+/// # Panics
+///
+/// Panics if [`min`] is not less than [`max`], or if [`min`] is 0
+///
+/// # Examples
+///
+/// Using an
+///
+/// ```
+/// use textdistance::collectors::ngram;
+/// let arr_iter = ["yum", "apple", "pie", "woo"].iter();
+/// let results = ngram(arr_iter, 2, 3).collect::<Vec<Vec<&str>>>();
+/// let expected: Vec<Vec<&str>> = Vec::new();
+/// expected.push(vec!["yum", "apple"]);
+/// expected.push(vec!["yum", "apple", "pie"]);
+/// expected.push(vec!["apple", "pie", "woo"]);
+/// expected.push(vec!["pie", "woo"]);
+/// assert_eq!(expected, results);
+/// ```
 pub fn ngram<I>(iter: I, min: usize, max: usize) -> NGram<I>
 where
     I: Iterator + Clone,
 {
-    assert!(min <= max, "Min <= Max condition not satisfied, {} > {}",min,max);
-    assert!(min > 0, "Min must be > 0, {} given",min);
+    assert!(
+        min <= max,
+        "Min <= Max condition not satisfied, {} > {}",
+        min,
+        max
+    );
+    assert!(min > 0, "Min must be > 0, {} given", min);
 
     NGram {
         iter: iter,
@@ -84,7 +134,6 @@ where
         max: max,
     }
 }
-
 
 #[cfg(test)]
 mod tests {
@@ -122,13 +171,13 @@ mod tests {
     #[test]
     fn test_ngram_size_1_2() {
         let vv = str_ngram_vec!("abcdef", 1, 2);
-        assert_eq!(vv, ["a", "ab","bc", "cd", "de", "ef","f"]);
+        assert_eq!(vv, ["a", "ab", "bc", "cd", "de", "ef", "f"]);
     }
 
     #[test]
     fn test_ngram_size_range() {
         let vv = str_ngram_vec!("abcdef", 2, 4);
-        assert_eq!(vv, ["ab", "abc", "abcd", "bcde", "cdef","def","ef"]);
+        assert_eq!(vv, ["ab", "abc", "abcd", "bcde", "cdef", "def", "ef"]);
     }
 
     #[test]
@@ -142,5 +191,17 @@ mod tests {
         let vv = str_ngram_vec!("abcd", 5, 5);
         let arr: [String; 0] = [];
         assert_eq!(vv, arr);
+    }
+
+    #[test]
+    fn test_ngram_string_arrr() {
+        let arr_iter = ["yum", "apple", "pie", "woo"].iter();
+        let results = ngram(arr_iter, 2, 3).collect::<Vec<Vec<&str>>>();
+        let expected: Vec<Vec<&str>> = Vec::new();
+        expected.push(vec!["yum", "apple"]);
+        expected.push(vec!["yum", "apple", "pie"]);
+        expected.push(vec!["apple", "pie", "woo"]);
+        expected.push(vec!["pie", "woo"]);
+        assert_eq!(expected, results);
     }
 }

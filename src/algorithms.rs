@@ -1,3 +1,5 @@
+//! A module for applying various closeness algorithms
+
 mod basic;
 mod damerau;
 mod jaccard;
