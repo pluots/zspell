@@ -5,9 +5,11 @@ use std::cmp::{max, min};
 /// This function implements calculation of the [levenshtein
 /// distance](https://en.wikipedia.org/wiki/Levenshtein_distance) between two
 /// strings, with specified costs for insertion, deletion, and substitution, and
-/// a limit. The other functions in this module simply wrap it.
+/// a limit. The other functions in this module simply wrap it, and it's
+/// generally easier to use any of those (e.g. [`levenshtein_limit`]) unless you
+/// need all the functionality that this has to offer.
 ///
-/// The main algorithm comes from the Levenshtein Distance wikipedia page
+/// This is an implementation of the iterative algorithm on the Wikipedia page.
 pub fn levenshtein_limit_weight(
     a: &str,
     b: &str,
@@ -16,13 +18,10 @@ pub fn levenshtein_limit_weight(
     del_cost: u32,
     sub_cost: u32,
 ) -> u32 {
-    let mut limit = limit;
-    if limit == 0 {
-        limit = u32::MAX;
-    }
-    let a_len = a.len();
-    let b_len = b.len();
-    let diff = (max(a_len, b_len) - min(a_len, b_len)) as u32;
+    let a_len = a.len() as u32;
+    let b_len = b.len() as u32;
+
+    let diff = max(a_len, b_len) - min(a_len, b_len);
 
     if diff >= limit {
         return limit;
@@ -79,15 +78,16 @@ pub fn levenshtein_limit_weight(
 /// let b = "mmmmmmm";
 /// assert_eq!(levenshtein_limit(a, b, 3), 3);
 /// ```
+#[inline]
 pub fn levenshtein_weight(a: &str, b: &str, ins_cost: u32, del_cost: u32, sub_cost: u32) -> u32 {
-    levenshtein_limit_weight(a, b, 0, ins_cost, del_cost, sub_cost)
+    levenshtein_limit_weight(a, b, u32::MAX, ins_cost, del_cost, sub_cost)
 }
 
 /// Levenshtein distance computation with a limit
 ///
 /// This will limitate the levshtein distance up to a given maximum value. The
 /// usual reason for wanting to do this is to avoid unnecessary computation when
-/// two strings can be qucikly identified as "very different".
+/// a match between two strings can quickly be pruned as "different".
 ///
 /// Behind the scenes, this wraps [`levenshtein_limit_weight`].
 ///
@@ -99,6 +99,7 @@ pub fn levenshtein_weight(a: &str, b: &str, ins_cost: u32, del_cost: u32, sub_co
 /// let b = "mmmmmmm";
 /// assert_eq!(levenshtein_limit(a, b, 3), 3);
 /// ```
+#[inline]
 pub fn levenshtein_limit(a: &str, b: &str, limit: u32) -> u32 {
     levenshtein_limit_weight(a, b, limit, 1, 1, 1)
 }
@@ -106,7 +107,10 @@ pub fn levenshtein_limit(a: &str, b: &str, limit: u32) -> u32 {
 /// Basic Levenshtein distance computation
 ///
 /// This runs the levenshtein distance algorithm on all strings with all costs
-/// equal to 1 and no limits, which is suitable for most cases.
+/// equal to 1 and no limits, which is suitable for cases where an exact
+/// distance is needed, mainly those where the strings are known to not be "very
+/// different" (e.g., strings of different lengths). In many cases it is better
+/// to use [`levenshtein_limit`] to avoid unnecessary computation.
 ///
 /// Behind the scenes, this wraps [`levenshtein_limit_weight`].
 ///
@@ -118,8 +122,9 @@ pub fn levenshtein_limit(a: &str, b: &str, limit: u32) -> u32 {
 /// let b = "i am a cook";
 /// assert_eq!(levenshtein(a, b), 6);
 /// ```
+#[inline]
 pub fn levenshtein(a: &str, b: &str) -> u32 {
-    levenshtein_limit_weight(a, b, 0, 1, 1, 1)
+    levenshtein_limit_weight(a, b, u32::MAX, 1, 1, 1)
 }
 
 #[cfg(test)]
@@ -137,28 +142,35 @@ mod tests {
     }
 
     #[test]
-    fn test_levenshtein_only_a() {
+    fn test_levenshtein_one_empty() {
         assert_eq!(levenshtein("abcdef", ""), 6);
-    }
-
-    #[test]
-    fn test_levenshtein_only_b() {
         assert_eq!(levenshtein("", "abcdef"), 6);
     }
 
     #[test]
     fn test_levenshtein_basic() {
-        assert_eq!(levenshtein("abcdef", "abdde"), 2);
+        assert_eq!(levenshtein("abcd", "ab"), 2);
+        assert_eq!(levenshtein("abcd", "ad"), 2);
+        assert_eq!(levenshtein("abcd", "cd"), 2);
+        assert_eq!(levenshtein("abcd", "a"), 3);
+        assert_eq!(levenshtein("abcd", "c"), 3);
+        assert_eq!(levenshtein("to be a bee", "not to bee"), 6);
     }
 
     #[test]
     fn test_levenshtein_limit_one_empty() {
         assert_eq!(levenshtein_limit("abcdef", "", 3), 3);
+        assert_eq!(levenshtein_limit("", "abcdef", 3), 3);
+        assert_eq!(levenshtein_limit("abcdef", "", 8), 6);
+        assert_eq!(levenshtein_limit("", "abcdef", 8), 6);
     }
 
     #[test]
     fn test_levenshtein_limit() {
-        assert_eq!(levenshtein_limit("abcdef", "ghijkl", 3), 3);
+        // Most of this is tested via levenshtein()
+        // just need to validate limits
+        assert_eq!(levenshtein_limit("abcdef", "000000", 3), 3);
+        assert_eq!(levenshtein_limit("ab", "cccc", 3), 3);
     }
 
     #[test]
@@ -170,6 +182,7 @@ mod tests {
     fn test_levenshtein_weight_deletion() {
         assert_eq!(levenshtein_weight("000a", "000", 2, 10, 10), 2);
     }
+
 
     // #[test]
     // fn test_levenshtein_weight_substitution() {
