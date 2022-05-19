@@ -151,7 +151,7 @@ pub fn levenshtein_limit(a: &str, b: &str, limit: u32) -> u32 {
 /// 
 /// This implements the levenshtein algorithm as defined below:
 /// 
-/// ```math
+/// $$
 /// \operatorname{lev}_{a,b}(i,j) = \begin{cases}
 ///    \max(i,j) &\text{if } \min(i,j) = 0, \\
 ///    \min
@@ -162,7 +162,7 @@ pub fn levenshtein_limit(a: &str, b: &str, limit: u32) -> u32 {
 ///       \end{cases}
 ///    &\text{otherwise} 
 /// \end{cases}
-/// ```
+/// $$
 /// 
 /// Note that sometimes the levenshtein distance is defined as having a default
 /// weight of 2 for substitutions. 
