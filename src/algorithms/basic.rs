@@ -11,7 +11,7 @@
 /// # Example
 ///
 /// ```
-/// use textdistance::algorithms::hamming;
+/// use stringmetrics::algorithms::hamming;
 /// let a = "abcdefg";
 /// let b = "aaadefa";
 /// assert_eq!(hamming(a, b), 3);

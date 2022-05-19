@@ -74,7 +74,7 @@ pub fn levenshtein_limit_weight(
 /// # Example
 ///
 /// ```
-/// use textdistance::algorithms::levenshtein_weight;
+/// use stringmetrics::algorithms::levenshtein_weight;
 /// let a = "abcdefg";
 /// let b = "mmmmmmm";
 /// assert_eq!(levenshtein_limit(a, b, 3), 3);
@@ -94,7 +94,7 @@ pub fn levenshtein_weight(a: &str, b: &str, ins_cost: u32, del_cost: u32, sub_co
 /// # Example
 ///
 /// ```
-/// use textdistance::algorithms::levenshtein_limit;
+/// use stringmetrics::algorithms::levenshtein_limit;
 /// let a = "abcdefg";
 /// let b = "mmmmmmm";
 /// assert_eq!(levenshtein_limit(a, b, 3), 3);
@@ -113,7 +113,7 @@ pub fn levenshtein_limit(a: &str, b: &str, limit: u32) -> u32 {
 /// # Example
 ///
 /// ```
-/// use textdistance::algorithms::levenshtein;
+/// use stringmetrics::algorithms::levenshtein;
 /// let a = "this is a book";
 /// let b = "i am a cook";
 /// assert_eq!(levenshtein(a, b), 6);

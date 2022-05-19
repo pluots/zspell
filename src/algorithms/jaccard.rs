@@ -12,7 +12,7 @@ use std::hash::Hash;
 ///
 /// ```
 /// use std::collections::HashSet;
-/// use textdistance::algorithms::jaccard;
+/// use stringmetrics::algorithms::jaccard;
 ///
 /// let crew1 = HashSet::from(["Einar", "Olaf", "Harald"]);
 /// let crew2 = HashSet::from(["Olaf", "Harald", "Birger"]);
@@ -43,7 +43,7 @@ where
 /// # Example
 ///
 /// ```
-/// use textdistance::algorithms::jaccard_iter;
+/// use stringmetrics::algorithms::jaccard_iter;
 ///
 /// let crew1 = ["Einar", "Olaf", "Harald"];
 /// let crew2 = ["Olaf", "Harald", "Birger"];
@@ -57,7 +57,7 @@ where
 /// for a good in-depth explanation of Jaccard Index for k-grams/n-grams.
 ///
 /// ```
-/// use textdistance::algorithms::jaccard_iter;
+/// use stringmetrics::algorithms::jaccard_iter;
 ///
 /// let a = [["to", "be"], ["be", "or"], ["or", "not"]];
 /// let b = [["who", "wants"], ["wants", "to"], ["to", "be"]];

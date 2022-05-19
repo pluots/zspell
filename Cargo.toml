@@ -4,9 +4,9 @@ version = "0.1.5"
 edition = "2021"
 description = "Rust library for approximate string matching"
 license-file = "LICENSE"
-repository = "https://github.com/pluots/textdistance-rust"
+repository = "https://github.com/pluots/stringmetrics-rust"
 # This won't auto link for some reason, no harm in having it manual
-documentation = "https://docs.rs/textdistance"
+documentation = "https://docs.rs/stringmetrics"
 
 
 [dependencies]
