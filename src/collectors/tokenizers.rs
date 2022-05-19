@@ -1,4 +1,5 @@
 use std::collections::LinkedList;
+use std::num::NonZeroUsize;
 
 macro_rules! ll_to_vec {
     ($ll:expr,$type:ty) => {{
@@ -6,10 +7,10 @@ macro_rules! ll_to_vec {
     }};
 }
 
-/// Runs ngram() on an input string and collect the resulting tokens into a
+/// Runs ngrams() on an input string and collect the resulting tokens into a
 /// Vec<String>.
 ///
-/// This macro takes the same arguments as ['ngram'], with the exception thart
+/// This macro takes the same arguments as ['ngrams'], with the exception thart
 /// arg[0] should be a String or &str (anything that implements ['chars']).
 ///
 /// # Examples
@@ -22,71 +23,70 @@ macro_rules! ll_to_vec {
 #[macro_export]
 macro_rules! str_ngram_vec {
     ($a:expr,$b:expr,$c:expr) => {{
-        $crate::collectors::ngram($a.chars(), $b, $c)
+        $crate::collectors::ngrams($a.chars(), $b, $c)
             .map(|x| x.iter().collect::<String>())
             .collect::<Vec<String>>()
     }};
 }
 
 /// An [`Iterator`] implementation for calculating a n-gram
+/// 
+/// This is created by the [`ngrams`] method on any iterable
+///
+/// # Example
+///
+/// ```
+/// let mychars = ['r', 'u', 's', 't'];
+/// let iter = mychars.ngrams(2, 3);
+/// ```
+///
+/// [`windows`]: crate::windows
 #[derive(Debug)]
-pub struct NGram<I>
-where
-    I: Iterator,
+pub struct NGrams<'a, T: 'a>
 {
-    iter: I,
-    window: LinkedList<I::Item>,
-    min: usize,
-    max: usize,
+    v: &'a [T],
+    min: NonZeroUsize,
+    max: NonZeroUsize,
+    wsize: usize, // Working variable to hold current window size
 }
 
-impl<TY, I> Iterator for NGram<I>
-where
-    TY: Clone,
-    I: Iterator<Item = TY>,
-{
-    type Item = Vec<I::Item>;
-
+impl<'a, T: 'a> NGrams<'a, T> {
     #[inline]
-    fn next(&mut self) -> Option<Vec<I::Item>> {
-        match self.iter.next() {
-            None => {
-                // We've hit the end of the road. Start removing elements, return
-                // if we still hvae enough. If not, end of the road for us too.
-                self.window.pop_front();
-
-                if self.window.len() >= self.min {
-                    Some(ll_to_vec!(self.window, TY))
-                } else {
-                    None
-                }
-            }
-            Some(next) => {
-                self.window.push_back(next);
-
-                // If we're just getting started, fill up our window
-                while self.window.len() < self.min {
-                    match self.iter.next() {
-                        None => return None,
-                        Some(v) => self.window.push_back(v),
-                    }
-                }
-
-                if self.window.len() > self.max {
-                    self.window.pop_front();
-                }
-
-                Some(ll_to_vec!(self.window, TY))
-            }
-        }
+    pub(super) fn new(slice: &'a [T], min: NonZeroUsize, max: NonZeroUsize) -> Self {
+        Self { v: slice, min,max ,wsize:min.get()}
     }
 }
 
-/// Calculate an ngram on any iterable
+
+impl<'a, T> Iterator for NGrams<'a,T>
+{
+    // type Item = Vec<I::Item>;
+    type Item = &'a [T];
+
+    #[inline]
+    // fn next(&mut self) -> Option<Vec<I::Item>> {
+    fn next(&mut self) -> Option<&'a [T]> {
+        let x = (1..2).map()
+        if self.min.get() > self.v.len() {
+            return None;
+        }
+        let retval = Some(&self.v[..self.wsize]);
+        
+        if self.wsize < self.max.get() {
+            self.wsize+=1;
+        } else {
+            self.v = &self.v[1..];
+        }
+
+        retval
+    }
+}
+
+/// Calculate an ngrams on any iterable
 ///
-/// When provided
-///
-/// [Wikipedia](https://en.wikipedia.org/wiki/N-gram) really says it best:
+/// This is an iterator adapter that accepts any iterator and returns an
+/// iterator of its ngrams. Regarding what a ngrams
+/// is, [Wikipedia](https://en.wikipedia.org/wiki/N-gram) really says it best:
 ///
 /// > In the fields of computational linguistics and probability, an n-gram
 /// > (sometimes also called Q-gram) is a contiguous sequence of n items from a
@@ -94,7 +94,6 @@ where
 /// > letters, words or base pairs according to the application. The n-grams
 /// > typically are collected from a text or speech corpus. When the items are
 /// > words, n-grams may also be called shingles
-///
 ///
 /// # Panics
 ///
@@ -105,9 +104,10 @@ where
 /// Using an
 ///
 /// ```
-/// use textdistance::collectors::ngram;
+/// use textdistance::collectors::ngrams;
 /// let arr_iter = ["yum", "apple", "pie", "woo"].iter();
-/// let results = ngram(arr_iter, 2, 3).collect::<Vec<Vec<&str>>>();
+/// let results = ngrams(arr_iter, 2, 3).collect::<Vec<Vec<&str>>>();
+/// 
 /// let expected: Vec<Vec<&str>> = Vec::new();
 /// expected.push(vec!["yum", "apple"]);
 /// expected.push(vec!["yum", "apple", "pie"]);
@@ -115,26 +115,22 @@ where
 /// expected.push(vec!["pie", "woo"]);
 /// assert_eq!(expected, results);
 /// ```
-pub fn ngram<I>(iter: I, min: usize, max: usize) -> NGram<I>
-where
-    I: Iterator + Clone,
-{
+/// 
+#[inline]
+pub fn ngrams(&self, min: usize, max: usize) -> NGrams<'_,T> {
+    let min=NonZeroUsize::new(min).expect("min is zero");
+    let max=NonZeroUsize::new(max).expect("max is zero");
     assert!(
         min <= max,
         "Min <= Max condition not satisfied, {} > {}",
         min,
         max
     );
-    assert!(min > 0, "Min must be > 0, {} given", min);
 
-    NGram {
-        iter: iter,
-        window: LinkedList::new(),
-        min: min,
-        max: max,
-    }
+    NGrams::new(self,min,max)
 }
 
+// #![feature(type_name_of_val)]
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -157,14 +153,17 @@ mod tests {
 
     #[test]
     fn test_ngram_empty() {
-        let vv: Vec<String> = str_ngram_vec!("", 2, 2);
+        // let vv 
+        // str_ngram_vec!("", 2, 2);
         let arr: [String; 0] = [];
         assert_eq!(vv, arr);
     }
 
     #[test]
     fn test_ngram_size_eq() {
-        let vv = str_ngram_vec!("abcdef", 2, 2);
+        // let vv = str_ngram_vec!("abcdef", 2, 2);
+        let s = "abcdef";
+        let vv = s.chars().ngrams(2,2).collect();
         assert_eq!(vv, ["ab", "bc", "cd", "de", "ef"]);
     }
 
@@ -193,15 +192,25 @@ mod tests {
         assert_eq!(vv, arr);
     }
 
+    fn print_type_of<T>(_: &T) {
+        println!("{}", std::any::type_name::<T>())
+    }
+
     #[test]
     fn test_ngram_string_arrr() {
         let arr_iter = ["yum", "apple", "pie", "woo"].iter();
-        let results = ngram(arr_iter, 2, 3).collect::<Vec<Vec<&str>>>();
-        let expected: Vec<Vec<&str>> = Vec::new();
+        let xx = ngrams(arr_iter, 2, 3);
+        let xx = ["yum", "apple", "pie", "woo"].windows(3);
+        let results = ngrams(arr_iter, 2, 3).collect::<Vec<Vec<&&str>>>();
+        let mut expected = Vec::new();
         expected.push(vec!["yum", "apple"]);
         expected.push(vec!["yum", "apple", "pie"]);
         expected.push(vec!["apple", "pie", "woo"]);
         expected.push(vec!["pie", "woo"]);
-        assert_eq!(expected, results);
+        println!("{:?}",results);
+        print_type_of(&results);
+        println!("{:?}",expected);
+        print_type_of(&expected);
+        // assert_eq!(expected, results);
     }
 }

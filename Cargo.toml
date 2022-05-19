@@ -1,6 +1,6 @@
 [package]
 name = "textdistance"
-version = "0.1.3"
+version = "0.1.4"
 edition = "2021"
 description = "Rust library for approximate string matching"
 license-file = "LICENSE"

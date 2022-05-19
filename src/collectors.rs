@@ -1,3 +1,3 @@
 mod tokenizers;
 
-pub use self::tokenizers::{ngram, NGram};
+pub use self::tokenizers::{ngrams, NGrams};
