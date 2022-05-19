@@ -1,6 +1,6 @@
 [package]
 name = "stringmetrics"
-version = "0.1.12"
+version = "0.1.13"
 edition = "2021"
 description = "Rust library for approximate string matching"
 license-file = "LICENSE"
@@ -17,7 +17,4 @@ documentation = "https://docs.rs/stringmetrics"
 # more-asserts = "0.2.2"
 
 [package.metadata.docs.rs]
-rustdoc-args = [
-    "--html-in-header",
-    ".cargo/registry/src/github.com-1ecc6299db9ec823/katex-doc-0.1.0/katex.html",
-]
+rustdoc-args = [ "--html-in-header", "katex-header.html" ]
