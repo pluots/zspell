@@ -1,5 +1,5 @@
 [package]
-name = "textdistance"
+name = "stringmetrics"
 version = "0.1.6"
 edition = "2021"
 description = "Rust library for approximate string matching"
