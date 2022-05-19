@@ -17,13 +17,13 @@ use std::hash::Hash;
 /// let crew1 = HashSet::from(["Einar", "Olaf", "Harald"]);
 /// let crew2 = HashSet::from(["Olaf", "Harald", "Birger"]);
 ///
-/// assert_eq!(jaccard(&crew1, &crew2), 0.5);
+/// assert_eq!(jaccard(crew1, crew2), 0.5);
 ///
 /// ```
 ///
 /// [`HashSet`]: std::collections::HashMap
 /// [`jaccard_iter`]: crate::algorithms::jaccard_iter
-pub fn jaccard<T>(a: &HashSet<T>, b: &HashSet<T>) -> f32
+pub fn jaccard<T>(a: HashSet<T>, b: HashSet<T>) -> f32
 where
     T: Eq + Hash,
 {
@@ -73,7 +73,7 @@ where
 {
     let aa: HashSet<U> = a.collect();
     let bb: HashSet<U> = b.collect();
-    jaccard(&aa, &bb)
+    jaccard(aa, bb)
 }
 
 #[cfg(test)]
