@@ -11,3 +11,7 @@ documentation = "https://docs.rs/textdistance"
 
 [dependencies]
 itertools = "0.10.3"
+
+
+[dev-dependencies]
+more-asserts = "0.2.2"

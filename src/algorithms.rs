@@ -7,6 +7,5 @@ mod levenshtein;
 
 pub use self::basic::hamming;
 pub use self::damerau::damerau_levenshtein;
-pub use self::jaccard::jaccard;
-pub use self::levenshtein::levenshtein;
-pub use self::levenshtein::levenshtein_limit;
+pub use self::jaccard::{jaccard, jaccard_iter};
+pub use self::levenshtein::{levenshtein, levenshtein_limit};

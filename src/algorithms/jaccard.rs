@@ -1,40 +1,61 @@
 use std::collections::HashSet;
 use std::hash::Hash;
-// use itertools::{chain, Itertools};
 
-// #[inline]
-// fn get_unique_tokens (s: &str, ngram: usize) ->Unique<Windows<T>>{
-//     let a =s.chars().collect::<Vec<char>>().windows(ngram).into_iter().unique();
-// }
-
-// Accept an iterator
-// pub fn jaccard_window_size(a: &str, b: &str, ngram: usize) -> f32 {
-//     // Turn our strings into vectors
-//     let a_token_iter = a.chars().windows(ngram).into_iter().unique();
-//     let b_token_iter = b.chars().windows(ngram).into_iter().unique();
-
-//     // s
-//     chain = a_token_iter.chain(b_token_iter);
-//     let total = chain;
-
-//     chain_unique = chain.unique();
-//     let unique_count = chain_unique.len();
-
-//     let mut unions = 0u32;
-//     let mut intersects = 0u32;
-
-//     0f32
-// }
-
-// Accept two iterators
-// pub fn jaccard(a: &str, b: &str) -> f32 {
-//     jaccard_window_size(a, b, 2)
-// }
-
-pub fn jaccard<T: Hash + Eq>(a: HashSet<T>, b: HashSet<T>) -> f32 {
+/// Calculate the Jaccard index on two [`HashSet`]s
+/// 
+/// Returns the mathematical Jaccard index, i.e. `|A ∩ B| / |A ∪ B|`
+/// 
+/// Usually this is interfaced via [`jaccard_iter`], unless the data is already
+/// in a [`HashSet`].
+/// 
+/// # Example
+/// 
+/// ```
+/// use std::collections::HashSet;
+/// use textdistance::algorithms::jaccard;
+/// 
+/// let crew1 = HashSet::from(["Einar", "Olaf", "Harald"]);
+/// let crew2 = HashSet::from(["Olaf", "Harald", "Birger"]);
+/// 
+/// assert_eq!(jaccard(&crew1, &crew2), 0.5);
+/// 
+/// ```
+/// 
+/// [`HashSet`]: std::collections::HashMap
+/// [`jaccard_iter`]: crate::algorithms::jaccard_iter
+pub fn jaccard<T>(a: &HashSet<T>, b: &HashSet<T>) -> f32
+where T: Eq + Hash{
     let ii = a.intersection(&b).count();
     let uu = a.union(&b).count();
     ii as f32 / uu as f32
+}
+
+/// Calculate the Jaccard index on two iterators
+/// 
+/// Returns the mathematical Jaccard index, i.e. `|A ∩ B| / |A ∪ B|`. Iterators
+/// can point to anything hashable. Often this is combined with an iterator
+/// adapter such as [`std::str::split`] and/or [`std::slice::Windows`] to
+/// generate n-grams for text similarity.
+/// 
+/// # Example
+/// 
+/// ```
+/// use std::collections::HashSet;
+/// use textdistance::algorithms::jaccard_iter;
+/// 
+/// let crew1_iter = ["Einar", "Olaf", "Harald"].iter();
+/// let crew2_iter = ["Olaf", "Harald", "Birger"].iter();
+/// 
+/// assert_eq!(jaccard_iter(crew1_iter, crew2_iter), 0.5);
+/// 
+/// ```
+/// 
+/// 
+pub fn jaccard_iter<T,U> (a:T,b:T)-> f32
+where T: Iterator<Item=U>,U:Hash+Eq {
+    let aa:HashSet<U> = a.collect();
+    let bb:HashSet<U> = b.collect();
+    jaccard(&aa,&bb)
 }
 
 #[cfg(test)]
@@ -43,6 +64,24 @@ mod tests {
 
     #[test]
     fn test_jaccard_empty() {
-        // assert_eq!(jaccard("", ""), 0f32);
+        assert!(jaccard_iter("".chars(), "".chars()).is_nan());
+    }
+
+    #[test]
+    fn test_jaccard_a_empty() {
+        assert_eq!(jaccard_iter("".chars(), "ab".chars()),0f32);
+    }
+
+    #[test]
+    fn test_jaccard_b_empty() {
+        assert_eq!(jaccard_iter("ab".chars(), "".chars()),0f32);
+    }
+    
+    #[test]
+    fn test_jaccard_str_sets() {
+        let a = ['a', 'b', 'c'].iter();
+        let b = ['b', 'c', 'd'].iter();
+
+        assert_eq!(jaccard_iter(a, b), 0.5);
     }
 }
