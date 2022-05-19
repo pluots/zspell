@@ -58,7 +58,7 @@ where
 ///
 /// ```
 /// use textdistance::algorithms::jaccard_iter;
-/// 
+///
 /// let a = [["to", "be"], ["be", "or"], ["or", "not"]];
 /// let b = [["who", "wants"], ["wants", "to"], ["to", "be"]];
 ///
