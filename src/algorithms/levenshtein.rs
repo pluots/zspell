@@ -1,6 +1,13 @@
 use std::cmp::{max, min};
 
-/// Main algorithm comes from the Levenshtein Distance wikipedia page
+/// Main levenshtein distance computations
+///
+/// This function implements calculation of the [levenshtein
+/// distance](https://en.wikipedia.org/wiki/Levenshtein_distance) between two
+/// strings, with specified costs for insertion, deletion, and substitution, and
+/// a limit. The other functions in this module simply wrap it.
+///
+/// The main algorithm comes from the Levenshtein Distance wikipedia page
 pub fn levenshtein_limit_weight(
     a: &str,
     b: &str,
@@ -59,9 +66,32 @@ pub fn levenshtein_limit_weight(
     v_prev.last().copied().unwrap_or_default()
 }
 
+/// Levenshtein distance computation with weights
+///
+/// See [`levenshtein_limit_weight`] for details; this function is simply a
+/// wrapper to remove limit function.
+///
+/// # Example
+///
+/// ```
+/// use textdistance::algorithms::levenshtein_weight;
+/// let a = "abcdefg";
+/// let b = "mmmmmmm";
+/// assert_eq!(levenshtein_limit(a, b, 3), 3);
+/// ```
+pub fn levenshtein_weight(a: &str, b: &str, ins_cost: u32, del_cost: u32, sub_cost: u32) -> u32 {
+    levenshtein_limit_weight(a, b, 0, ins_cost, del_cost, sub_cost)
+}
+
 /// Levenshtein distance computation with a limit
 ///
-/// This will limitate the levshtein distance to a given maximum value
+/// This will limitate the levshtein distance up to a given maximum value. The
+/// usual reason for wanting to do this is to avoid unnecessary computation when
+/// two strings can be qucikly identified as "very different".
+///
+/// Behind the scenes, this wraps [`levenshtein_limit_weight`].
+///
+/// # Example
 ///
 /// ```
 /// use textdistance::algorithms::levenshtein_limit;
@@ -73,7 +103,14 @@ pub fn levenshtein_limit(a: &str, b: &str, limit: u32) -> u32 {
     levenshtein_limit_weight(a, b, limit, 1, 1, 1)
 }
 
-/// Levenshtein distance computation
+/// Basic Levenshtein distance computation
+///
+/// This runs the levenshtein distance algorithm on all strings with all costs
+/// equal to 1 and no limits, which is suitable for most cases.
+///
+/// Behind the scenes, this wraps [`levenshtein_limit_weight`].
+///
+/// # Example
 ///
 /// ```
 /// use textdistance::algorithms::levenshtein;
@@ -122,5 +159,20 @@ mod tests {
     #[test]
     fn test_levenshtein_limit() {
         assert_eq!(levenshtein_limit("abcdef", "ghijkl", 3), 3);
+    }
+
+    #[test]
+    fn test_levenshtein_weight_insertion() {
+        assert_eq!(levenshtein_weight("000", "000a", 10, 2, 10), 2);
+    }
+
+    #[test]
+    fn test_levenshtein_weight_deletion() {
+        assert_eq!(levenshtein_weight("000a", "000", 2, 10, 10), 2);
+    }
+
+    #[test]
+    fn test_levenshtein_weight_substitution() {
+        assert_eq!(levenshtein_weight("kitten", "sitten", 10, 10, 2), 2);
     }
 }

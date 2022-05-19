@@ -1,5 +1,15 @@
 /// Hamming distance computation
 ///
+/// The hamming distance between two equal length strings is the number of
+/// substitutions required to change one string into the other. This function
+/// calculates that.
+///
+/// # Panics
+///
+/// If the given strings are not equal length, this function will panic
+///
+/// # Example
+///
 /// ```
 /// use textdistance::algorithms::hamming;
 /// let a = "abcdefg";
@@ -26,4 +36,25 @@ pub fn hamming(a: &str, b: &str) -> u32 {
     }
 
     distance
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    #[should_panic]
+    fn test_panic_on_not_equal() {
+        hamming("abc", "ab");
+    }
+
+    #[test]
+    fn test_empty_string() {
+        assert_eq!(hamming("", ""), 0);
+    }
+
+    #[test]
+    fn test_basic() {
+        assert_eq!(hamming("abcdefg", "0bc1ef2"), 3);
+    }
 }

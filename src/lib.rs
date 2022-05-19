@@ -6,7 +6,7 @@
 //! tokenization and comparison.
 //!
 //! Note that this module is very much a work in progress, and it is likely that
-//! itnterfaces may change. Large parts of this module are still under
+//! interfaces may change. Large parts of this module are still under
 //! construction.
 
 pub mod algorithms;

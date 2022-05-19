@@ -36,7 +36,7 @@ where
 ///
 /// Returns the mathematical Jaccard index, i.e. `|A ∩ B| / |A ∪ B|`. Iterators
 /// can point to anything hashable. Often this is combined with an iterator
-/// adapter such as [`std::str::split`] and/or [`std::slice::Windows`] to
+/// adapter such as [`std::str::Split`] and/or [`core::slice::Windows`] to
 /// generate n-grams for text similarity. See [this wikipedia
 /// page](https://en.wikipedia.org/wiki/N-gram) for descriptions on n-grams.
 ///
