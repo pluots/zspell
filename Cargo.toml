@@ -1,6 +1,6 @@
 [package]
 name = "stringmetrics"
-version = "0.1.7"
+version = "0.1.8"
 edition = "2021"
 description = "Rust library for approximate string matching"
 license-file = "LICENSE"
