@@ -21,6 +21,13 @@ pub fn levenshtein_limit_weight(
     let a_len = a.len() as u32;
     let b_len = b.len() as u32;
 
+    if a_len == 0 {
+        return min(b_len * ins_cost, limit);
+    }
+    if b_len == 0 {
+        return min(a_len * ins_cost, limit);
+    }
+
     let diff = max(a_len, b_len) - min(a_len, b_len);
 
     if diff >= limit {
@@ -42,14 +49,21 @@ pub fn levenshtein_limit_weight(
         // Fill out the rest of the row
         for (j, a_char) in a.chars().enumerate() {
             // calculating costs for A[i+1][j+1]
-            deletion_cost = (v_prev[j + 1] + 1) * del_cost;
-            insertion_cost = (v_curr[j] + 1) * ins_cost;
-            substitution_cost = (match a_char == b_char {
+            insertion_cost = v_curr[j] + 1;
+            deletion_cost = v_prev[j + 1] + 1;
+            substitution_cost = match a_char == b_char {
                 true => v_prev[j],
                 false => v_prev[j] + 1,
-            }) * sub_cost;
+            };
 
-            v_curr[j + 1] = min(min(deletion_cost, insertion_cost), substitution_cost);
+            // Figure out which operation we use first, then multiply by weight
+            if insertion_cost < min(deletion_cost, substitution_cost) {
+                v_curr[j + 1] = insertion_cost * ins_cost;
+            } else if deletion_cost < min(insertion_cost, substitution_cost) {
+                v_curr[j + 1] = deletion_cost * del_cost;
+            } else {
+                v_curr[j + 1] = substitution_cost * sub_cost;
+            }
         }
         let current_max = v_curr.last().copied().unwrap_or_default();
         if current_max >= limit {
@@ -175,14 +189,13 @@ mod tests {
 
     #[test]
     fn test_levenshtein_weight_insertion() {
-        assert_eq!(levenshtein_weight("000", "000a", 10, 2, 10), 2);
+        assert_eq!(levenshtein_weight("", "a", 10, 0, 0), 10);
     }
 
     #[test]
     fn test_levenshtein_weight_deletion() {
         assert_eq!(levenshtein_weight("000a", "000", 2, 10, 10), 2);
     }
-
 
     // #[test]
     // fn test_levenshtein_weight_substitution() {
