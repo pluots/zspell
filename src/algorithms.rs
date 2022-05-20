@@ -97,15 +97,19 @@
 //! 6     n [18, 17, 14, 11,  8,  7,  4,  8]
 //! ```
 //!
-//!
+//! The result of 8 is representative of one added letter (+4) and two
+//! substitutions (+2*2). The substitution could alternatively be counted as an
+//! insertion followed by a deletion but the algorithm "chooses" against it
+//! since the cost would be much higher (4+3=7 when the substitution cost is
+//! only 2).)
 
 mod basic;
-mod damerau;
+// mod damerau;
 mod jaccard;
 mod levenshtein;
 
 pub use self::basic::hamming;
-pub use self::damerau::damerau_levenshtein;
+// pub use self::damerau::damerau_levenshtein;
 pub use self::jaccard::{jaccard, jaccard_set};
 pub use self::levenshtein::{
     levenshtein, levenshtein_limit, levenshtein_limit_weight, levenshtein_weight,

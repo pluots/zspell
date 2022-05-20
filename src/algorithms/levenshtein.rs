@@ -19,10 +19,22 @@ use std::cmp::{max, min};
 ///
 ///
 /// # Example
+/// 
+/// In this example, an insertion weight of 4, deletion weight of 3, and
+/// substitution weight of 2 are used. A limit of 6 is applied, and we see that
+/// we hit that limit.
 ///
 /// ```
 /// use stringmetrics::algorithms::levenshtein_limit_weight;
 /// assert_eq!(levenshtein_limit_weight("kitten", "sitting", 6, 4, 3, 2), 6);
+/// ```
+/// 
+/// With a more reasonable limit, we get a representative result. The 8 comes
+/// from one added letter (4) and two substitutions.
+/// 
+/// ```
+/// use stringmetrics::algorithms::levenshtein_limit_weight;
+/// assert_eq!(levenshtein_limit_weight("kitten", "sitting", 100, 4, 3, 2), 8);
 /// ```
 pub fn levenshtein_limit_weight(
     a: &str,
@@ -60,8 +72,6 @@ pub fn levenshtein_limit_weight(
     let mut del_cost: u32;
     let mut sub_cost: u32;
     let mut current_max: u32 = 0;
-
-    println!("{:?}", v_prev);
     // i holds our "vertical" position, j our "horizontal". We fill the table
     // top to bottom. Note there is actually an offset of 1 from i to the "true"
     // array position (since we start one row down).
@@ -78,7 +88,7 @@ pub fn levenshtein_limit_weight(
 
             v_curr[j + 1] = min(min(ins_cost, del_cost), sub_cost);
         }
-        println!("{:?}", v_curr);
+
         current_max = *v_curr.last().unwrap();
 
         if current_max >= limit {
@@ -101,6 +111,9 @@ pub fn levenshtein_limit_weight(
 /// Behind the scenes, this wraps [`levenshtein_limit_weight`].
 ///
 /// # Example
+/// 
+/// In this example, an insertion weight of 4, deletion weight of 3, and
+/// substitution weight of 2 are used.
 ///
 /// ```
 /// use stringmetrics::algorithms::levenshtein_weight;
