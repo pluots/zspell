@@ -16,6 +16,14 @@ use std::cmp::{max, min};
 ///
 /// See [algorithms](crate::algorithms) for a detailed description of the
 /// algorithm in use.
+///
+///
+/// # Example
+///
+/// ```
+/// use stringmetrics::algorithms::levenshtein_limit_weight;
+/// assert_eq!(levenshtein_limit_weight("kitten", "sitting", 6, 4, 3, 2), 6);
+/// ```
 pub fn levenshtein_limit_weight(
     a: &str,
     b: &str,
@@ -95,10 +103,8 @@ pub fn levenshtein_limit_weight(
 /// # Example
 ///
 /// ```
-/// use stringmetrics::algorithms::levenshtein_limit;
-/// let a = "abcdefg";
-/// let b = "mmmmmmm";
-/// assert_eq!(levenshtein_limit(a, b, 3), 3);
+/// use stringmetrics::algorithms::levenshtein_weight;
+/// assert_eq!(levenshtein_weight("kitten", "sitting", 4, 3, 2), 8);
 /// ```
 #[inline]
 pub fn levenshtein_weight(a: &str, b: &str, w_ins: u32, w_del: u32, w_sub: u32) -> u32 {
