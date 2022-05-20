@@ -5,7 +5,8 @@
 //!
 //! # Levenshtein distance algorithm
 //!
-//! The funcition [`levenshtein`] implements the algorithm below:
+//! The funcition [levenshtein][crate::algorithms::levenshtein] implements the
+//! algorithm below:
 //!
 //! $$ \operatorname{lev}_{a,b}(i,j) = \begin{cases} \max(i,j) &\text{if }
 //! \min(i,j) = 0, \\
@@ -55,13 +56,13 @@
 //! that only uses two vectors at a time, rather than constructing the entire
 //! matrix, for memory optimizations. Memory use is only that for a vector of
 //! u32 twice the length of string B.
-//! 
+//!
 //! ## Limited Levenshtein algorithm
-//! 
+//!
 //! This is easy; same algorithm as above, just stop matching when you hit a
 //! desired limit to avoid spending resources on obviously different strings.
 //! Use this version where possible, implemented by [`levenshtein_limit`].
-//! 
+//!
 //! ```
 //! use stringmetrics::algorithms::levenshtein_limit;
 //! assert_eq!(levenshtein_limit("superlongstring", "", 3), 3);
@@ -74,15 +75,15 @@
 //! insertion, deletion, and substitution. It's basically the same algorithm as
 //! above, except the added values are weights rather than one, and the initial
 //! row population is related to insertion and deletion weights.
-//! 
+//!
 //! For example, the following code:
-//! 
+//!
 //! ```
 //! use stringmetrics::algorithms::levenshtein_weight;
 //! assert_eq!(levenshtein_weight("kitten", "sitting", 4, 3, 2), 8);
 //! ```
 //! Creates the following matrix:
-//! 
+//!
 //! ```text
 //!       j → 0   1   2   3   4   5   6   7
 //! i             str B ->
@@ -95,8 +96,8 @@
 //! 5  ↓  e [15, 14, 11,  8,  5,  4,  8, 12]
 //! 6     n [18, 17, 14, 11,  8,  7,  4,  8]
 //! ```
-//! 
-//! 
+//!
+//!
 
 mod basic;
 mod damerau;

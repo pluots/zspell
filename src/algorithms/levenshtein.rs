@@ -1,6 +1,6 @@
 use std::cmp::{max, min};
 
-/// Main levenshtein distance computations
+/// Levenshtein distance computations with adjustable weights and a limit
 ///
 /// This function implements calculation of the [levenshtein
 /// distance](https://en.wikipedia.org/wiki/Levenshtein_distance) between two
@@ -9,7 +9,13 @@ use std::cmp::{max, min};
 /// generally easier to use any of those (e.g. [`levenshtein_limit`]) unless you
 /// need all the functionality that this has to offer.
 ///
-/// This is an implementation of the iterative algorithm on the Wikipedia page.
+/// Note that this algorithm does not apply any sort of per-character weights,
+/// as some may allow for. Instead, it assumes that all substitutions have a
+/// cost of 0 if the characters are equal, and the specified weight if the
+/// characters are not equal.
+///
+/// See [algorithms](crate::algorithms) for a detailed description of the
+/// algorithm in use.
 pub fn levenshtein_limit_weight(
     a: &str,
     b: &str,
@@ -45,9 +51,9 @@ pub fn levenshtein_limit_weight(
     let mut ins_cost: u32;
     let mut del_cost: u32;
     let mut sub_cost: u32;
-    let mut current_max:u32=0;
+    let mut current_max: u32 = 0;
 
-    println!("{:?}",v_prev);
+    println!("{:?}", v_prev);
     // i holds our "vertical" position, j our "horizontal". We fill the table
     // top to bottom. Note there is actually an offset of 1 from i to the "true"
     // array position (since we start one row down).
@@ -64,9 +70,9 @@ pub fn levenshtein_limit_weight(
 
             v_curr[j + 1] = min(min(ins_cost, del_cost), sub_cost);
         }
-        println!("{:?}",v_curr);
-        current_max =  *v_curr.last().unwrap();
-        
+        println!("{:?}", v_curr);
+        current_max = *v_curr.last().unwrap();
+
         if current_max >= limit {
             return limit;
         }
@@ -81,8 +87,10 @@ pub fn levenshtein_limit_weight(
 
 /// Levenshtein distance computation with weights
 ///
-/// See [`levenshtein_limit_weight`] for details; this function is simply a
-/// wrapper to remove limit function.
+/// Allows setting costs for inserts, deletes and substitutions. See
+/// [algorithms](crate::algorithms) for details on weight computation.
+///
+/// Behind the scenes, this wraps [`levenshtein_limit_weight`].
 ///
 /// # Example
 ///
@@ -93,8 +101,8 @@ pub fn levenshtein_limit_weight(
 /// assert_eq!(levenshtein_limit(a, b, 3), 3);
 /// ```
 #[inline]
-pub fn levenshtein_weight(a: &str, b: &str, ins_cost: u32, del_cost: u32, sub_cost: u32) -> u32 {
-    levenshtein_limit_weight(a, b, u32::MAX, ins_cost, del_cost, sub_cost)
+pub fn levenshtein_weight(a: &str, b: &str, w_ins: u32, w_del: u32, w_sub: u32) -> u32 {
+    levenshtein_limit_weight(a, b, u32::MAX, w_ins, w_del, w_sub)
 }
 
 /// Levenshtein distance computation with a limit
@@ -122,13 +130,14 @@ pub fn levenshtein_limit(a: &str, b: &str, limit: u32) -> u32 {
 /// Basic Levenshtein distance computation
 ///
 /// This runs the levenshtein distance algorithm on all strings with all costs
-/// equal to 1 and no limits, which is suitable for cases where an exact
-/// distance is needed, mainly those where the strings are known to not be "very
-/// different" (e.g., strings of different lengths). In many cases it is better
-/// to use [`levenshtein_limit`] to avoid unnecessary computation.
+/// equal to 1 and with no limits, which is suitable for cases where an exact
+/// distance is needed. Use cases are usually those where the strings are known
+/// to not be "very different" (e.g., strings have similar lengths). In many
+/// cases it is better to use [`levenshtein_limit`] to avoid unnecessary
+/// computation.
 ///
 /// Behind the scenes, this wraps [`levenshtein_limit_weight`]. For details on
-/// operation, see the [`algorithms`] page.
+/// operation, see the [algorithms](crate::algorithms) page.
 ///
 /// # Example
 ///
