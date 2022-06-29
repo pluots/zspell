@@ -32,7 +32,7 @@ where
     ii as f32 / uu as f32
 }
 
-/// Calculate the Jaccard index on two iterators
+/// Calculate the Jaccard index on two iterators using [`jaccard_set`]
 ///
 /// Returns the mathematical Jaccard index, i.e. `|A ∩ B| / |A ∪ B|`. Iterators
 /// can point to anything hashable. Often this is combined with an iterator
@@ -56,8 +56,8 @@ where
 /// ```
 ///
 /// Example using using 2-grams. See
-/// `<https://www.cs.utah.edu/~jeffp/teaching/cs5140-S15/cs5140/L4-Jaccard+nGram.pdf>`
-/// for a good in-depth explanation of Jaccard Index for k-grams/n-grams.
+/// [this execllent reference](https://www.cs.utah.edu/~jeffp/teaching/cs5140-S15/cs5140/L4-Jaccard+nGram.pdf)
+/// for an in-depth explanation of Jaccard Index for k-grams/n-grams.
 ///
 /// ```
 /// use stringmetrics::algorithms::jaccard;

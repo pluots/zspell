@@ -1,0 +1,24 @@
+SET UTF-8
+TRY esianrtolcdugmphbyfvkwzESIANRTOLCDUGMPHBYFVKWZ'
+NOSUGGEST !
+
+PFX A Y 1
+PFX A   0     re         .
+
+SFX N Y 3
+SFX N   e     ion        e
+SFX N   y     ication    y
+SFX N   0     en         [^ey]
+
+SFX X Y 3
+SFX X   e     ions       e
+SFX X   y     ications   y
+SFX X   0     ens        [^ey]
+
+REP 90
+REP a ei
+REP ei a
+REP a ey
+REP ey a
+REP ai ie
+REP ie ai

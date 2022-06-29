@@ -1,3 +1,8 @@
 /target
 /Cargo.lock
 .vscode/
+dictionaries/*.dic
+dictionaries/*.aff
+dictionaries/*.license
+.DS_Store
+tests/files/odyssey.txt
