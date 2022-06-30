@@ -66,5 +66,5 @@ jobs:
         env:
           MATURIN_PYPI_TOKEN: ${{ secrets.PYPI_API_TOKEN }}
         with:
-          command: upload --manifest-path crates/stringmetrics_py/Cargo.toml
+          command: upload
           args: --skip-existing *
