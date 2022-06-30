@@ -1,29 +1,17 @@
-# Stringmetrics
+# ZSpell
 
-This is a Rust library for approximate string matching that implements simple
-algorithms such has Hamming distance, Levenshtein distance, Jaccard similarity,
-and more, as well as a competent spellchecker that handles Hunspell
-dictionaries.
-
-This package comes with a library for programatic use, as well as a command line
-interface. The library is usable via WASM.
+This is a Rust library implementing a spellchecker that handles Hunspell
+dictionaries. It comes with a library for programatic use, as well as a command
+line interface. The library is usable via WASM.
 
 Crate info:
-[https://crates.io/crates/stringmetrics](https://crates.io/crates/stringmetrics)
+[https://crates.io/crates/zspell](https://crates.io/crates/zspell)
 
 Crate docs:
-[https://docs.rs/stringmetrics/](https://docs.rs/stringmetrics/).
+[https://docs.rs/zspell/](https://docs.rs/zspell/).
 
 Crate source:
-[https://github.com/pluots/stringmetrics-rust](https://github.com/pluots/stringmetrics-rust)
-
-
-## Stringmetric Algorithms
-
-One of the main purposes of this library is to provide a variety of string
-metric functions. These include a few Levenshtein implementations (including
-limit/max, weighted, and generic), Jaccard index, and a Hamming implementation.
-These are all found in the `algorithms` module.
+[https://github.com/pluots/zspell](https://github.com/pluots/zspell)
 
 
 ## Spellcheck
@@ -59,7 +47,7 @@ adding fuller features.
 time hunspell -d dictionaries/en -l < tests/files/odyssey.txt > /dev/null
 1.25s user 0.01s system 95% cpu 1.325 total
 
-time ./target/release/stringmetrics spell -d dictionaries/en < tests/files/odyssey.txt > /dev/null
+time ./target/release/zspell spell -d dictionaries/en < tests/files/odyssey.txt > /dev/null
 0.17s user 0.01s system 91% cpu 0.199 total
 ``` -->
 

@@ -1,3 +1,3 @@
-# Stringmetrics
+# ZSpell
 
-Python bindings for the Rust stringmetrics library
+Python bindings for the Rust zspell library

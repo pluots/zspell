@@ -8,4 +8,4 @@ version: 2
 
 python:
    install:
-   - requirements: crates/stringmetrics_py/docs/requirements.txt
+   - requirements: crates/zspell_py/docs/requirements.txt

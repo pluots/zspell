@@ -1,0 +1,59 @@
+[package]
+name = "zspell"
+version = "0.0.1"
+edition = "2018"
+authors = ["Trevor Gross <tmgross@umich.edu>"]
+description = "Rust library for approximate string matching and spellchecking"
+
+readme = "../../README.md"
+license-file = "../../LICENSE"
+
+documentation = "https://docs.rs/zspell"
+repository = "https://github.com/pluots/zspell"
+
+keywords = ["spellcheck", "spelling"]
+categories = ["algorithms", "text-processing"]
+
+[badges]
+maintenance = { status = "actively-developed" }
+
+# Config for the rust-usable library and the executable binary
+[lib]
+name = "zspell"
+path = "src/lib.rs"
+
+[[bin]]
+name = "zspell"
+path = "src/bin/bin.rs"
+
+[dependencies]
+# isolang = "2.1.0"
+futures = "0.3"             # async tools
+lazy_static = "1.4"         # late-evaluated statics
+regex = "1"                 # rust core regex
+# Enum ser/des operations
+strum = { version = "0.24", features = ["derive"] }
+strum_macros = "0.24"        # Macros for ser/de
+# Splitting on graphemes rather than chars
+unicode-segmentation = "1.9.0"
+clap = { version = "3.2", features = ["derive"] }
+stringmetrics = "1"
+
+[dev-dependencies]
+criterion = "0.3"
+assert_cmd = "2.0"
+predicates = "2.1"
+
+[[bench]]
+name = "dict_datastructure"
+harness = false
+
+[[bench]]
+name = "dict_integration"
+harness = false
+
+[package.metadata.docs.rs]
+rustdoc-args = [ "--html-in-header", "katex-header.html" ]
+
+[package.metadata.release]
+shared-version = true

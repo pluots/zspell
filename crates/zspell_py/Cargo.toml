@@ -1,0 +1,22 @@
+[package]
+name = "zspell_py"
+version = "1.1.2"
+edition = "2021"
+publish = false
+
+readme = "../../README.py.md"
+license-file = "../../LICENSE"
+
+[lib]
+name = "zspell"
+crate-type = ["cdylib"]
+
+[dependencies]
+pyo3 = { version = "0.16", features = ["extension-module"] }
+zspell = { path = "../zspell" }
+
+[build-dependencies]
+pyo3-build-config = "0.16"
+
+[package.metadata.release]
+shared-version = true
