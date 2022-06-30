@@ -3,6 +3,8 @@
 //! This module handles loading in an affix file to an [`Affix`] object. Usually
 //! it is not accessed directly.
 
+use std::convert::TryFrom;
+
 use super::affix::Affix;
 use super::affix_types::{AffixRule, Conversion, EncodingType, TokenType};
 use strum::{EnumProperty, VariantNames};

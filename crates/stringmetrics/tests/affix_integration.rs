@@ -32,7 +32,7 @@ fn affix_create_words() {
 fn load_full_affix_file() {
     let mut afx = Affix::new();
 
-    let content = fs::read_to_string("dictionaries/en.aff").unwrap();
+    let content = fs::read_to_string("../../dictionaries/en.aff").unwrap();
 
     afx.load_from_str(content.as_str()).unwrap();
     // println!("{:?}",afx);

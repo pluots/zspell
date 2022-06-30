@@ -1,62 +1,8 @@
-[package]
-name = "stringmetrics"
-version = "1.1.0"
-edition = "2021"
-authors = ["Trevor Gross <tmgross@umich.edu>"]
-description = "Rust library for approximate string matching and spellchecking"
-# This won't auto link for some reason, no harm in having it manual
-documentation = "https://docs.rs/stringmetrics"
-readme = "README.md"
-repository = "https://github.com/pluots/stringmetrics-rust"
-license-file = "LICENSE"
-keywords = ["spellcheck", "spelling", "levenshtein"]
-categories = ["algorithms", "text-processing"]
+[workspace]
 
-[badges]
-maintenance = { status = "actively-developed" }
-
-# Config for the rust-usable library and the executable binary
-[lib]
-name = "stringmetrics"
-path = "src/lib.rs"
-
-[[bin]]
-name = "stringmetrics"
-path = "src/bin/bin.rs"
-
-[dependencies]
-# itertools = "0.10.3"
-# isolang = "2.1.0"
-futures = "0.3"             # async tools
-lazy_static = "1.4"         # late-evaluated statics
-regex = "1"                 # rust core regex
-# This crate's proc macros (unused)
-# stringmetrics-derive = { path = "stringmetrics-derive" }
-# Enum ser/des operations
-strum = { version = "0.24", features = ["derive"] }
-strum_macros = "0.24"        # Macros for ser/de
-# Splitting on graphemes rather than chars
-unicode-segmentation = "1.9.0"
-clap = { version = "3.2", features = ["derive"] }
+members = ["crates/stringmetrics", "crates/stringmetrics_py"]
 
 
-# Use this for testing with full optimizations
-# [profile.test]
-# opt-level = 3
-
-[dev-dependencies]
-criterion = "0.3"
-assert_cmd = "2.0"
-predicates = "2.1"
-
-[[bench]]
-name = "dict_datastructure"
-harness = false
-
-[[bench]]
-name = "dict_integration"
-harness = false
-
-
-[package.metadata.docs.rs]
-rustdoc-args = [ "--html-in-header", "katex-header.html" ]
+[workspace.metadata.release]
+allow-branch = ["main"]
+shared-version = true

@@ -490,6 +490,8 @@ impl AffixRule {
 
 #[cfg(test)]
 mod tests {
+    use std::convert::TryFrom;
+
     use super::*;
     use strum::{EnumProperty, VariantNames};
 

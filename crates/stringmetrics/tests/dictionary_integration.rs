@@ -18,8 +18,8 @@ fn fixture_create_en_dict() -> Dictionary {
     // Test that we correctly compile the short wordlist
     let mut dic = Dictionary::new();
 
-    let aff_content = fs::read_to_string("dictionaries/en.aff").unwrap();
-    let dic_content = fs::read_to_string("dictionaries/en.dic").unwrap();
+    let aff_content = fs::read_to_string("../../dictionaries/en.aff").unwrap();
+    let dic_content = fs::read_to_string("../../dictionaries/en.dic").unwrap();
 
     dic.affix.load_from_str(aff_content.as_str()).unwrap();
     dic.load_dict_from_str(dic_content.as_str());
