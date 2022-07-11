@@ -5,6 +5,7 @@ build-backend = "maturin"
 [project]
 name = "zspell"
 requires-python = ">=3.7"
+description = "A simple yet fast spellchecker that works with Hunspell dictionaries"
 classifiers = [
     "Programming Language :: Rust",
     "Programming Language :: Python :: Implementation :: CPython",

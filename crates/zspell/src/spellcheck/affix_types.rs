@@ -6,7 +6,7 @@
 use super::affix_serde::{t_data_unwrap, AffixProcessedToken, ProcessedTokenData};
 use regex::Regex;
 use strum::EnumString;
-use strum_macros;
+// use strum_macros;
 /// All possible types found in hunspell affix files
 /// This represents a generic token type that will have associated
 #[derive(

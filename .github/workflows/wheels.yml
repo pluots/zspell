@@ -1,12 +1,9 @@
-name: Build python wheels
+name: Build and release python wheels
 
 on:
   push:
-    branches:
-    - main
     tags:
     - 'v*'
-  pull_request:
 
 jobs:
   linux:
@@ -17,47 +14,46 @@ jobs:
       with:
         manylinux: auto
         command: build
-        args: --release -o dist --manifest-path crates/zspell_py/Cargo.toml
+        args: --release -o dist --manifest-path crates/stringmetrics_py/Cargo.toml
     - name: Upload wheels
       uses: actions/upload-artifact@v2
       with:
         name: wheels
         path: dist
 
-  # windows:
-  #   runs-on: windows-latest
-  #   steps:
-  #   - uses: actions/checkout@v3
-  #   - uses: messense/maturin-action@v1
-  #     with:
-  #       command: build
-  #       args: --release --no-sdist -o dist --manifest-path crates/stringmetrzspell_pyics_py/Cargo.toml
-  #   - name: Upload wheels
-  #     uses: actions/upload-artifact@v2
-  #     with:
-  #       name: wheels
-  #       path: dist
+  windows:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: messense/maturin-action@v1
+      with:
+        command: build
+        args: --release --no-sdist -o dist --manifest-path crates/stringmetrics_py/Cargo.toml
+    - name: Upload wheels
+      uses: actions/upload-artifact@v2
+      with:
+        name: wheels
+        path: dist
 
-  # macos:
-  #   runs-on: macos-latest
-  #   steps:
-  #   - uses: actions/checkout@v3
-  #   - uses: messense/maturin-action@v1
-  #     with:
-  #       command: build
-  #       args: --release --no-sdist -o dist --universal2 --manifest-path crates/zspell_py/Cargo.toml
-  #   - name: Upload wheels
-  #     uses: actions/upload-artifact@v2
-  #     with:
-  #       name: wheels
-  #       path: dist
+  macos:
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v3
+    - uses: messense/maturin-action@v1
+      with:
+        command: build
+        args: --release --no-sdist -o dist --universal2 --manifest-path crates/stringmetrics_py/Cargo.toml
+    - name: Upload wheels
+      uses: actions/upload-artifact@v2
+      with:
+        name: wheels
+        path: dist
 
   release:
     name: Release
     runs-on: ubuntu-latest
-    if: "startsWith(github.ref, 'refs/tags/')"
-    needs: [ linux ]
-    # needs: [ macos, windows, linux ]
+    # needs: [ linux ]
+    needs: [ macos, windows, linux ]
     steps:
       - uses: actions/download-artifact@v2
         with:
