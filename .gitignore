@@ -76,3 +76,7 @@ docs/_build/
 
 # Pyenv
 .python-version
+
+# Profiling
+perf.data*
+callgrind.out*

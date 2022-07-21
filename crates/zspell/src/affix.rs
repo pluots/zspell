@@ -1,14 +1,18 @@
 //! Classes needed for affix attributes
 
-// use super::affix_types::*;
-use crate::graph_vec;
-use crate::spellcheck::affix_types::{AffixRule, Conversion, EncodingType};
+mod serde;
+mod types;
+
 use unicode_segmentation::UnicodeSegmentation;
 
-use super::affix_serde::load_affix_from_str;
-use super::affix_types::AffixRuleType;
+use crate::errors::AffixError;
+use crate::graph_vec;
 
-/// The main affix item
+use serde::t_data_unwrap;
+pub use serde::{load_affix_from_str, AffixProcessedToken, ProcessedTokenData};
+pub use types::{AffixRule, AffixRuleType, Conversion, EncodingType, TokenType};
+
+/// Dictionary configuration object that holds affix file data
 ///
 /// This holds the entire contents of the affix file as an AST representation
 /// and is intended to be used throughout program lifetime.
@@ -19,16 +23,15 @@ use super::affix_types::AffixRuleType;
 /// IMPORTANT NOTE: we are talking about Unicode here, so a lot of the times a
 /// "character" in text and a "character" in code are not the same; a Unicode
 /// character can be up to four character codes. As this is a string processing
-/// library, we choose that "character" means a character in text, which will be
-/// comprised of one to four unsigned 8-bit integers (4-byte UTF8).
+/// library, we choose that "character" means a character as it might appear to
+/// a human, which will be comprised of one or more `chars`.
 ///
-/// With that in mind, a basic string for us is `Vec<&str>` - not `String` or
-/// `&str` than `String` that would otherwise seem to make sense. This is
-/// because we frequently work with individual characers.
+/// With that in mind, a basic string for us is represented as `Vec<&str>` (not
+/// `String` or `&str`) because we frequently work with individual characers.
 ///
 /// So, an actual vector of strings is Vec<Vec<&str>>
 #[derive(Debug, PartialEq)]
-pub struct Affix {
+pub struct AffixConfig {
     // We want to make sure all these items are mutable so we
     // can append/edit later
     /// Charset to use, reference to an EncodingType Currently this is unused;
@@ -49,8 +52,8 @@ pub struct Affix {
     /// List of usable flag vectors. Defaults to all things after "/"" in a dict.
     pub afx_flag_vector: Vec<String>,
 
-    /// ## Suggestion-related items
-    // List of e.g. "qwerty", "asdfg" that define neighbors
+    // ## Suggestion-related items
+    /// List of e.g. "qwerty", "asdfg" that define neighbors
     pub keys: Vec<Vec<String>>,
 
     /// Suggest words that differe by 1 try character
@@ -86,10 +89,9 @@ pub struct Affix {
     // pub replacements: Vec<&'a ReplaceRule<'a>>,
     // maps: Vec<>, // MAP
     // phones: Vec<>
-    /// ## Compounding-related items
+    // ## Compounding-related items
     // break_points: Vec<>
     // compound_rules: Vec<>
-
     /// Minimum length of words used in a compound
     pub compound_min_length: u16,
 
@@ -121,10 +123,10 @@ pub struct Affix {
     pub replacements: Vec<Conversion>,
 }
 
-impl Affix {
+impl AffixConfig {
     /// Create an empty affix object
-    pub fn new() -> Affix {
-        Affix {
+    pub fn new() -> AffixConfig {
+        AffixConfig {
             encoding: EncodingType::Utf8,
             complex_prefixes: false,
             lang: String::new(),
@@ -155,7 +157,7 @@ impl Affix {
     }
 
     /// Load this affix from a string, i.e. one loaded from an affix file
-    pub fn load_from_str(&mut self, s: &str) -> Result<(), String> {
+    pub fn load_from_str(&mut self, s: &str) -> Result<(), AffixError> {
         load_affix_from_str(self, s)
     }
 
@@ -207,10 +209,10 @@ impl Affix {
     }
 }
 
-impl Default for Affix {
+impl Default for AffixConfig {
     /// Common defaults for affix configuration
     fn default() -> Self {
-        let mut ax = Affix::new();
+        let mut ax = AffixConfig::new();
 
         ax.keys = vec![
             graph_vec!("qwertyuiop"),

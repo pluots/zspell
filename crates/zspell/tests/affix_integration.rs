@@ -1,9 +1,9 @@
 use std::fs;
-use zspell::Affix;
+use zspell::AffixConfig;
 
 #[test]
 fn affix_create_words() {
-    let mut afx = Affix::new();
+    let mut afx = AffixConfig::new();
 
     let content = fs::read_to_string("tests/files/short.aff").unwrap();
 
@@ -30,7 +30,7 @@ fn affix_create_words() {
 
 #[test]
 fn load_full_affix_file() {
-    let mut afx = Affix::new();
+    let mut afx = AffixConfig::new();
 
     let content = fs::read_to_string("../../dictionaries/en.aff").unwrap();
 

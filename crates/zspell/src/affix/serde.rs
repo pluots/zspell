@@ -1,24 +1,30 @@
 //! Affix Ser/Des module
 //!
-//! This module handles loading in an affix file to an [`Affix`] object. Usually
-//! it is not accessed directly.
+//! This module handles loading in an affix file to an [`AffixConfig`] object.
+//! Usually it is not accessed directly.
 
 use std::convert::TryFrom;
 
-use super::affix::Affix;
-use super::affix_types::{AffixRule, Conversion, EncodingType, TokenType};
 use strum::{EnumProperty, VariantNames};
 use unicode_segmentation::UnicodeSegmentation;
 
-// Unwrap a TokenData type
+use crate::affix::AffixConfig;
+use crate::affix::{AffixRule, Conversion, EncodingType, TokenType};
+use crate::errors::AffixError;
+use crate::graph_vec;
+use crate::unwrap_or_ret_e;
+
+/// Unwrap a TokenData type
 macro_rules! t_data_unwrap {
     ( $token:ident, $field:ident ) => {
         match $token.data {
             ProcessedTokenData::$field(f) => f,
-            _ => panic!("Bad token type specified!"),
+            _ => return Err(AffixError::BadTokenType),
         }
     };
 }
+
+pub(crate) use t_data_unwrap;
 
 macro_rules! parentify {
     // Boolean field just assigns true and returns Ok (Flag is just either there
@@ -26,19 +32,19 @@ macro_rules! parentify {
     ( $parent:ident.$field:ident, $token:ident, bool ) => {
         match $token.data {
             ProcessedTokenData::Bool(b) => $parent.$field = b,
-            _ => panic!("Bad token type specified!"),
+            _ => return Err(AffixError::BadTokenType),
         }
     };
     ( $parent:ident.$field:ident, $token:ident, int ) => {
         match $token.data {
             ProcessedTokenData::Int(b) => $parent.$field = b,
-            _ => panic!("Bad token type specified!"),
+            _ => return Err(AffixError::BadTokenType),
         }
     };
     ( $parent:ident.$field:ident, $token:ident, str_replace ) => {
         match $token.data {
             ProcessedTokenData::String(s) => $parent.$field = s.to_string(),
-            _ => panic!("Bad token type specified!"),
+            _ => return Err(AffixError::BadTokenType),
         }
     };
 
@@ -53,26 +59,22 @@ macro_rules! parentify {
                 $parent.$field.sort();
                 $parent.$field.dedup();
             }
-            _ => panic!("Bad token type specified!"),
+            _ => return Err(AffixError::BadTokenType),
         }
     };
 }
 
-pub(crate) use t_data_unwrap;
-
-/// Populate an Affix class from the string version of a file.
-/// This is the main function exported from this module.
-/// `ax` is the [`Affix`] object to load, `s` is the file raw string to load in
-pub fn load_affix_from_str(ax: &mut Affix, s: &str) -> Result<(), String> {
+/// Populate an Affix class from the string version of a file. This is the main
+/// function exported from this module. `ax` is the [`AffixConfig`] object to
+/// load, `s` is the file raw string to load in
+pub fn load_affix_from_str(ax: &mut AffixConfig, s: &str) -> Result<(), AffixError> {
     // This will give us a list of tokens with no processing applied
     let raw_stripped = strip_comments(s);
     let raw_str = raw_stripped.as_str();
     let raw_tokens = create_raw_tokens(raw_str);
 
-    match create_processed_tokens(raw_tokens) {
-        Ok(tokens) => set_parent(ax, tokens),
-        Err(e) => Err(e),
-    }
+    let tokens = create_processed_tokens(raw_tokens)?;
+    set_parent(ax, tokens)
 }
 
 /// Strip "#" comments from a &str. Breaks from a found "#" to the next newline;
@@ -158,10 +160,11 @@ pub struct AffixProcessedToken<'a> {
 
 /// Use the first raw token to determine how many more to read into the table
 /// Returns a u16 if successful, error otherwise
-fn get_table_item_count(token: &AffixRawToken) -> Result<u16, String> {
+fn get_table_item_count(token: &AffixRawToken) -> Result<u16, AffixError> {
     // Recall: our tokens have the token prefix stripped
 
-    let temp = match token.ttype {
+    // count_str gives us the string that should represent the table's item count
+    let count_str = match token.ttype {
         // AF [n]
         TokenType::AffixFlag => token.content.first(),
         // AM [n]
@@ -190,17 +193,17 @@ fn get_table_item_count(token: &AffixRawToken) -> Result<u16, String> {
         _ => return Ok(0),
     };
 
-    match temp {
-        Some(num) => match num.parse() {
-            Ok(val) => Ok(val),
-            Err(_) => Err(format!("Bad number at {}", token.ttype)),
-        },
-        None => Err(format!("Incorrect syntax at {}", token.ttype)),
+    let to_parse = unwrap_or_ret_e!(count_str, AffixError::Syntax(token.content.join(" ")));
+    match to_parse.parse() {
+        Ok(v) => Ok(v),
+        Err(e) => Err(AffixError::NumParse(e)),
     }
 }
 
 /// Loop through a vector of raw tokens and create the processed version
-fn create_processed_tokens(tokens: Vec<AffixRawToken>) -> Result<Vec<AffixProcessedToken>, String> {
+fn create_processed_tokens(
+    tokens: Vec<AffixRawToken>,
+) -> Result<Vec<AffixProcessedToken>, AffixError> {
     // Vector to hold what we will return
     let mut retvec = Vec::new();
     // If we need to accumulate values for a table, use these items
@@ -220,10 +223,11 @@ fn create_processed_tokens(tokens: Vec<AffixRawToken>) -> Result<Vec<AffixProces
             // one to our temp working vector
             // Validate token type first
             if token.ttype != table_accum_type {
-                return Err(format!(
-                    "Token of type {} did not match {}. Expected {} more token.",
-                    token.ttype, table_accum_type, table_accum_count
-                ));
+                return Err(AffixError::TableCount {
+                    expected: table_accum_type.to_string(),
+                    received: token.ttype.to_string(),
+                    missing: table_accum_count,
+                });
             }
 
             table_accum_vec.push(token.content);
@@ -248,10 +252,7 @@ fn create_processed_tokens(tokens: Vec<AffixRawToken>) -> Result<Vec<AffixProces
             // String or bool are straightforward
             "str" => {
                 if token.content.len() != 1 {
-                    return Err(format!(
-                        "{} is a sting; only one value allowed on the line",
-                        token.ttype
-                    ));
+                    return Err(AffixError::Syntax(token.ttype.to_string()));
                 };
                 retvec.push(AffixProcessedToken {
                     ttype: token.ttype,
@@ -260,10 +261,7 @@ fn create_processed_tokens(tokens: Vec<AffixRawToken>) -> Result<Vec<AffixProces
             }
             "bool" => {
                 if !token.content.is_empty() {
-                    return Err(format!(
-                        "{} is a boolean; nothing else allowed on the line",
-                        token.ttype
-                    ));
+                    return Err(AffixError::Syntax(token.ttype.to_string()));
                 };
                 retvec.push(AffixProcessedToken {
                     ttype: token.ttype,
@@ -272,19 +270,20 @@ fn create_processed_tokens(tokens: Vec<AffixRawToken>) -> Result<Vec<AffixProces
             }
             "int" => {
                 if token.content.len() != 1 {
-                    return Err(format!(
-                        "{} is a integer; nothing else allowed on the line",
-                        token.ttype
-                    ));
+                    return Err(AffixError::Syntax(token.ttype.to_string()));
                 };
-                let val = token.content[0].parse();
-                match val {
-                    Ok(v) => retvec.push(AffixProcessedToken {
-                        ttype: token.ttype,
-                        data: ProcessedTokenData::Int(v),
-                    }),
-                    Err(_) => return Err(format!("Bad integer value at {}", token.ttype)),
-                }
+                let val = token.content[0].parse()?;
+                retvec.push(AffixProcessedToken {
+                    ttype: token.ttype,
+                    data: ProcessedTokenData::Int(val),
+                })
+                // match val {
+                //     Ok(v) => retvec.push(AffixProcessedToken {
+                //         ttype: token.ttype,
+                //         data: ProcessedTokenData::Int(v),
+                //     }),
+                //     // Err(_) => return Err(format!("Bad integer value at {}", token.ttype)),
+                // }
             }
             // For table - figure out item count, push this token,
             "table" => {
@@ -303,12 +302,12 @@ fn create_processed_tokens(tokens: Vec<AffixRawToken>) -> Result<Vec<AffixProces
 }
 
 // Actually go through and set the parent here
-fn set_parent(ax: &mut Affix, tokens: Vec<AffixProcessedToken>) -> Result<(), String> {
+fn set_parent(ax: &mut AffixConfig, tokens: Vec<AffixProcessedToken>) -> Result<(), AffixError> {
     for token in tokens {
         match token.ttype {
             TokenType::Encoding => match EncodingType::try_from(t_data_unwrap!(token, String)) {
                 Ok(et) => ax.encoding = et,
-                Err(_) => return Err("Bad encoding type specified".to_string()),
+                Err(_) => return Err(AffixError::BadEncodingType),
             },
             TokenType::FlagType => todo!("Flag is not yet supported"),
             TokenType::ComplexPrefixes => parentify!(ax.complex_prefixes, token, bool),
@@ -382,6 +381,7 @@ fn set_parent(ax: &mut Affix, tokens: Vec<AffixProcessedToken>) -> Result<(), St
 
 #[cfg(test)]
 mod tests {
+
     use super::*;
 
     #[test]
@@ -421,13 +421,17 @@ mod tests {
             ttype: TokenType::Prefix,
             content: vec!["A", "Y"],
         });
-        assert_eq!(count_res2, Err("Incorrect syntax at PFX".to_string()));
+        assert_eq!(count_res2, Err(AffixError::Syntax("A Y".into())));
 
         let count_res3 = get_table_item_count(&AffixRawToken {
             ttype: TokenType::Prefix,
             content: vec!["A", "Y", "-80"],
         });
-        assert_eq!(count_res3, Err("Bad number at PFX".to_string()));
+        // Can't figure out a good way to compare the errors
+        match count_res3.unwrap_err() {
+            AffixError::NumParse(_) => (),
+            _ => panic!(),
+        }
     }
 
     #[test]
