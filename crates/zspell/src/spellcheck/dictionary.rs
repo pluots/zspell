@@ -1,6 +1,6 @@
 //! A dictionary contains methods and a list of Entries
-//! Load hunspell dicts
-//! http://pwet.fr/man/linux/fichiers_speciaux/hunspell/
+//! Load hunspell dicts, as described at
+//! <http://pwet.fr/man/linux/fichiers_speciaux/hunspell/>
 
 use crate::spellcheck::affix::Affix;
 use core::hash::Hash;
@@ -191,8 +191,8 @@ impl Dictionary {
 
     /// Create a sorted vector of all items in the word list
     ///
-    /// Note that this is relatively slow. Prefer [`check`] for validating a word
-    /// exists.
+    /// Note that this is relatively slow. Prefer [`Dictionary::check`] for
+    /// validating a word exists.
     pub fn wordlist_items(&self) -> Vec<&str> {
         self.break_if_not_compiled();
 
