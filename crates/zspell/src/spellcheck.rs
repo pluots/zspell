@@ -5,8 +5,8 @@
 //! configuration and the implementation to perform spell checking.
 //!
 //! Please note that the spellchecker is currently in alpha, and really not
-//! ready for any mainstream use. Contributions are more than welcome,
-//! https://github.com/pluots/zspell.
+//! ready for any mainstream use. Contributions are more than welcome at,
+//! <https://github.com/pluots/zspell>.
 
 /// Create a vector of unicode graphemes
 /// Each &str within this array is a single unicode character, which

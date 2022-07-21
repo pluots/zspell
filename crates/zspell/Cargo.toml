@@ -3,10 +3,10 @@ name = "zspell"
 version = "0.0.1"
 edition = "2018"
 authors = ["Trevor Gross <tmgross@umich.edu>"]
-description = "Rust library for approximate string matching and spellchecking"
+description = "Pure rust library for spellchecking"
 
-readme = "../../README.md"
-license-file = "../../LICENSE"
+readme = "README.md"
+license-file = "LICENSE"
 
 documentation = "https://docs.rs/zspell"
 repository = "https://github.com/pluots/zspell"
@@ -52,8 +52,44 @@ harness = false
 name = "dict_integration"
 harness = false
 
-[package.metadata.docs.rs]
-rustdoc-args = [ "--html-in-header", "katex-header.html" ]
-
 [package.metadata.release]
 shared-version = true
+
+
+# Can't run replacements at workspace root. Need to use this "hacky" sort of way.
+[[package.metadata.release.pre-release-replacements]]
+file = "../../CHANGELOG.md"
+search = "Unreleased"
+replace = "{{version}}"
+
+[[package.metadata.release.pre-release-replacements]]
+file = "../../CHANGELOG.md"
+search = "\\.\\.\\.HEAD"
+replace = "...{{tag_name}}"
+exactly = 1
+
+[[package.metadata.release.pre-release-replacements]]
+file = "../../CHANGELOG.md"
+search = "ReleaseDate"
+replace = "{{date}}"
+
+[[package.metadata.release.pre-release-replacements]]
+file = "../../CHANGELOG.md"
+search = "<!-- next-header -->"
+replace = """\
+  <!-- next-header -->\n\n\
+  ## [Unreleased] - ReleaseDate\n\n\
+  ### Added\n\n\
+  ### Changed\n\n\
+  ### Removed\n\n\
+  """
+exactly = 1
+
+[[package.metadata.release.pre-release-replacements]]
+file = "../../CHANGELOG.md"
+search = "<!-- next-url -->"
+replace = """\
+  <!-- next-url -->\n\
+  [Unreleased]: https://github.com/pluots/stringmetrics/compare/{{tag_name}}...HEAD\
+  """
+exactly = 1

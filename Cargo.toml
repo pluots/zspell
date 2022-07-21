@@ -1,3 +1,10 @@
 [workspace]
 
 members = ["crates/zspell", "crates/zspell_py"]
+
+# Build with `cargo build --profile=release-debug`
+# Alternatively `cargo bench --profile=release-debug`
+# Useful for profiling, not for official releases
+[profile.release-debug]
+inherits = "release"
+debug = true

@@ -1,4 +1,4 @@
-name: Test building python wheels
+name: "Python wheels: build test"
 
 on:
   push:
@@ -7,15 +7,24 @@ on:
   pull_request:
 
 jobs:
-  linux:
+  linux_wheels:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-    - uses: messense/maturin-action@v1
+    - name: Build libc wheels
+      uses: messense/maturin-action@v1
       with:
         manylinux: auto
         command: build
-        args: --release -o dist --manifest-path crates/stringmetrics_py/Cargo.toml
+        # container default is manylinux
+        args: --release -o dist --manifest-path crates/zspell_py/Cargo.toml
+    - name: Build musl wheels
+      uses: messense/maturin-action@v1
+      with:
+        target: x86_64-unknown-linux-musl
+        manylinux: musllinux_1_1
+        command: build
+        args: --release -o dist -i 3.7 3.8 3.9 3.10 --manifest-path crates/zspell_py/Cargo.toml
     - name: Upload wheels
       uses: actions/upload-artifact@v2
       with:
