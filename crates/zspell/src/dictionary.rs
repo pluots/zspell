@@ -2,17 +2,20 @@
 //! Load hunspell dicts, as described at
 //! <http://pwet.fr/man/linux/fichiers_speciaux/hunspell/>
 
-use crate::spellcheck::affix::Affix;
+use crate::{
+    affix::AffixConfig,
+    errors::{AffixError, CompileError},
+};
 use core::hash::Hash;
 use std::collections::HashSet;
 use stringmetrics::tokenizers::split_whitespace_remove_punc;
 
-/// This is the main object used for spellchecking
+/// Main dictionary object used for spellchecking and autocorrect
 ///
 /// A dictionary contains
 pub struct Dictionary {
     /// This contains the dictionary's configuration
-    pub affix: Affix,
+    pub config: AffixConfig,
 
     // General word list of words that are accepted and suggested. Note that it
     // may make sense in the future to include non-suggest words here too.
@@ -33,7 +36,7 @@ pub struct Dictionary {
 impl Dictionary {
     pub fn new() -> Dictionary {
         Dictionary {
-            affix: Affix::new(),
+            config: AffixConfig::new(),
             wordlist: HashSet::new(),
             wordlist_nosuggest: HashSet::new(),
             wordlist_forbidden: HashSet::new(),
@@ -44,9 +47,9 @@ impl Dictionary {
     }
 
     /// Can also be done with strings
-    pub fn load_affix_from_str(&mut self, s: &str) -> Result<(), String> {
+    pub fn load_affix_from_str(&mut self, s: &str) -> Result<(), AffixError> {
         self.compiled = false;
-        self.affix.load_from_str(s)
+        self.config.load_from_str(s)
     }
 
     pub fn load_dict_from_str(&mut self, s: &str) {
@@ -65,7 +68,7 @@ impl Dictionary {
     }
 
     /// Match affixes, personal dict, etc
-    pub fn compile(&mut self) -> Result<(), String> {
+    pub fn compile(&mut self) -> Result<(), CompileError> {
         // Work through the personal word list
         for word in self.raw_wordlist_personal.iter() {
             // Words will be in the format "*word/otherword" where "word" is the
@@ -82,7 +85,11 @@ impl Dictionary {
 
                     match self.raw_wordlist.iter().find(|s| s.starts_with(&filtval)) {
                         Some(_w) => (),
-                        None => return Err("Root word not found".to_string()),
+                        None => {
+                            return Err(CompileError::MissingRootWord {
+                                rootword: rootword.to_string(),
+                            })
+                        }
                     }
                 }
                 None => (),
@@ -94,8 +101,8 @@ impl Dictionary {
             let rootword = split[0];
             match split.get(1) {
                 Some(rule_keys) => {
-                    let wordlist = self.affix.create_affixed_words(rootword, rule_keys);
-                    match rule_keys.contains(&self.affix.nosuggest_flag) {
+                    let wordlist = self.config.create_affixed_words(rootword, rule_keys);
+                    match rule_keys.contains(&self.config.nosuggest_flag) {
                         true => iter_to_hashset(wordlist, &mut self.wordlist_nosuggest),
                         false => iter_to_hashset(wordlist, &mut self.wordlist),
                     }
@@ -132,7 +139,7 @@ impl Dictionary {
     /// let aff_content = fs::read_to_string("tests/files/short.aff").unwrap();
     /// let dic_content = fs::read_to_string("tests/files/short.dic").unwrap();
     ///
-    /// dic.affix.load_from_str(aff_content.as_str()).unwrap();
+    /// dic.config.load_from_str(aff_content.as_str()).unwrap();
     /// dic.load_dict_from_str(dic_content.as_str());
     /// dic.compile().unwrap();
     ///

@@ -1,9 +1,12 @@
 // use super::affix::Affix;
 // use super::affix_serde::{ENCODING_CLASS_LIST, TOKEN_CLASS_LIST};
 
+use crate::errors::AffixError;
+
 // use std::string::ToString;
 // use strum::{EnumProperty, EnumString, VariantNames};
-use super::affix_serde::{t_data_unwrap, AffixProcessedToken, ProcessedTokenData};
+use crate::affix::{t_data_unwrap, AffixProcessedToken, ProcessedTokenData};
+use crate::unwrap_or_ret_e;
 use regex::Regex;
 use strum::EnumString;
 // use strum_macros;
@@ -221,8 +224,10 @@ pub enum EncodingType {
     IsciiDevanagari, // ISCII-DEVANAGARI
 }
 
-/// REP, ICONV and OCONV representations
-/// Simple input to output mapping
+/// A simple input-to-output conversion mapping.
+///
+/// This is usually represented in an affix file via `REP`, `ICONV`, and
+/// `OCONV`.
 #[derive(Debug, PartialEq, Eq)]
 pub struct Conversion {
     input: String,
@@ -234,7 +239,7 @@ impl Conversion {
     pub fn from_processed_token(
         pt: AffixProcessedToken,
         bidirectional: bool,
-    ) -> Result<Vec<Conversion>, String> {
+    ) -> Result<Vec<Conversion>, AffixError> {
         let tab = t_data_unwrap!(pt, Table);
         let mut iter = tab.iter();
 
@@ -246,11 +251,11 @@ impl Conversion {
             ret.push(Conversion {
                 input: match row.first() {
                     Some(v) => v.to_string(),
-                    None => return Err("No conversion input found".to_string()),
+                    None => return Err(AffixError::NoConversionInput),
                 },
                 output: match row.get(1) {
                     Some(v) => v.to_string(),
-                    None => return Err("No conversion output found".to_string()),
+                    None => return Err(AffixError::NoConversionOutput),
                 },
                 bidirectional,
             })
@@ -399,20 +404,25 @@ impl AffixRuleDef {
 }
 
 /// A prefix or suffix rule
+///
+/// This struct represents a prefix or suffix option that may be applied to any
+/// base word. It contains multiple possible rule definitions that describe how
+/// to apply the rule.
 #[derive(Debug, PartialEq)]
 pub struct AffixRule {
     /// Character identifier for this specific affix
     pub ident: String,
     /// Prefix or suffix
     pub atype: AffixRuleType,
-    // Whether or not this can be combined with others
+    /// Whether or not this can be combined with the opposite affix
     pub combine_pfx_sfx: bool,
-
+    /// Actual rules for replacing
     rules: Vec<AffixRuleDef>,
 }
 
 impl AffixRule {
-    pub fn from_processed_token(pt: AffixProcessedToken) -> Result<AffixRule, String> {
+    /// Load the affix rule from a processed token
+    pub fn from_processed_token(pt: AffixProcessedToken) -> Result<AffixRule, AffixError> {
         let tab = t_data_unwrap!(pt, Table);
         let mut iter = tab.iter();
 
@@ -424,25 +434,14 @@ impl AffixRule {
         let atype = match pt.ttype {
             TokenType::Prefix => AffixRuleType::Prefix,
             TokenType::Suffix => AffixRuleType::Suffix,
-            _ => panic!(),
+            _ => return Err(AffixError::BadTokenType),
         };
 
         // Create rule definitions for that identifier
         for rule in iter {
-            let strip_text = match rule.get(1) {
-                Some(v) => v,
-                None => return Err("Bad stripping characters".to_string()),
-            };
-
-            let affix_text = match rule.get(2) {
-                Some(v) => v,
-                None => return Err("Bad affix given".to_string()),
-            };
-
-            let condition = match rule.get(3) {
-                Some(v) => v,
-                None => return Err("Bad condition given".to_string()),
-            };
+            let strip_text = unwrap_or_ret_e!(rule.get(1), AffixError::Syntax(rule.join("")));
+            let affix_text = unwrap_or_ret_e!(rule.get(2), AffixError::Syntax(rule.join("")));
+            let condition = unwrap_or_ret_e!(rule.get(3), AffixError::Syntax(rule.join("")));
 
             ruledefs.push(AffixRuleDef::from_table_creation(
                 atype,
@@ -453,20 +452,14 @@ impl AffixRule {
             ))
         }
 
-        // Populate with informatino from the first line
+        // Populate with information from the first line
         Ok(AffixRule {
             atype,
-            ident: match start.first() {
-                Some(v) => v.to_string(),
-                None => return Err("No identifier found".to_string()),
-            },
-            combine_pfx_sfx: match start.get(1) {
-                Some(v) => match *v {
-                    "Y" => true,
-                    "N" => false,
-                    _ => return Err("Bad cross product info".to_string()),
-                },
-                None => return Err("No cross product info found".to_string()),
+            ident: unwrap_or_ret_e!(start.first(), AffixError::MissingIdentifier).to_string(),
+            combine_pfx_sfx: match *unwrap_or_ret_e!(start.get(1), AffixError::BadCrossProduct) {
+                "Y" => true,
+                "N" => false,
+                _ => return Err(AffixError::BadCrossProduct),
             },
             rules: ruledefs,
         })

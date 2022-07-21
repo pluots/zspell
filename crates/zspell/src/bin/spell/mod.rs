@@ -17,7 +17,7 @@ pub fn create_dict_from_path(basepath: &str) -> Dictionary {
         .unwrap_or_else(|_| panic!("Unable to find .dic file. Does {} exist?", dict_file_path));
 
     let mut dic = Dictionary::new();
-    dic.affix.load_from_str(aff_content.as_str()).unwrap();
+    dic.config.load_from_str(aff_content.as_str()).unwrap();
     dic.load_dict_from_str(dic_content.as_str());
     dic.compile().expect("Error in dictionary compilation");
 

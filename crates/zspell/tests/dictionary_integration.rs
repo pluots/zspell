@@ -8,7 +8,7 @@ fn fixture_create_short_dict() -> Dictionary {
     let aff_content = fs::read_to_string("tests/files/short.aff").unwrap();
     let dic_content = fs::read_to_string("tests/files/short.dic").unwrap();
 
-    dic.affix.load_from_str(aff_content.as_str()).unwrap();
+    dic.config.load_from_str(aff_content.as_str()).unwrap();
     dic.load_dict_from_str(dic_content.as_str());
     dic.compile().unwrap();
     dic
@@ -21,7 +21,7 @@ fn fixture_create_en_dict() -> Dictionary {
     let aff_content = fs::read_to_string("../../dictionaries/en.aff").unwrap();
     let dic_content = fs::read_to_string("../../dictionaries/en.dic").unwrap();
 
-    dic.affix.load_from_str(aff_content.as_str()).unwrap();
+    dic.config.load_from_str(aff_content.as_str()).unwrap();
     dic.load_dict_from_str(dic_content.as_str());
     dic.compile().unwrap();
     dic
