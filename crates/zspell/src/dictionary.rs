@@ -8,7 +8,7 @@ use crate::{
     errors::{AffixError, CompileError},
 };
 use core::hash::Hash;
-use std::collections::HashSet;
+use hashbrown::HashSet;
 use stringmetrics::tokenizers::split_whitespace_remove_punc;
 
 /// Main dictionary object used for spellchecking and autocorrect
