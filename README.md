@@ -1,7 +1,7 @@
 # ZSpell
 
 This is a Rust library implementing a spellchecker that handles Hunspell
-dictionaries. It comes with a library for programatic use, as well as a command
+dictionaries. It comes with a library for programmatic use, as well as a command
 line interface. The library is usable via WASM.
 
 Crate info:
@@ -28,7 +28,7 @@ Spellcheck functionality is found in the `spellcheck` module.
 NOTE: The spellcheck portion of this project is still under development and is
 not guaranteed to work properly. Completed and future planned support include:
 
-- [x] Basic prefix/sufix dictionary files
+- [x] Basic prefix/suffix dictionary files
 - [ ] Forbidden word handling
 - [ ]
 - [ ] Morphological/Phonetic handling
@@ -55,6 +55,3 @@ obtained under license. These files have been sourced from here:
 These dictionaries are licensed under various licenses, different from that of
 this project. Please see the applicable `.license` file withing the
 `dictionaries/` directory.
-
-**Note: this project was previously named "textdistance". Please make sure to
-update all references.**

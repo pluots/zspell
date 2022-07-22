@@ -37,8 +37,12 @@ strum_macros = "0.24"        # Macros for ser/de
 # Splitting on graphemes rather than chars
 unicode-segmentation = "1.9.0"
 clap = { version = "3.2", features = ["derive"] }
-stringmetrics = "1"
+stringmetrics = "2"
 thiserror = "1.0"
+rayon = "1.5"
+# hashbrown = "0.12"
+hashbrown = { version = "0.12", features = ["rayon"] }
+home = "0.5"
 
 [dev-dependencies]
 criterion = "0.3"
@@ -46,7 +50,7 @@ assert_cmd = "2.0"
 predicates = "2.1"
 
 [[bench]]
-name = "dict_datastructure"
+name = "datastructure"
 harness = false
 
 [[bench]]

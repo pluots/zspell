@@ -3,8 +3,7 @@
 use std::num;
 use thiserror::Error;
 
-/// Errors that occur while loading an affix file
-#[derive(Error, Debug, PartialEq)]
+#[derive(Error, Debug, PartialEq, Eq)]
 pub enum AffixError {
     #[error("bad number at")]
     NumParse(#[from] num::ParseIntError),
