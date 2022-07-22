@@ -1,4 +1,12 @@
-//! Classes needed for affix attributes
+//! Dictionary configuration options framework
+//! 
+//! This module contains everything related to the configuration of a
+//! [`crate::Dictionary`], which can then be used for checking words.
+//! 
+//! Usually this configuration is loaded via an affix file (typically ending in
+//! `.aff`), but it can also be created programatically if desired.
+//! 
+//! This module should be considered unstable as its usage is finalized.
 
 mod serde;
 mod types;
@@ -15,28 +23,25 @@ pub use types::{AffixRule, AffixRuleType, Conversion, EncodingType, TokenType};
 /// Dictionary configuration object that holds affix file data
 ///
 /// This holds the entire contents of the affix file as an AST representation
-/// and is intended to be used throughout program lifetime.
+/// and is intended to be used throughout program lifetime. If you are
+/// uninterested in modifying an existing dictionary structure, you are likely
+/// interested in just using [`crate::Dictionary`] and its methods.
+/// 
+/// # Internal working
 ///
+/// Generally within this class, a "string" is represented as a Vec<String> or
+/// Vec<&str>, i.e. a vector of string graphemes. This is because many languages
+/// may require accurate unicode segmentation to work properly. It is not yet
+/// understood whether this is the best practice, so this may change in the
+/// future.
+/// 
 /// Any type that can be modified must be owned (e.g. String, Vec), others may
 /// be borrowed.
-///
-/// IMPORTANT NOTE: we are talking about Unicode here, so a lot of the times a
-/// "character" in text and a "character" in code are not the same; a Unicode
-/// character can be up to four character codes. As this is a string processing
-/// library, we choose that "character" means a character as it might appear to
-/// a human, which will be comprised of one or more `chars`.
-///
-/// With that in mind, a basic string for us is represented as `Vec<&str>` (not
-/// `String` or `&str`) because we frequently work with individual characers.
-///
-/// So, an actual vector of strings is Vec<Vec<&str>>
 #[derive(Debug, PartialEq)]
 pub struct AffixConfig {
-    // We want to make sure all these items are mutable so we
-    // can append/edit later
-    /// Charset to use, reference to an EncodingType Currently this is unused;
-    /// only UTF-8 is supported. However, the affix file must still have an
-    /// accurate definition.
+    /// Charset to use, reference to an [`EncodingType`] Currently this is
+    /// unused; only UTF-8 is supported. However, the affix file must still have
+    /// an accurate definition.
     pub encoding: EncodingType,
 
     /// Twofold prefix skipping for e.g. right-to-left languages
@@ -89,7 +94,9 @@ pub struct AffixConfig {
     // pub replacements: Vec<&'a ReplaceRule<'a>>,
     // maps: Vec<>, // MAP
     // phones: Vec<>
+
     // ## Compounding-related items
+    
     // break_points: Vec<>
     // compound_rules: Vec<>
     /// Minimum length of words used in a compound
@@ -156,28 +163,34 @@ impl AffixConfig {
         }
     }
 
-    /// Load this affix from a string, i.e. one loaded from an affix file
+    /// Load this affix from a string, e.g. one read from an affix file
     pub fn load_from_str(&mut self, s: &str) -> Result<(), AffixError> {
         load_affix_from_str(self, s)
     }
 
-    /// Create a vector of roods from a single root word by applying rules in
+    /// Create a vector of words from a single root word by applying rules in
     /// this affix
     ///
     /// May contain duplicates
+    /// 
+    /// # Parameters
+    /// 
+    /// - `rootword`: The word to have prefixes/suffixes applied to
+    /// - `keys`: Prefix and suffix keys to apply
     pub fn create_affixed_words(&self, rootword: &str, keys: &str) -> Vec<String> {
         let mut ret = vec![rootword.to_string()];
-        // We will build applicable words here to help for the cross-fixable
-        // rules
+        // We will build our prefixed words here.
         let mut prefixed_words: Vec<String> = Vec::new();
 
-        let idents: Vec<String> = graph_vec!(keys.to_uppercase());
+        // List of what keys may apply to an affix
+        let keys_vec: Vec<String> = graph_vec!(keys.to_uppercase());
 
-        // Loop through rules where the identifiers are correct
+        // Loop through rules where the identifiers apply
         // Then apply them
         self.affix_rules
             .iter()
-            .filter(|ar| idents.contains(&ar.ident))
+            // Select rules whose identifier is in the desired keys
+            .filter(|rule| keys_vec.contains(&rule.key))
             .for_each(|rule| match rule.apply(rootword) {
                 Some(newword) => {
                     if rule.combine_pfx_sfx && rule.atype == AffixRuleType::Prefix {
@@ -191,10 +204,12 @@ impl AffixConfig {
         // Redo the same thing for rules that allow chaining
         self.affix_rules
             .iter()
-            .filter(|ar| {
-                ar.combine_pfx_sfx
-                    && idents.contains(&ar.ident)
-                    && ar.atype == AffixRuleType::Suffix
+            // Select rules whose identifier is in the desired keys, and who
+            // allow pfx+sfx combinations
+            .filter(|rule| {
+                rule.combine_pfx_sfx
+                    && keys_vec.contains(&rule.key)
+                    && rule.atype == AffixRuleType::Suffix
             })
             .for_each(|rule| {
                 for pfxword in &prefixed_words {
@@ -210,7 +225,7 @@ impl AffixConfig {
 }
 
 impl Default for AffixConfig {
-    /// Common defaults for affix configuration
+    /// Common defaults for affix configuration with a QWERTY keyboard
     fn default() -> Self {
         let mut ax = AffixConfig::new();
 

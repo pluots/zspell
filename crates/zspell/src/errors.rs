@@ -1,7 +1,9 @@
+//! Errors that may arise during processing
+
 use std::num;
 use thiserror::Error;
-// use super::spellcheck::affix_
 
+/// Errors that occur while loading an affix file
 #[derive(Error, Debug, PartialEq)]
 pub enum AffixError {
     #[error("bad number at")]
@@ -39,12 +41,9 @@ pub enum AffixError {
 
     #[error("bad encoding type specified")]
     BadEncodingType,
-    // #[error("the data for key `{0}` is not available")]
-
-    // #[error("unknown data store error")]
-    // Unknown,
 }
 
+/// Errors that occur while compiling a dictionary
 #[derive(Error, Debug)]
 pub enum CompileError {
     #[error("missing root word {rootword}")]

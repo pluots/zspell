@@ -31,7 +31,7 @@ pub fn spellcheck_list_cli_runner(dic: &Dictionary) {
     for line in stdin.lock().lines() {
         let unwrapped = line.unwrap();
 
-        for word in dic.check_return_list(unwrapped) {
+        for word in dic.check_returning_list(unwrapped) {
             println!("{}", &word)
         }
     }
