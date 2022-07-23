@@ -1,6 +1,4 @@
-//! Errors that may arise during processing
-
-use std::num;
+use std::{io, num};
 use thiserror::Error;
 
 #[derive(Error, Debug, PartialEq, Eq)]
@@ -42,12 +40,18 @@ pub enum AffixError {
     BadEncodingType,
 }
 
-/// Errors that occur while compiling a dictionary
-#[derive(Error, Debug)]
+/// Error while compiling the dictionary
+#[derive(Error, Debug, PartialEq, Eq)]
 pub enum CompileError {
     #[error("missing root word {rootword}")]
-    MissingRootWord { rootword: String }, // #[error("the data for key `{0}` is not available")]
+    MissingRootWord { rootword: String },
+}
 
-                                          // #[error("unknown data store error")]
-                                          // Unknown,
+/// Errors that occur while compiling a dictionary
+#[derive(Error, Debug)]
+pub enum UsageError {
+    // #[error(transparent)]
+    // FileError(#[from] io::Error),
+    #[error("issue with file {fname}: {orig_e}")]
+    FileError { fname: String, orig_e: io::Error },
 }

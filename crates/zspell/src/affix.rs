@@ -1,11 +1,11 @@
 //! Dictionary configuration options framework
-//! 
+//!
 //! This module contains everything related to the configuration of a
 //! [`crate::Dictionary`], which can then be used for checking words.
-//! 
+//!
 //! Usually this configuration is loaded via an affix file (typically ending in
 //! `.aff`), but it can also be created programatically if desired.
-//! 
+//!
 //! This module should be considered unstable as its usage is finalized.
 
 mod serde;
@@ -26,7 +26,7 @@ pub use types::{AffixRule, AffixRuleType, Conversion, EncodingType, TokenType};
 /// and is intended to be used throughout program lifetime. If you are
 /// uninterested in modifying an existing dictionary structure, you are likely
 /// interested in just using [`crate::Dictionary`] and its methods.
-/// 
+///
 /// # Internal working
 ///
 /// Generally within this class, a "string" is represented as a Vec<String> or
@@ -34,7 +34,7 @@ pub use types::{AffixRule, AffixRuleType, Conversion, EncodingType, TokenType};
 /// may require accurate unicode segmentation to work properly. It is not yet
 /// understood whether this is the best practice, so this may change in the
 /// future.
-/// 
+///
 /// Any type that can be modified must be owned (e.g. String, Vec), others may
 /// be borrowed.
 #[derive(Debug, PartialEq)]
@@ -96,7 +96,7 @@ pub struct AffixConfig {
     // phones: Vec<>
 
     // ## Compounding-related items
-    
+
     // break_points: Vec<>
     // compound_rules: Vec<>
     /// Minimum length of words used in a compound
@@ -172,9 +172,9 @@ impl AffixConfig {
     /// this affix
     ///
     /// May contain duplicates
-    /// 
+    ///
     /// # Parameters
-    /// 
+    ///
     /// - `rootword`: The word to have prefixes/suffixes applied to
     /// - `keys`: Prefix and suffix keys to apply
     pub fn create_affixed_words(&self, rootword: &str, keys: &str) -> Vec<String> {

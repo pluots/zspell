@@ -3,7 +3,7 @@ name = "zspell"
 version = "0.0.1"
 edition = "2018"
 authors = ["Trevor Gross <tmgross@umich.edu>"]
-description = "Pure rust library for spellchecking"
+description = "Native Rust library for spellchecking"
 
 readme = "README.md"
 license-file = "LICENSE"
@@ -27,20 +27,16 @@ name = "zspell"
 path = "src/bin/bin.rs"
 
 [dependencies]
-# isolang = "2.1.0"
-futures = "0.3"             # async tools
-lazy_static = "1.4"         # late-evaluated statics
-regex = "1"                 # rust core regex
-# Enum ser/des operations
+futures = "0.3"
+lazy_static = "1.4"
+regex = "1"
 strum = { version = "0.24", features = ["derive"] }
-strum_macros = "0.24"        # Macros for ser/de
-# Splitting on graphemes rather than chars
+strum_macros = "0.24"
 unicode-segmentation = "1.9.0"
 clap = { version = "3.2", features = ["derive"] }
 stringmetrics = "2"
 thiserror = "1.0"
 rayon = "1.5"
-# hashbrown = "0.12"
 hashbrown = { version = "0.12", features = ["rayon"] }
 home = "0.5"
 

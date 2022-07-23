@@ -1,5 +1,5 @@
 //! Word checking and correction suggestion framework
-//! 
+//!
 //! This module is generally not imported, since [`Dictionary`] can be directly
 //! imported from [`crate`].
 
@@ -14,7 +14,7 @@ use stringmetrics::tokenizers::split_whitespace_remove_punc;
 /// Main dictionary object used for spellchecking and autocorrect
 ///
 /// A dictionary contains
-/// 
+///
 /// Load hunspell dicts, as described at
 /// <http://pwet.fr/man/linux/fichiers_speciaux/hunspell/>
 pub struct Dictionary {
@@ -51,7 +51,7 @@ impl Dictionary {
         }
     }
 
-    /// Load this dictionary's affix configuration from 
+    /// Load this dictionary's affix configuration from
     pub fn load_affix_from_str(&mut self, s: &str) -> Result<(), AffixError> {
         self.compiled = false;
         self.config.load_from_str(s)
@@ -200,7 +200,10 @@ impl Dictionary {
         // Note that in the future this implementation might change
         // And one of the "exists" wordlists contains the word
         (!self.wordlist_forbidden.contains(sref))
-            && (self.wordlist.contains(sref) || self.wordlist.contains(lower))
+            && (self.wordlist.contains(sref)
+                || self.wordlist.contains(lower)
+                || self.wordlist_nosuggest.contains(sref)
+                || self.wordlist_nosuggest.contains(lower))
     }
 
     /// Create a sorted vector of all items in the word list

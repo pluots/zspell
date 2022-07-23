@@ -1,11 +1,18 @@
+use home::home_dir;
 use std::ffi::{OsStr, OsString};
+use std::fs;
 use std::os::unix::prelude::OsStrExt;
 use std::{
     env,
-    path::{Component, Path, PathBuf},
+    path::{Component, PathBuf},
 };
 
-use home::home_dir;
+use crate::errors::UsageError;
+// use crate::errors::FileError;
+use crate::Dictionary;
+
+pub const PKG_NAME: &str = env!("CARGO_PKG_NAME");
+pub const PKG_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 #[derive(Debug, PartialEq, Eq)]
 enum Plat {
@@ -80,7 +87,7 @@ fn split_os_path_string(oss: OsString) -> Vec<PathBuf> {
 
 /// Create a list of possible locations to find dictionary files.
 /// Expands home; does not expand windcards
-pub fn create_raw_paths<'a>() -> Vec<PathBuf> {
+pub fn create_raw_paths() -> Vec<PathBuf> {
     let mut raw_vec_base: Vec<PathBuf> = Vec::new();
 
     // Add all environment variable paths to our raw list
@@ -144,6 +151,48 @@ pub fn create_raw_paths<'a>() -> Vec<PathBuf> {
     }
 
     new_vec
+}
+
+// Take in a path and load the dictionary
+pub fn create_dict_from_path(basepath: &str) -> Result<Dictionary, UsageError> {
+    let mut dic = Dictionary::new();
+
+    let mut dict_file_path = basepath.to_owned();
+    let mut affix_file_path = basepath.to_owned();
+
+    dict_file_path.push_str(".dic");
+    affix_file_path.push_str(".aff");
+
+    // let aff_content = fs::read_to_string(&affix_file_path)?;
+    // let dic_content = fs::read_to_string(&dict_file_path)?;
+
+    // let e = FileError::Other(dic_content.unwrap_err().kind());
+
+    match fs::read_to_string(&affix_file_path) {
+        Ok(s) => dic.config.load_from_str(s.as_str()).unwrap(),
+        Err(e) => {
+            return Err(UsageError::FileError {
+                fname: affix_file_path,
+                orig_e: e,
+            })
+        }
+    }
+
+    match fs::read_to_string(&dict_file_path) {
+        Ok(s) => dic.load_dict_from_str(s.as_str()),
+        Err(e) => {
+            return Err(UsageError::FileError {
+                fname: dict_file_path,
+                orig_e: e,
+            })
+        }
+    }
+
+    // dic.config.load_from_str(aff_content.as_str()).unwrap();
+    // dic.load_dict_from_str(dic_content.as_str());
+    dic.compile().expect("Error in dictionary compilation");
+
+    Ok(dic)
 }
 
 // Need function to expand wildcard paths. Will need to look through the parent
