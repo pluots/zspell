@@ -3,13 +3,16 @@
 //! This module is generally not imported, since [`Dictionary`] can be directly
 //! imported from [`crate`].
 
-use crate::{
-    affix::AffixConfig,
-    errors::{AffixError, CompileError},
-};
 use core::hash::Hash;
+use std::string::ToString;
+
 use hashbrown::HashSet;
 use stringmetrics::tokenizers::split_whitespace_remove_punc;
+
+use crate::{
+    affix::Config,
+    errors::{AffixError, CompileError},
+};
 
 /// Main dictionary object used for spellchecking and autocorrect
 ///
@@ -19,29 +22,30 @@ use stringmetrics::tokenizers::split_whitespace_remove_punc;
 /// <http://pwet.fr/man/linux/fichiers_speciaux/hunspell/>
 pub struct Dictionary {
     /// This contains the dictionary's configuration
-    pub config: AffixConfig,
+    pub config: Config,
 
-    // General word list of words that are accepted and suggested. Note that it
-    // may make sense in the future to include non-suggest words here too.
+    /// General word list of words that are accepted and suggested. Note that it
+    /// may make sense in the future to include non-suggest words here too.
     wordlist: HashSet<String>,
-    // Words to accept but never suggest
+    /// Words to accept but never suggest
     wordlist_nosuggest: HashSet<String>,
-    // Words forbidden by the personal dictionary, i.e. do not accept as correct
+    /// Words forbidden by the personal dictionary, i.e. do not accept as correct
     wordlist_forbidden: HashSet<String>,
 
-    // These hold the files as loaded
-    // Will be emptied upon compile
+    /// These hold the files as loaded
+    /// Will be emptied upon compile
     raw_wordlist: Vec<String>,
     raw_wordlist_personal: Vec<String>,
-    // Indicator of whether or not this has been compiled
+    /// Indicator of whether or not this has been compiled
     compiled: bool,
 }
 
 impl Dictionary {
     /// Create a new, completely empty dictionary
-    pub fn new() -> Dictionary {
-        Dictionary {
-            config: AffixConfig::new(),
+    #[inline]
+    pub fn new() -> Self {
+        Self {
+            config: Config::new(),
             wordlist: HashSet::new(),
             wordlist_nosuggest: HashSet::new(),
             wordlist_forbidden: HashSet::new(),
@@ -52,32 +56,44 @@ impl Dictionary {
     }
 
     /// Load this dictionary's affix configuration from
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if loading is unsuccessful
+    #[inline]
     pub fn load_affix_from_str(&mut self, s: &str) -> Result<(), AffixError> {
         self.compiled = false;
         self.config.load_from_str(s)
     }
 
     /// Load this dictionary's word list from a string
+    #[inline]
     pub fn load_dict_from_str(&mut self, s: &str) {
         self.compiled = false;
 
         let mut lines = s.lines();
         // First line is just a count of the number of items
         let _first = lines.next();
-        self.raw_wordlist = lines.map(|l| l.to_string()).collect()
+        self.raw_wordlist = lines.map(ToString::to_string).collect();
     }
 
     /// Load this dictionary's personal word list from a string
+    #[inline]
     pub fn load_personal_dict_from_str(&mut self, s: &str) {
         self.compiled = false;
 
-        self.raw_wordlist_personal = s.lines().map(|l| l.to_string()).collect()
+        self.raw_wordlist_personal = s.lines().map(ToString::to_string).collect();
     }
 
     /// Match affixes, personal dict, etc
+    ///
+    /// # Errors
+    ///
+    /// Raises an error if the compilation was unsuccessful
+    #[inline]
     pub fn compile(&mut self) -> Result<(), CompileError> {
         // Work through the personal word list
-        for word in self.raw_wordlist_personal.iter() {
+        for word in &self.raw_wordlist_personal {
             // Words will be in the format "*word/otherword" where "word" is the
             // main word to add, but it will get all rules of "otherword"
             let split: Vec<&str> = word.split('/').collect();
@@ -86,7 +102,7 @@ impl Dictionary {
             match split.get(1) {
                 Some(rootword) => {
                     // Find "otherword/" in main wordlist
-                    let mut tmp = rootword.to_string();
+                    let mut tmp = (*rootword).to_owned();
                     tmp.push('/');
                     let filtval = tmp.trim_start_matches('*');
 
@@ -94,7 +110,7 @@ impl Dictionary {
                         Some(_w) => (),
                         None => {
                             return Err(CompileError::MissingRootWord {
-                                rootword: rootword.to_string(),
+                                rootword: (*rootword).to_owned(),
                             })
                         }
                     }
@@ -103,19 +119,20 @@ impl Dictionary {
             }
         }
 
-        for word in self.raw_wordlist.iter() {
+        for word in &self.raw_wordlist {
             let split: Vec<&str> = word.split('/').collect();
-            let rootword = split[0];
+            let rootword = *split.first().unwrap();
             match split.get(1) {
                 Some(rule_keys) => {
                     let wordlist = self.config.create_affixed_words(rootword, rule_keys);
-                    match rule_keys.contains(&self.config.nosuggest_flag) {
-                        true => iter_to_hashset(wordlist, &mut self.wordlist_nosuggest),
-                        false => iter_to_hashset(wordlist, &mut self.wordlist),
+                    if rule_keys.contains(&self.config.nosuggest_flag) {
+                        iter_to_hashset(wordlist, &mut self.wordlist_nosuggest);
+                    } else {
+                        iter_to_hashset(wordlist, &mut self.wordlist);
                     }
                 }
                 None => {
-                    self.wordlist.insert(rootword.to_string());
+                    self.wordlist.insert(rootword.to_owned());
                 }
             }
         }
@@ -170,6 +187,7 @@ impl Dictionary {
 
     /// Perform spellcheck on a string, return a list of misspelled words.
     /// Returns an iterator.
+    #[inline]
     pub fn check_returning_list<T: AsRef<str>>(&self, s: T) -> Vec<String> {
         // We actually just need to check
         self.break_if_not_compiled();
@@ -210,13 +228,14 @@ impl Dictionary {
     ///
     /// Note that this is relatively slow. Prefer [`Dictionary::check`] for
     /// validating a word exists.
+    #[inline]
     pub fn wordlist_items(&self) -> Vec<&str> {
         self.break_if_not_compiled();
 
         let mut items = self
             .wordlist
             .iter()
-            .map(|s| s.as_str())
+            .map(String::as_str)
             .collect::<Vec<&str>>();
         items.sort_unstable();
         items
@@ -224,15 +243,16 @@ impl Dictionary {
 
     /// Helper function to error if we haven't compiled when we needed to
     #[inline]
-    fn break_if_not_compiled(&self) {
+    const fn break_if_not_compiled(&self) {
         assert!(
             self.compiled,
             "This method requires compiling the dictionary with `dic.compile()` first."
-        )
+        );
     }
 }
 
 impl Default for Dictionary {
+    #[inline]
     fn default() -> Self {
         Self::new()
     }

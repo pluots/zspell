@@ -1,6 +1,7 @@
 use std::{io, num};
 use thiserror::Error;
 
+#[non_exhaustive]
 #[derive(Error, Debug, PartialEq, Eq)]
 pub enum AffixError {
     #[error("bad number at")]
@@ -41,6 +42,7 @@ pub enum AffixError {
 }
 
 /// Error while compiling the dictionary
+#[non_exhaustive]
 #[derive(Error, Debug, PartialEq, Eq)]
 pub enum CompileError {
     #[error("missing root word {rootword}")]
@@ -48,6 +50,7 @@ pub enum CompileError {
 }
 
 /// Errors that occur while compiling a dictionary
+#[non_exhaustive]
 #[derive(Error, Debug)]
 pub enum UsageError {
     // #[error(transparent)]
