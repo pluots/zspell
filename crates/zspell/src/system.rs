@@ -20,7 +20,7 @@ enum Plat {
     Posix,
 }
 
-/// All of these paths will be added to the relevant DIR_NAME lists
+/// All of these paths will be added to the relevant `DIR_NAME` lists
 const ENV_VAR_NAMES: [&str; 5] = [
     "DICPATH",
     "XDG_DATA_HOME",
@@ -67,13 +67,13 @@ fn get_plat() -> Plat {
 
 /// Split $PATH-like variables by the apropriate separator
 /// e.g. $PATH=/abc/def:/ghi/jkl:/mno -> [/abc/def, /ghi/jkl, /mno]
-fn split_os_path_string(oss: OsString) -> Vec<PathBuf> {
+fn split_os_path_string(oss: &OsString) -> Vec<PathBuf> {
     let mut ret = Vec::new();
 
     // Get the separator for $PATH-like values
     let path_sep: u8 = match get_plat() {
         Plat::Windows => 0x3b, // ";" on Windows
-        _ => 0x3a,             // ":" on Posix
+        Plat::Posix => 0x3a,   // ":" on Posix
     };
 
     let byte_arr = oss.as_bytes();
@@ -87,13 +87,14 @@ fn split_os_path_string(oss: OsString) -> Vec<PathBuf> {
 
 /// Create a list of possible locations to find dictionary files.
 /// Expands home; does not expand windcards
+#[inline]
 pub fn create_raw_paths() -> Vec<PathBuf> {
     let mut raw_vec_base: Vec<PathBuf> = Vec::new();
 
     // Add all environment variable paths to our raw list
     for env in ENV_VAR_NAMES {
         match env::var_os(env) {
-            Some(v) => raw_vec_base.append(&mut split_os_path_string(v)),
+            Some(v) => raw_vec_base.append(&mut split_os_path_string(&v)),
             None => (),
         }
     }
@@ -103,7 +104,7 @@ pub fn create_raw_paths() -> Vec<PathBuf> {
         Plat::Windows => WIN_DIR_NAMES
             .iter()
             .for_each(|s| raw_vec_base.push(PathBuf::from(s))),
-        _ => POSIX_DIR_NAMES
+        Plat::Posix => POSIX_DIR_NAMES
             .iter()
             .for_each(|s| raw_vec_base.push(PathBuf::from(s))),
     };
@@ -137,9 +138,9 @@ pub fn create_raw_paths() -> Vec<PathBuf> {
             match comp {
                 Component::Normal(value) => {
                     if home_path.is_none() || !home_options.contains(&value) {
-                        working_new.push(Component::Normal(value))
+                        working_new.push(Component::Normal(value));
                     } else {
-                        working_new.push(home_path.clone().unwrap())
+                        working_new.push(home_path.clone().unwrap());
                     }
                 }
                 // Anything that's not HOME, just add it
@@ -153,7 +154,12 @@ pub fn create_raw_paths() -> Vec<PathBuf> {
     new_vec
 }
 
-// Take in a path and load the dictionary
+/// Take in a path and load the dictionary
+///
+/// # Errors
+///
+/// Error when can't find dictionary
+#[inline]
 pub fn create_dict_from_path(basepath: &str) -> Result<Dictionary, UsageError> {
     let mut dic = Dictionary::new();
 
@@ -213,14 +219,14 @@ mod tests {
                 PathBuf::from("/ccc"),
                 PathBuf::from("/ddd"),
             ];
-            assert_eq!(split_os_path_string(s_ix), v_split);
+            assert_eq!(split_os_path_string(&s_ix), v_split);
         } else {
             let v_split = vec![
                 PathBuf::from(r"c:\aaa\bbb"),
                 PathBuf::from(r"d:\ccc"),
                 PathBuf::from(r"e:\ddd"),
             ];
-            assert_eq!(split_os_path_string(s_win), v_split);
+            assert_eq!(split_os_path_string(&s_win), v_split);
         }
     }
 

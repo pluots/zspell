@@ -67,6 +67,7 @@ pub fn spellcheck_cli(cli: &Cli) -> ExitCode {
                 UsageError::FileError { fname, orig_e } => {
                     eprintln!("Error opening \"{}\"; {}", fname, orig_e)
                 }
+                _ => todo!(),
             };
             return ExitCode::FAILURE;
         }

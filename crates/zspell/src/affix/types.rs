@@ -1,17 +1,18 @@
 // use super::affix::Affix;
 // use super::affix_serde::{ENCODING_CLASS_LIST, TOKEN_CLASS_LIST};
 
-use crate::errors::AffixError;
+use std::string::ToString;
 
-// use std::string::ToString;
-// use strum::{EnumProperty, EnumString, VariantNames};
-use crate::affix::{t_data_unwrap, AffixProcessedToken, ProcessedTokenData};
-use crate::unwrap_or_ret_e;
 use regex::Regex;
 use strum::EnumString;
-// use strum_macros;
+
+use crate::affix::{t_data_unwrap, ProcessedToken, ProcessedTokenData};
+use crate::errors::AffixError;
+use crate::unwrap_or_ret_e;
+
 /// All possible types found in hunspell affix files
 /// This represents a generic token type that will have associated
+#[non_exhaustive]
 #[derive(
     Debug,
     Eq,
@@ -200,6 +201,7 @@ pub enum TokenType {
     FileStart,
 }
 
+#[non_exhaustive]
 #[derive(
     Debug, Eq, PartialEq, EnumString, strum_macros::Display, strum_macros::EnumVariantNames,
 )]
@@ -236,10 +238,14 @@ pub struct Conversion {
 }
 
 impl Conversion {
+    /// Perform conversion
+    ///
+    /// # Errors
+    #[inline]
     pub fn from_processed_token(
-        pt: AffixProcessedToken,
+        pt: ProcessedToken,
         bidirectional: bool,
-    ) -> Result<Vec<Conversion>, AffixError> {
+    ) -> Result<Vec<Self>, AffixError> {
         let tab = t_data_unwrap!(pt, Table);
         let mut iter = tab.iter();
 
@@ -248,31 +254,31 @@ impl Conversion {
         let mut ret = Vec::new();
 
         for row in iter {
-            ret.push(Conversion {
+            ret.push(Self {
                 input: match row.first() {
-                    Some(v) => v.to_string(),
+                    Some(v) => (*v).to_owned(),
                     None => return Err(AffixError::NoConversionInput),
                 },
                 output: match row.get(1) {
-                    Some(v) => v.to_string(),
+                    Some(v) => (*v).to_owned(),
                     None => return Err(AffixError::NoConversionOutput),
                 },
                 bidirectional,
-            })
+            });
         }
         Ok(ret)
     }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
-pub enum AffixRuleType {
+pub enum RuleType {
     Prefix,
     Suffix,
 }
 
 #[derive(Debug)]
 pub struct AffixRuleDef {
-    atype: AffixRuleType,
+    atype: RuleType,
     stripping_chars: Option<String>,
     affix: String,
     /// Regex-based rule for when this rule is true
@@ -298,13 +304,13 @@ impl PartialEq for AffixRuleDef {
 impl AffixRuleDef {
     /// Create from the information we would expect to have in a table
     pub fn from_table_creation(
-        atype: AffixRuleType,
+        atype: RuleType,
         strip_text: &str,
         affix_text: &str,
         condition_text: &str,
         morph_info: Vec<String>,
-    ) -> AffixRuleDef {
-        let mut ruledef = AffixRuleDef {
+    ) -> Self {
+        let mut ruledef = Self {
             atype,
             stripping_chars: match strip_text {
                 "" => None,
@@ -338,11 +344,11 @@ impl AffixRuleDef {
 
         // Build the rest of the pattern
         match self.atype {
-            AffixRuleType::Prefix => {
+            RuleType::Prefix => {
                 re_pattern.push_str(self.condition.clone().as_str());
                 re_pattern.push_str(".*");
             }
-            AffixRuleType::Suffix => {
+            RuleType::Suffix => {
                 re_pattern.push_str(".*");
                 re_pattern.push_str(self.condition.clone().as_str());
             }
@@ -371,7 +377,7 @@ impl AffixRuleDef {
         let mut working = s;
 
         match self.atype {
-            AffixRuleType::Prefix => {
+            RuleType::Prefix => {
                 // If stripping chars exist, strip them from the prefix
                 // If not or if no prefix to strip, working is unchanged
                 working = match &self.stripping_chars {
@@ -382,11 +388,11 @@ impl AffixRuleDef {
                     None => working,
                 };
 
-                let mut s = self.affix.clone();
-                s.push_str(working);
-                Some(s)
+                let mut w_s = self.affix.clone();
+                w_s.push_str(working);
+                Some(w_s)
             }
-            AffixRuleType::Suffix => {
+            RuleType::Suffix => {
                 // Same logic as above
                 working = match &self.stripping_chars {
                     Some(sc) => match working.strip_suffix(sc) {
@@ -395,9 +401,9 @@ impl AffixRuleDef {
                     },
                     None => working,
                 };
-                let mut s = working.to_owned();
-                s.push_str(&self.affix);
-                Some(s)
+                let mut w_s = working.to_owned();
+                w_s.push_str(&self.affix);
+                Some(w_s)
             }
         }
     }
@@ -409,21 +415,26 @@ impl AffixRuleDef {
 /// base word. It contains multiple possible rule definitions that describe how
 /// to apply the rule.
 #[derive(Debug, PartialEq)]
-pub struct AffixRule {
+pub struct Rule {
     /// Character identifier for this specific affix, usually any uppercase
     /// letter
     pub key: String,
     /// Prefix or suffix
-    pub atype: AffixRuleType,
+    pub atype: RuleType,
     /// Whether or not this can be combined with the opposite affix
     pub combine_pfx_sfx: bool,
     /// Actual rules for replacing
     rules: Vec<AffixRuleDef>,
 }
 
-impl AffixRule {
+impl Rule {
     /// Load the affix rule from a processed token
-    pub fn from_processed_token(pt: AffixProcessedToken) -> Result<AffixRule, AffixError> {
+    ///
+    /// # Errors
+    ///
+    /// Error if unable to load token in
+    #[inline]
+    pub fn from_processed_token(pt: ProcessedToken) -> Result<Self, AffixError> {
         let tab = t_data_unwrap!(pt, Table);
         let mut iter = tab.iter();
 
@@ -433,8 +444,8 @@ impl AffixRule {
         let mut ruledefs = Vec::new();
 
         let atype = match pt.ttype {
-            TokenType::Prefix => AffixRuleType::Prefix,
-            TokenType::Suffix => AffixRuleType::Suffix,
+            TokenType::Prefix => RuleType::Prefix,
+            TokenType::Suffix => RuleType::Suffix,
             _ => return Err(AffixError::BadTokenType),
         };
 
@@ -449,14 +460,19 @@ impl AffixRule {
                 strip_text,
                 affix_text,
                 condition,
-                rule.as_slice()[4..].iter().map(|s| s.to_string()).collect(),
-            ))
+                rule.as_slice()
+                    .get(4..)
+                    .expect("Error processing token")
+                    .iter()
+                    .map(ToString::to_string)
+                    .collect(),
+            ));
         }
 
         // Populate with information from the first line
-        Ok(AffixRule {
+        Ok(Self {
             atype,
-            key: unwrap_or_ret_e!(start.first(), AffixError::MissingIdentifier).to_string(),
+            key: (*unwrap_or_ret_e!(start.first(), AffixError::MissingIdentifier)).to_owned(),
             combine_pfx_sfx: match *unwrap_or_ret_e!(start.get(1), AffixError::BadCrossProduct) {
                 "Y" => true,
                 "N" => false,
@@ -470,6 +486,7 @@ impl AffixRule {
     ///
     /// Does not pay attention to prf/sfx combinations, that must be done
     /// earlier.
+    #[inline]
     pub fn apply(&self, rootword: &str) -> Option<String> {
         for rule in &self.rules {
             match rule.apply_pattern(rootword) {
@@ -533,7 +550,7 @@ mod tests {
     #[test]
     fn test_rule_def_condition() {
         let mut ard = AffixRuleDef {
-            atype: AffixRuleType::Suffix,
+            atype: RuleType::Suffix,
             stripping_chars: None,
             affix: "".into(),
             condition: "[^aeiou]y".into(),
@@ -550,7 +567,7 @@ mod tests {
 
         // Test with prefix
         ard.condition = "y[^aeiou]".into();
-        ard.atype = AffixRuleType::Prefix;
+        ard.atype = RuleType::Prefix;
         ard.compile_re();
         assert_eq!(ard.check_condition("yxxx"), true);
         assert_eq!(ard.check_condition("yaxxx"), false);
@@ -558,7 +575,7 @@ mod tests {
 
         // Test other real rules
         ard.condition = "[sxzh]".into();
-        ard.atype = AffixRuleType::Suffix;
+        ard.atype = RuleType::Suffix;
         ard.compile_re();
         assert_eq!(ard.check_condition("access"), true);
         assert_eq!(ard.check_condition("abyss"), true);
@@ -575,7 +592,7 @@ mod tests {
     #[test]
     fn test_rule_apply() {
         let mut ard = AffixRuleDef {
-            atype: AffixRuleType::Suffix,
+            atype: RuleType::Suffix,
             stripping_chars: Some("y".into()),
             affix: "zzz".into(),
             condition: "[^aeiou]y".into(),
@@ -587,12 +604,12 @@ mod tests {
 
         assert_eq!(ard.apply_pattern("xxxy"), Some("xxxzzz".to_string()));
 
-        ard.atype = AffixRuleType::Prefix;
+        ard.atype = RuleType::Prefix;
         ard.condition = "y[^aeiou]".into();
         ard.compile_re();
         assert_eq!(ard.apply_pattern("yxxx"), Some("zzzxxx".to_string()));
 
-        ard.atype = AffixRuleType::Suffix;
+        ard.atype = RuleType::Suffix;
         ard.condition = ".".into();
         ard.compile_re();
         assert_eq!(ard.apply_pattern("xxx"), Some("xxxzzz".to_string()));
@@ -600,27 +617,27 @@ mod tests {
 
     #[test]
     fn test_affix_rule_apply_words() {
-        let ar = AffixRule {
-            atype: AffixRuleType::Suffix,
+        let ar = Rule {
+            atype: RuleType::Suffix,
             key: "A".into(),
             combine_pfx_sfx: true,
             rules: vec![
                 AffixRuleDef::from_table_creation(
-                    AffixRuleType::Suffix,
+                    RuleType::Suffix,
                     "y",
                     "iness",
                     "[^aeiou]y",
                     Vec::new(),
                 ),
                 AffixRuleDef::from_table_creation(
-                    AffixRuleType::Suffix,
+                    RuleType::Suffix,
                     "0",
                     "ness",
                     "[aeiou]y",
                     Vec::new(),
                 ),
                 AffixRuleDef::from_table_creation(
-                    AffixRuleType::Suffix,
+                    RuleType::Suffix,
                     "0",
                     "ness",
                     "[^y]",

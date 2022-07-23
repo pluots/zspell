@@ -17,8 +17,8 @@ use crate::errors::AffixError;
 use crate::graph_vec;
 
 use serde::t_data_unwrap;
-pub use serde::{load_affix_from_str, AffixProcessedToken, ProcessedTokenData};
-pub use types::{AffixRule, AffixRuleType, Conversion, EncodingType, TokenType};
+pub use serde::{load_affix_from_str, ProcessedToken, ProcessedTokenData};
+pub use types::{Conversion, EncodingType, Rule, RuleType, TokenType};
 
 /// Dictionary configuration object that holds affix file data
 ///
@@ -37,8 +37,9 @@ pub use types::{AffixRule, AffixRuleType, Conversion, EncodingType, TokenType};
 ///
 /// Any type that can be modified must be owned (e.g. String, Vec), others may
 /// be borrowed.
+#[non_exhaustive]
 #[derive(Debug, PartialEq)]
-pub struct AffixConfig {
+pub struct Config {
     /// Charset to use, reference to an [`EncodingType`] Currently this is
     /// unused; only UTF-8 is supported. However, the affix file must still have
     /// an accurate definition.
@@ -124,16 +125,17 @@ pub struct AffixConfig {
     pub output_conversions: Vec<Conversion>,
 
     // Rules for setting prefixes and suffixes
-    pub affix_rules: Vec<AffixRule>,
+    pub affix_rules: Vec<Rule>,
 
     // Rules for suggestion replacements to try
     pub replacements: Vec<Conversion>,
 }
 
-impl AffixConfig {
+impl Config {
     /// Create an empty affix object
-    pub fn new() -> AffixConfig {
-        AffixConfig {
+    #[inline]
+    pub const fn new() -> Self {
+        Self {
             encoding: EncodingType::Utf8,
             complex_prefixes: false,
             lang: String::new(),
@@ -164,6 +166,11 @@ impl AffixConfig {
     }
 
     /// Load this affix from a string, e.g. one read from an affix file
+    ///
+    /// # Errors
+    ///
+    /// Error if loading is unsuccessful
+    #[inline]
     pub fn load_from_str(&mut self, s: &str) -> Result<(), AffixError> {
         load_affix_from_str(self, s)
     }
@@ -177,8 +184,9 @@ impl AffixConfig {
     ///
     /// - `rootword`: The word to have prefixes/suffixes applied to
     /// - `keys`: Prefix and suffix keys to apply
+    #[inline]
     pub fn create_affixed_words(&self, rootword: &str, keys: &str) -> Vec<String> {
-        let mut ret = vec![rootword.to_string()];
+        let mut ret = vec![rootword.to_owned()];
         // We will build our prefixed words here.
         let mut prefixed_words: Vec<String> = Vec::new();
 
@@ -193,8 +201,8 @@ impl AffixConfig {
             .filter(|rule| keys_vec.contains(&rule.key))
             .for_each(|rule| match rule.apply(rootword) {
                 Some(newword) => {
-                    if rule.combine_pfx_sfx && rule.atype == AffixRuleType::Prefix {
-                        prefixed_words.push(newword.clone())
+                    if rule.combine_pfx_sfx && rule.atype == RuleType::Prefix {
+                        prefixed_words.push(newword.clone());
                     }
                     ret.push(newword);
                 }
@@ -209,7 +217,7 @@ impl AffixConfig {
             .filter(|rule| {
                 rule.combine_pfx_sfx
                     && keys_vec.contains(&rule.key)
-                    && rule.atype == AffixRuleType::Suffix
+                    && rule.atype == RuleType::Suffix
             })
             .for_each(|rule| {
                 for pfxword in &prefixed_words {
@@ -224,10 +232,11 @@ impl AffixConfig {
     }
 }
 
-impl Default for AffixConfig {
+impl Default for Config {
     /// Common defaults for affix configuration with a QWERTY keyboard
+    #[inline]
     fn default() -> Self {
-        let mut ax = AffixConfig::new();
+        let mut ax = Self::new();
 
         ax.keys = vec![
             graph_vec!("qwertyuiop"),

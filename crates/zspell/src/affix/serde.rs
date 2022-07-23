@@ -8,13 +8,13 @@ use std::convert::TryFrom;
 use strum::{EnumProperty, VariantNames};
 use unicode_segmentation::UnicodeSegmentation;
 
-use crate::affix::AffixConfig;
-use crate::affix::{AffixRule, Conversion, EncodingType, TokenType};
+use crate::affix::Config;
+use crate::affix::{Conversion, EncodingType, Rule, TokenType};
 use crate::errors::AffixError;
 use crate::graph_vec;
 use crate::unwrap_or_ret_e;
 
-/// Unwrap a TokenData type
+/// Unwrap a [`TokenData`] type
 macro_rules! t_data_unwrap {
     ( $token:ident, $field:ident ) => {
         match $token.data {
@@ -43,7 +43,7 @@ macro_rules! parentify {
     };
     ( $parent:ident.$field:ident, $token:ident, str_replace ) => {
         match $token.data {
-            ProcessedTokenData::String(s) => $parent.$field = s.to_string(),
+            ProcessedTokenData::String(s) => $parent.$field = s.to_owned(),
             _ => return Err(AffixError::BadTokenType),
         }
     };
@@ -67,7 +67,12 @@ macro_rules! parentify {
 /// Populate an Affix class from the string version of a file. This is the main
 /// function exported from this module. `ax` is the [`AffixConfig`] object to
 /// load, `s` is the file raw string to load in
-pub fn load_affix_from_str(ax: &mut AffixConfig, s: &str) -> Result<(), AffixError> {
+///
+/// # Errors
+///
+/// Returns an [`AffixError`] if there is any problem loading the file
+#[inline]
+pub fn load_affix_from_str(ax: &mut Config, s: &str) -> Result<(), AffixError> {
     // This will give us a list of tokens with no processing applied
     let raw_stripped = strip_comments(s);
     let raw_str = raw_stripped.as_str();
@@ -153,7 +158,7 @@ pub enum ProcessedTokenData<'a> {
 }
 
 #[derive(Debug, PartialEq, Eq)]
-pub struct AffixProcessedToken<'a> {
+pub struct ProcessedToken<'a> {
     pub ttype: TokenType,
     pub data: ProcessedTokenData<'a>,
 }
@@ -201,9 +206,7 @@ fn get_table_item_count(token: &AffixRawToken) -> Result<u16, AffixError> {
 }
 
 /// Loop through a vector of raw tokens and create the processed version
-fn create_processed_tokens(
-    tokens: Vec<AffixRawToken>,
-) -> Result<Vec<AffixProcessedToken>, AffixError> {
+fn create_processed_tokens(tokens: Vec<AffixRawToken>) -> Result<Vec<ProcessedToken>, AffixError> {
     // Vector to hold what we will return
     let mut retvec = Vec::new();
     // If we need to accumulate values for a table, use these items
@@ -238,7 +241,7 @@ fn create_processed_tokens(
 
             // If we are here, that means we are on our last token.
             // Finalie it to the return vec
-            retvec.push(AffixProcessedToken {
+            retvec.push(ProcessedToken {
                 ttype: token.ttype,
                 data: ProcessedTokenData::Table(table_accum_vec),
             });
@@ -254,36 +257,33 @@ fn create_processed_tokens(
                 if token.content.len() != 1 {
                     return Err(AffixError::Syntax(token.ttype.to_string()));
                 };
-                retvec.push(AffixProcessedToken {
+                retvec.push(ProcessedToken {
                     ttype: token.ttype,
                     data: ProcessedTokenData::String(token.content[0]),
-                })
+                });
             }
             "bool" => {
                 if !token.content.is_empty() {
                     return Err(AffixError::Syntax(token.ttype.to_string()));
                 };
-                retvec.push(AffixProcessedToken {
+                retvec.push(ProcessedToken {
                     ttype: token.ttype,
                     data: ProcessedTokenData::Bool(true),
-                })
+                });
             }
             "int" => {
                 if token.content.len() != 1 {
                     return Err(AffixError::Syntax(token.ttype.to_string()));
                 };
-                let val = token.content[0].parse()?;
-                retvec.push(AffixProcessedToken {
+                let val = token
+                    .content
+                    .first()
+                    .expect("Issue getting token content")
+                    .parse()?;
+                retvec.push(ProcessedToken {
                     ttype: token.ttype,
                     data: ProcessedTokenData::Int(val),
-                })
-                // match val {
-                //     Ok(v) => retvec.push(AffixProcessedToken {
-                //         ttype: token.ttype,
-                //         data: ProcessedTokenData::Int(v),
-                //     }),
-                //     // Err(_) => return Err(format!("Bad integer value at {}", token.ttype)),
-                // }
+                });
             }
             // For table - figure out item count, push this token,
             "table" => {
@@ -302,7 +302,7 @@ fn create_processed_tokens(
 }
 
 // Actually go through and set the parent here
-fn set_parent(ax: &mut AffixConfig, tokens: Vec<AffixProcessedToken>) -> Result<(), AffixError> {
+fn set_parent(ax: &mut Config, tokens: Vec<ProcessedToken>) -> Result<(), AffixError> {
     for token in tokens {
         match token.ttype {
             TokenType::Encoding => match EncodingType::try_from(t_data_unwrap!(token, String)) {
@@ -325,8 +325,9 @@ fn set_parent(ax: &mut AffixConfig, tokens: Vec<AffixProcessedToken>) -> Result<
             // TokenType::NoSpaceSubs => todo!(),
             // TokenType::KeepTerminationDots => todo!(),
             TokenType::Replacement => {
-                ax.replacements = Conversion::from_processed_token(token, false)?
+                ax.replacements = Conversion::from_processed_token(token, false)?;
             }
+
             // TokenType::Mapping => todo!(),
             // TokenType::Phonetic => todo!(),
             // TokenType::WarnRareFlag => todo!(),
@@ -353,18 +354,20 @@ fn set_parent(ax: &mut AffixConfig, tokens: Vec<AffixProcessedToken>) -> Result<
             // TokenType::CompoundForceUpper => todo!(),
             // TokenType::CompoundForceSyllable => todo!(),
             // TokenType::CompoundSyllableNumber => todo!(),
-            TokenType::Prefix => ax.affix_rules.push(AffixRule::from_processed_token(token)?),
-            TokenType::Suffix => ax.affix_rules.push(AffixRule::from_processed_token(token)?),
+            TokenType::Prefix => ax.affix_rules.push(Rule::from_processed_token(token)?),
+            TokenType::Suffix => ax.affix_rules.push(Rule::from_processed_token(token)?),
             // TokenType::AffixCircumfixFlag => todo!(),
             // TokenType::AffixForbiddenWordFlag => todo!(),
             // TokenType::AffixFullStrip => todo!(),
             // TokenType::AffixKeepCase => todo!(),
             TokenType::AffixInputConversion => {
-                ax.input_conversions = Conversion::from_processed_token(token, false)?
+                ax.input_conversions = Conversion::from_processed_token(token, false)?;
             }
+
             TokenType::AffixOutputConversion => {
-                ax.output_conversions = Conversion::from_processed_token(token, false)?
+                ax.output_conversions = Conversion::from_processed_token(token, false)?;
             }
+
             // TokenType::AffixLemmaPresentDeprecated => todo!(),
             // TokenType::AffixNeededFlag => todo!(),
             // TokenType::AffixPseudoRootFlagDeprecated => todo!(),
@@ -441,7 +444,7 @@ mod tests {
             ttype: TokenType::NoSpaceSubs,
             content: vec![],
         };
-        let res0 = Ok(vec![AffixProcessedToken {
+        let res0 = Ok(vec![ProcessedToken {
             ttype: TokenType::NoSpaceSubs,
             data: ProcessedTokenData::Bool(true),
         }]);
@@ -452,7 +455,7 @@ mod tests {
             ttype: TokenType::Language,
             content: vec!["mylanguage"],
         };
-        let res1 = Ok(vec![AffixProcessedToken {
+        let res1 = Ok(vec![ProcessedToken {
             ttype: TokenType::Language,
             data: ProcessedTokenData::String("mylanguage"),
         }]);
@@ -471,7 +474,7 @@ mod tests {
             ttype: TokenType::Prefix,
             content: vec!["V", "0"],
         };
-        let res1 = Ok(vec![AffixProcessedToken {
+        let res1 = Ok(vec![ProcessedToken {
             ttype: TokenType::Prefix,
             data: ProcessedTokenData::Table(vec![
                 vec!["V", "N", "2"],
