@@ -22,8 +22,11 @@ jobs:
           command: check
 
   test:
-    name: "cargo-test: Test Suite"
-    runs-on: ubuntu-latest
+    strategy:
+        matrix:
+          os: [ubuntu-latest, windows-latest, macos-latest]
+    name: "cargo-test: Test Suite ${{ matrix.os }}"
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
@@ -66,20 +69,6 @@ jobs:
         with:
           command: clippy
           args: -- -D warnings
-
-  cargo_build:
-    name: "cargo-build: Validate build"
-    runs-on: ubuntu-latest
-    needs: [ check ]
-    steps:
-      - uses: actions/checkout@v2
-      - uses: actions-rs/toolchain@v1
-        with:
-          toolchain: stable
-      - uses: actions-rs/cargo@v1
-        with:
-          command: build
-          args: --release --all-features
 
   doc:
     name: "docs: Verify docs"

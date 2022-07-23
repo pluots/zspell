@@ -20,6 +20,32 @@ enum Plat {
     Posix,
 }
 
+macro_rules! cfg_block {
+    ($m:meta, $($item:item)*) => {
+        $(
+            $meta
+            $item
+        )*
+    }
+}
+
+// Unix config
+#[cfg(not(target_family = "windows"))]
+const PLAT: Plat = Plat::Posix;
+
+#[cfg(not(target_family = "windows"))]
+const ENV_PATH_SEP: u8 = 0x3a; // ":" on Posix
+
+// Windows config
+#[cfg(target_family = "windows")]
+const PLAT: Plat = Plat::Posix;
+
+#[cfg(target_family = "windows")]
+const ENV_PATH_SEP: u8 = 0x3b; // ";" on Windows
+
+#[cfg(target_family = "windows")]
+const WIN_DIR_NAMES: [&str; 2] = ["~", r"C:\Program files\OpenOffice.org*\share\dict\ooo"];
+
 /// All of these paths will be added to the relevant `DIR_NAME` lists
 const ENV_VAR_NAMES: [&str; 5] = [
     "DICPATH",
@@ -39,7 +65,6 @@ const CHILD_DIR_NAMES: [&str; 8] = [
     "dicts",
 ];
 
-const WIN_DIR_NAMES: [&str; 2] = ["~", r"C:\Program files\OpenOffice.org*\share\dict\ooo"];
 const POSIX_DIR_NAMES: [&str; 15] = [
     "~",
     "~/.local/share",
@@ -57,13 +82,6 @@ const POSIX_DIR_NAMES: [&str; 15] = [
     "/opt/openoffice.org*/share/dict/ooo",
     "/usr/lib/openoffice.org*/share/dict/ooo",
 ];
-
-fn get_plat() -> Plat {
-    match env::consts::OS {
-        "windows" => Plat::Windows,
-        _ => Plat::Posix,
-    }
-}
 
 /// Split $PATH-like variables by the apropriate separator
 /// e.g. $PATH=/abc/def:/ghi/jkl:/mno -> [/abc/def, /ghi/jkl, /mno]
