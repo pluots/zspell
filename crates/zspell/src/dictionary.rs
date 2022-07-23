@@ -1,6 +1,7 @@
-//! A dictionary contains methods and a list of Entries
-//! Load hunspell dicts, as described at
-//! <http://pwet.fr/man/linux/fichiers_speciaux/hunspell/>
+//! Word checking and correction suggestion framework
+//! 
+//! This module is generally not imported, since [`Dictionary`] can be directly
+//! imported from [`crate`].
 
 use crate::{
     affix::AffixConfig,
@@ -13,6 +14,9 @@ use stringmetrics::tokenizers::split_whitespace_remove_punc;
 /// Main dictionary object used for spellchecking and autocorrect
 ///
 /// A dictionary contains
+/// 
+/// Load hunspell dicts, as described at
+/// <http://pwet.fr/man/linux/fichiers_speciaux/hunspell/>
 pub struct Dictionary {
     /// This contains the dictionary's configuration
     pub config: AffixConfig,
@@ -34,6 +38,7 @@ pub struct Dictionary {
 }
 
 impl Dictionary {
+    /// Create a new, completely empty dictionary
     pub fn new() -> Dictionary {
         Dictionary {
             config: AffixConfig::new(),
@@ -46,12 +51,13 @@ impl Dictionary {
         }
     }
 
-    /// Can also be done with strings
+    /// Load this dictionary's affix configuration from 
     pub fn load_affix_from_str(&mut self, s: &str) -> Result<(), AffixError> {
         self.compiled = false;
         self.config.load_from_str(s)
     }
 
+    /// Load this dictionary's word list from a string
     pub fn load_dict_from_str(&mut self, s: &str) {
         self.compiled = false;
 
@@ -61,6 +67,7 @@ impl Dictionary {
         self.raw_wordlist = lines.map(|l| l.to_string()).collect()
     }
 
+    /// Load this dictionary's personal word list from a string
     pub fn load_personal_dict_from_str(&mut self, s: &str) {
         self.compiled = false;
 
@@ -163,7 +170,7 @@ impl Dictionary {
 
     /// Perform spellcheck on a string, return a list of misspelled words.
     /// Returns an iterator.
-    pub fn check_return_list<T: AsRef<str>>(&self, s: T) -> Vec<String> {
+    pub fn check_returning_list<T: AsRef<str>>(&self, s: T) -> Vec<String> {
         // We actually just need to check
         self.break_if_not_compiled();
 

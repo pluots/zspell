@@ -403,15 +403,16 @@ impl AffixRuleDef {
     }
 }
 
-/// A prefix or suffix rule
+/// A simple prefix or suffix rule
 ///
 /// This struct represents a prefix or suffix option that may be applied to any
 /// base word. It contains multiple possible rule definitions that describe how
 /// to apply the rule.
 #[derive(Debug, PartialEq)]
 pub struct AffixRule {
-    /// Character identifier for this specific affix
-    pub ident: String,
+    /// Character identifier for this specific affix, usually any uppercase
+    /// letter
+    pub key: String,
     /// Prefix or suffix
     pub atype: AffixRuleType,
     /// Whether or not this can be combined with the opposite affix
@@ -455,7 +456,7 @@ impl AffixRule {
         // Populate with information from the first line
         Ok(AffixRule {
             atype,
-            ident: unwrap_or_ret_e!(start.first(), AffixError::MissingIdentifier).to_string(),
+            key: unwrap_or_ret_e!(start.first(), AffixError::MissingIdentifier).to_string(),
             combine_pfx_sfx: match *unwrap_or_ret_e!(start.get(1), AffixError::BadCrossProduct) {
                 "Y" => true,
                 "N" => false,
@@ -601,7 +602,7 @@ mod tests {
     fn test_affix_rule_apply_words() {
         let ar = AffixRule {
             atype: AffixRuleType::Suffix,
-            ident: "A".into(),
+            key: "A".into(),
             combine_pfx_sfx: true,
             rules: vec![
                 AffixRuleDef::from_table_creation(
