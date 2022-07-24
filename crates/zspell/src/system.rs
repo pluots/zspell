@@ -1,3 +1,4 @@
+use cfg_if::cfg_if;
 use home::home_dir;
 use std::ffi::{OsStr, OsString};
 use std::fs;
@@ -14,37 +15,51 @@ use crate::Dictionary;
 pub const PKG_NAME: &str = env!("CARGO_PKG_NAME");
 pub const PKG_VERSION: &str = env!("CARGO_PKG_VERSION");
 
+#[allow(dead_code)]
 #[derive(Debug, PartialEq, Eq)]
 enum Plat {
     Windows,
     Posix,
 }
 
-macro_rules! cfg_block {
-    ($m:meta, $($item:item)*) => {
-        $(
-            $meta
-            $item
-        )*
+cfg_if! {
+    if #[cfg(windows)] {
+        // windows config
+        #[allow(dead_code)]
+        const PLAT: Plat = Plat::Windows;
+        // The separator for $PATH-like values; ";" on windows
+        const ENV_PATH_SEP: u8 = 0x3b;
+        const BASE_DIR_NAMES: [&str; 2] = [
+            "~",
+            r"C:\Program files\OpenOffice.org*\share\dict\ooo"
+        ];
+
+    } else {
+        // unix or WASM
+        #[allow(dead_code)]
+        const PLAT: Plat = Plat::Posix;
+        // The separator for $PATH-like values; ":" on posix
+        const ENV_PATH_SEP: u8 = 0x3a;
+
+        const BASE_DIR_NAMES: [&str; 15] = [
+            "~",
+            "~/.local/share",
+            "/usr/share",
+            "/usr/local/share",
+            "/usr/share/myspell/dicts",
+            "/Library/Spelling",
+            "~/Library/Spelling",
+            "/Library/Application Support",
+            "~/Library/Application Support",
+            "~/.openoffice.org/*/user/wordbook",
+            "~/.openoffice.org*/user/wordbook",
+            "/opt/openoffice.org/basis*/share/dict/ooo",
+            "/usr/lib/openoffice.org/basis*/share/dict/ooo",
+            "/opt/openoffice.org*/share/dict/ooo",
+            "/usr/lib/openoffice.org*/share/dict/ooo",
+        ];
     }
 }
-
-// Unix config
-#[cfg(not(target_family = "windows"))]
-const PLAT: Plat = Plat::Posix;
-
-#[cfg(not(target_family = "windows"))]
-const ENV_PATH_SEP: u8 = 0x3a; // ":" on Posix
-
-// Windows config
-#[cfg(target_family = "windows")]
-const PLAT: Plat = Plat::Posix;
-
-#[cfg(target_family = "windows")]
-const ENV_PATH_SEP: u8 = 0x3b; // ";" on Windows
-
-#[cfg(target_family = "windows")]
-const WIN_DIR_NAMES: [&str; 2] = ["~", r"C:\Program files\OpenOffice.org*\share\dict\ooo"];
 
 /// All of these paths will be added to the relevant `DIR_NAME` lists
 const ENV_VAR_NAMES: [&str; 5] = [
@@ -65,79 +80,49 @@ const CHILD_DIR_NAMES: [&str; 8] = [
     "dicts",
 ];
 
-const POSIX_DIR_NAMES: [&str; 15] = [
-    "~",
-    "~/.local/share",
-    "/usr/share",
-    "/usr/local/share",
-    "/usr/share/myspell/dicts",
-    "/Library/Spelling",
-    "~/Library/Spelling",
-    "/Library/Application Support",
-    "~/Library/Application Support",
-    "~/.openoffice.org/*/user/wordbook",
-    "~/.openoffice.org*/user/wordbook",
-    "/opt/openoffice.org/basis*/share/dict/ooo",
-    "/usr/lib/openoffice.org/basis*/share/dict/ooo",
-    "/opt/openoffice.org*/share/dict/ooo",
-    "/usr/lib/openoffice.org*/share/dict/ooo",
-];
-
-/// Split $PATH-like variables by the apropriate separator
-/// e.g. $PATH=/abc/def:/ghi/jkl:/mno -> [/abc/def, /ghi/jkl, /mno]
+/// Split $PATH-like variables by the apropriate separator, e.g.
+/// $PATH=/abc/def:/ghi/jkl:/mno -> [/abc/def, /ghi/jkl, /mno]
+///
+/// oss is an `OsString` (bytestring)
 fn split_os_path_string(oss: &OsString) -> Vec<PathBuf> {
-    let mut ret = Vec::new();
-
-    // Get the separator for $PATH-like values
-    let path_sep: u8 = match get_plat() {
-        Plat::Windows => 0x3b, // ";" on Windows
-        Plat::Posix => 0x3a,   // ":" on Posix
-    };
-
-    let byte_arr = oss.as_bytes();
-
-    byte_arr
-        .split(|x| *x == path_sep)
-        .for_each(|x| ret.push(PathBuf::from(OsStr::from_bytes(x))));
-
-    ret
+    oss.as_bytes()
+        // Split by the path separator
+        .split(|x| *x == ENV_PATH_SEP)
+        // Re-load the bytes into an osstring
+        .map(OsStr::from_bytes)
+        // Create the pathbuf that we want
+        .map(PathBuf::from)
+        // And create the vec
+        .collect()
 }
 
-/// Create a list of possible locations to find dictionary files.
-/// Expands home; does not expand windcards
+/// Create a list of possible locations to find dictionary files. Expands home;
+/// does not expand windcards
 #[inline]
 pub fn create_raw_paths() -> Vec<PathBuf> {
-    let mut raw_vec_base: Vec<PathBuf> = Vec::new();
+    // Please excuse the iterators but Rust is cool
 
-    // Add all environment variable paths to our raw list
-    for env in ENV_VAR_NAMES {
-        match env::var_os(env) {
-            Some(v) => raw_vec_base.append(&mut split_os_path_string(&v)),
-            None => (),
-        }
-    }
+    // Loop through all our environment variables
+    let env_paths = ENV_VAR_NAMES
+        .iter()
+        // Get values of only the vars that exist
+        .filter_map(env::var_os)
+        // Split these into vectors of PathBufs, and flatten
+        .flat_map(|val| split_os_path_string(&val));
 
-    // Add all our raw path names
-    match get_plat() {
-        Plat::Windows => WIN_DIR_NAMES
-            .iter()
-            .for_each(|s| raw_vec_base.push(PathBuf::from(s))),
-        Plat::Posix => POSIX_DIR_NAMES
-            .iter()
-            .for_each(|s| raw_vec_base.push(PathBuf::from(s))),
-    };
+    // Create a PathBuf for each of our non-env paths
+    let base_paths = BASE_DIR_NAMES.iter().map(PathBuf::from);
 
-    let mut raw_vec = Vec::new();
+    // Put our env paths and base paths together in a vector
+    let mut search_paths_raw: Vec<PathBuf> = env_paths.chain(base_paths).collect();
 
-    // Go through each pathbuf and add it, plus all possible suffixes, to the
-    // search path
-    for pathbuf in raw_vec_base {
-        raw_vec.push(pathbuf.clone());
-
+    // Go through each pathbuf and add all possible suffixes to the search path.
+    // Need to clone so we don't append while we iter.
+    for pathbuf in search_paths_raw.clone() {
         for child_dir in CHILD_DIR_NAMES {
             let mut cloned = pathbuf.clone();
             cloned.push(child_dir);
-            raw_vec.push(cloned);
+            search_paths_raw.push(cloned);
         }
     }
 
@@ -145,10 +130,10 @@ pub fn create_raw_paths() -> Vec<PathBuf> {
     let home_options = [OsStr::new("$HOME"), OsStr::new("~")];
     let home_path = home_dir();
 
-    let mut new_vec = Vec::new();
+    let mut search_paths = Vec::new();
 
     // Expand "$HOME" and "~"
-    for pathbuf in raw_vec {
+    for pathbuf in search_paths_raw {
         let mut working_new = PathBuf::new();
 
         // Iterate through each path section, e.g. "/a/b/c" -> [a, b, c]
@@ -162,14 +147,52 @@ pub fn create_raw_paths() -> Vec<PathBuf> {
                     }
                 }
                 // Anything that's not HOME, just add it
-                any => working_new.push(any),
+                other => working_new.push(other),
             }
         }
 
-        new_vec.push(working_new);
+        search_paths.push(working_new);
     }
 
-    new_vec
+    search_paths
+}
+
+/// Use real directory
+#[inline]
+pub fn expand_dir_wildcards(paths: &Vec<PathBuf>) -> Vec<PathBuf> {
+    let ret = Vec::new();
+    // Loop through all paths; we will collect those that exist
+    for path in paths {
+        // This collects part of the path as we validate they exist
+        let root = PathBuf::new();
+        let testing_parents: Vec<PathBuf> = Vec::new();
+
+        for comp in path.components() {
+            match comp {
+                Component::Normal(value) => {}
+                other => {}
+            }
+
+            // if comp ==  {
+
+            // }
+
+            // .into_os_string()
+            // .into_string().unwrap_or("").contains("*")
+        }
+    }
+    // LOOP
+    // Pop item
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+    //
+
+    ret
 }
 
 /// Take in a path and load the dictionary
@@ -186,11 +209,6 @@ pub fn create_dict_from_path(basepath: &str) -> Result<Dictionary, UsageError> {
 
     dict_file_path.push_str(".dic");
     affix_file_path.push_str(".aff");
-
-    // let aff_content = fs::read_to_string(&affix_file_path)?;
-    // let dic_content = fs::read_to_string(&dict_file_path)?;
-
-    // let e = FileError::Other(dic_content.unwrap_err().kind());
 
     match fs::read_to_string(&affix_file_path) {
         Ok(s) => dic.config.load_from_str(s.as_str()).unwrap(),
@@ -231,7 +249,7 @@ mod tests {
         let s_ix = OsString::from("/aaa/bbb:/ccc:/ddd");
         let s_win = OsString::from(r"c:\aaa\bbb;d:\ccc;e:\ddd");
 
-        if get_plat() == Plat::Posix {
+        if PLAT == Plat::Posix {
             let v_split = vec![
                 PathBuf::from("/aaa/bbb"),
                 PathBuf::from("/ccc"),
@@ -250,12 +268,26 @@ mod tests {
 
     #[test]
     fn test_raw_paths() {
+        // Just spot check what we have here
         let paths = create_raw_paths();
-        assert!(paths.contains(&PathBuf::from("/usr/share")));
-        assert!(paths.contains(&PathBuf::from("/usr/share/zspell")));
-        assert!(paths.contains(&PathBuf::from("/usr/share/myspell")));
-        assert!(paths.contains(&PathBuf::from("/usr/share/hunspell")));
-        assert!(paths.contains(&PathBuf::from("/Library/Spelling/hunspell")));
-        assert!(paths.contains(&PathBuf::from("/Library/Spelling/hunspell")));
+
+        match PLAT {
+            Plat::Posix => {
+                assert!(paths.contains(&PathBuf::from("/usr/share")));
+                assert!(paths.contains(&PathBuf::from("/usr/share/zspell")));
+                assert!(paths.contains(&PathBuf::from("/usr/share/myspell")));
+                assert!(paths.contains(&PathBuf::from("/usr/share/hunspell")));
+                assert!(paths.contains(&PathBuf::from("/Library/Spelling/hunspell")));
+                assert!(paths.contains(&PathBuf::from("/Library/Spelling/hunspell")));
+            }
+            Plat::Windows => {
+                assert!(paths.contains(&PathBuf::from(
+                    r"C:\Program files\OpenOffice.org*\share\dict\ooo"
+                )));
+                assert!(paths.contains(&PathBuf::from(
+                    r"C:\Program files\OpenOffice.org*\share\dict\ooo\hunspell"
+                )));
+            }
+        }
     }
 }

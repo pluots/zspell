@@ -1,3 +1,10 @@
+---
+
+# Main "useful" actions config file
+# Cache config comes from https://github.com/actions/cache/blob/main/examples.md#rust---cargo
+# actions-rs/toolchain configures rustup
+# actions-rs/cargo actually runs cargo
+
 on:
   push:
     branches:
@@ -12,6 +19,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
@@ -23,12 +39,34 @@ jobs:
 
   test:
     strategy:
+        fail-fast: true
         matrix:
           os: [ubuntu-latest, windows-latest, macos-latest]
-    name: "cargo-test: Test Suite ${{ matrix.os }}"
+          include:
+            - os: ubuntu-latest
+              name: linux
+            - os: windows-latest
+              name: windows
+            - os: macos-latest
+              name: mac
+
+    name: "cargo-test: Test Suite ${{ matrix.name }}"
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v2
+      - name: List files
+        run: |
+          pwd
+          ls
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
@@ -43,6 +81,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
@@ -59,10 +106,20 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: stable
+          # Some nice checks are only nightly
+          toolchain: nightly
           override: true
       - run: rustup component add clippy
       - uses: actions-rs/cargo@v1
@@ -75,6 +132,15 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            target/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
