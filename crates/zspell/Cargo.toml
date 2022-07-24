@@ -3,7 +3,7 @@ name = "zspell"
 version = "0.0.1"
 edition = "2018"
 authors = ["Trevor Gross <tmgross@umich.edu>"]
-description = "Native Rust library for spellchecking"
+description = "Native Rust library for spellchecking, with a command line interface"
 
 readme = "README.md"
 license-file = "LICENSE"
@@ -11,8 +11,8 @@ license-file = "LICENSE"
 documentation = "https://docs.rs/zspell"
 repository = "https://github.com/pluots/zspell"
 
-keywords = ["spellcheck", "spelling"]
-categories = ["algorithms", "text-processing"]
+keywords = ["spellcheck", "spelling", "cli"]
+categories = ["algorithms", "text-processing", "command-line-utilities"]
 
 [badges]
 maintenance = { status = "actively-developed" }
@@ -39,11 +39,13 @@ thiserror = "1.0"
 rayon = "1.5"
 hashbrown = { version = "0.12", features = ["rayon"] }
 home = "0.5"
+cfg-if = "1.0"
 
 [dev-dependencies]
 criterion = "0.3"
 assert_cmd = "2.0"
 predicates = "2.1"
+tempfile = "3.3"
 
 [[bench]]
 name = "datastructure"
