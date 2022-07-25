@@ -1,16 +1,17 @@
 use cfg_if::cfg_if;
+use hashbrown::HashSet;
 use home::home_dir;
-use std::ffi::{OsStr, OsString};
+use regex::{escape, Regex};
+use std::ffi::OsStr;
 use std::fs;
-use std::os::unix::prelude::OsStrExt;
 use std::{
     env,
-    path::{Component, PathBuf},
+    path::{Component, Path, PathBuf},
 };
 
-use crate::errors::UsageError;
+use crate::errors::DictError;
 // use crate::errors::FileError;
-use crate::Dictionary;
+use crate::{unwrap_or_ret, Dictionary};
 
 pub const PKG_NAME: &str = env!("CARGO_PKG_NAME");
 pub const PKG_VERSION: &str = env!("CARGO_PKG_VERSION");
@@ -27,8 +28,6 @@ cfg_if! {
         // windows config
         #[allow(dead_code)]
         const PLAT: Plat = Plat::Windows;
-        // The separator for $PATH-like values; ";" on windows
-        const ENV_PATH_SEP: u8 = 0x3b;
         const BASE_DIR_NAMES: [&str; 2] = [
             "~",
             r"C:\Program files\OpenOffice.org*\share\dict\ooo"
@@ -38,9 +37,6 @@ cfg_if! {
         // unix or WASM
         #[allow(dead_code)]
         const PLAT: Plat = Plat::Posix;
-        // The separator for $PATH-like values; ":" on posix
-        const ENV_PATH_SEP: u8 = 0x3a;
-
         const BASE_DIR_NAMES: [&str; 15] = [
             "~",
             "~/.local/share",
@@ -80,22 +76,6 @@ const CHILD_DIR_NAMES: [&str; 8] = [
     "dicts",
 ];
 
-/// Split $PATH-like variables by the apropriate separator, e.g.
-/// $PATH=/abc/def:/ghi/jkl:/mno -> [/abc/def, /ghi/jkl, /mno]
-///
-/// oss is an `OsString` (bytestring)
-fn split_os_path_string(oss: &OsString) -> Vec<PathBuf> {
-    oss.as_bytes()
-        // Split by the path separator
-        .split(|x| *x == ENV_PATH_SEP)
-        // Re-load the bytes into an osstring
-        .map(OsStr::from_bytes)
-        // Create the pathbuf that we want
-        .map(PathBuf::from)
-        // And create the vec
-        .collect()
-}
-
 /// Create a list of possible locations to find dictionary files. Expands home;
 /// does not expand windcards
 #[inline]
@@ -107,8 +87,8 @@ pub fn create_raw_paths() -> Vec<PathBuf> {
         .iter()
         // Get values of only the vars that exist
         .filter_map(env::var_os)
-        // Split these into vectors of PathBufs, and flatten
-        .flat_map(|val| split_os_path_string(&val));
+        // Split these by PATH separator (':' on Unix, ';' on Windows) and flatten
+        .flat_map(|x| env::split_paths(&x).collect::<Vec<PathBuf>>());
 
     // Create a PathBuf for each of our non-env paths
     let base_paths = BASE_DIR_NAMES.iter().map(PathBuf::from);
@@ -157,40 +137,86 @@ pub fn create_raw_paths() -> Vec<PathBuf> {
     search_paths
 }
 
-/// Use real directory
 #[inline]
-pub fn expand_dir_wildcards(paths: &Vec<PathBuf>) -> Vec<PathBuf> {
-    let ret = Vec::new();
-    // Loop through all paths; we will collect those that exist
-    for path in paths {
-        // This collects part of the path as we validate they exist
-        let root = PathBuf::new();
-        let testing_parents: Vec<PathBuf> = Vec::new();
+pub fn find_matching_dirs(parent: &Path, pattern: &str) -> Vec<PathBuf> {
+    let mut ret = Vec::new();
 
-        for comp in path.components() {
-            match comp {
-                Component::Normal(value) => {}
-                other => {}
+    // Escape anything unexpected, then convert wildcard -> regex
+    let pattern_rep = escape(pattern).replace(r"\*", ".*").replace(r"\?", ".");
+
+    let dir_items = unwrap_or_ret!(parent.read_dir(), ret);
+    let re = unwrap_or_ret!(Regex::new(&pattern_rep), ret);
+
+    // Start with our may-or-may-not-exist dir items
+    let matched_iter = dir_items
+        // Get Ok() values
+        .filter_map(Result::ok)
+        // Looks tricky, but just returns the path if our item is a directory
+        .filter_map(|x| match x.file_type() {
+            Ok(ft) => {
+                if ft.is_dir() {
+                    Some(x.path())
+                } else {
+                    None
+                }
+            }
+            Err(_) => None,
+        })
+        // Get items that match
+        .filter(|x| re.is_match(&x.to_string_lossy()));
+
+    // Create a new item for the parent paths if exists
+    for item in matched_iter {
+        let mut parent_c = parent.to_path_buf();
+        parent_c.push(item);
+        ret.push(parent_c);
+    }
+
+    ret
+}
+
+/// Expand wildcards (*) in directory paths, and return only directories that
+/// exist
+///
+/// This takes a mutable vector that will be drained (used as a stack).
+#[inline]
+pub fn expand_dir_wildcards(paths: &mut Vec<PathBuf>) -> HashSet<PathBuf> {
+    // We will collect only the existing values here
+    let mut ret = HashSet::new();
+
+    // Work to empty our stack
+    while let Some(top) = paths.pop() {
+        // This will hold the "working" parent path
+        let mut cur_base = PathBuf::new();
+        let mut is_new = true;
+
+        for comp in top.components() {
+            // If our parent doesn't exist or is not a dir, we're done here
+            if !is_new && (!cur_base.exists() || !cur_base.is_dir()) {
+                break;
             }
 
-            // if comp ==  {
+            if let Component::Normal(value) = comp {
+                // Enter here if this part of the
+                let val_str = value.to_string_lossy();
+                if val_str.contains('*') {
+                    find_matching_dirs(&cur_base, &val_str);
+                } else {
+                    // Just add anything else
+                    cur_base.push(comp);
+                }
+            } else {
+                // Anything else just gets added on with no fanfare
+                cur_base.push(comp);
+            }
 
-            // }
+            is_new = false;
+        }
 
-            // .into_os_string()
-            // .into_string().unwrap_or("").contains("*")
+        if cur_base.exists() && cur_base.is_dir() {
+            ret.insert(cur_base);
         }
     }
-    // LOOP
-    // Pop item
-    //
-    //
-    //
-    //
-    //
-    //
-    //
-    //
 
     ret
 }
@@ -201,7 +227,7 @@ pub fn expand_dir_wildcards(paths: &Vec<PathBuf>) -> Vec<PathBuf> {
 ///
 /// Error when can't find dictionary
 #[inline]
-pub fn create_dict_from_path(basepath: &str) -> Result<Dictionary, UsageError> {
+pub fn create_dict_from_path(basepath: &str) -> Result<Dictionary, DictError> {
     let mut dic = Dictionary::new();
 
     let mut dict_file_path = basepath.to_owned();
@@ -213,19 +239,19 @@ pub fn create_dict_from_path(basepath: &str) -> Result<Dictionary, UsageError> {
     match fs::read_to_string(&affix_file_path) {
         Ok(s) => dic.config.load_from_str(s.as_str()).unwrap(),
         Err(e) => {
-            return Err(UsageError::FileError {
+            return Err(DictError::FileError {
                 fname: affix_file_path,
-                orig_e: e,
+                orig_e: e.kind(),
             })
         }
     }
 
     match fs::read_to_string(&dict_file_path) {
-        Ok(s) => dic.load_dict_from_str(s.as_str()),
+        Ok(s) => dic.load_dict_from_str(s.as_str())?,
         Err(e) => {
-            return Err(UsageError::FileError {
+            return Err(DictError::FileError {
                 fname: dict_file_path,
-                orig_e: e,
+                orig_e: e.kind(),
             })
         }
     }
@@ -243,28 +269,6 @@ pub fn create_dict_from_path(basepath: &str) -> Result<Dictionary, UsageError> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_split_os_path() {
-        let s_ix = OsString::from("/aaa/bbb:/ccc:/ddd");
-        let s_win = OsString::from(r"c:\aaa\bbb;d:\ccc;e:\ddd");
-
-        if PLAT == Plat::Posix {
-            let v_split = vec![
-                PathBuf::from("/aaa/bbb"),
-                PathBuf::from("/ccc"),
-                PathBuf::from("/ddd"),
-            ];
-            assert_eq!(split_os_path_string(&s_ix), v_split);
-        } else {
-            let v_split = vec![
-                PathBuf::from(r"c:\aaa\bbb"),
-                PathBuf::from(r"d:\ccc"),
-                PathBuf::from(r"e:\ddd"),
-            ];
-            assert_eq!(split_os_path_string(&s_win), v_split);
-        }
-    }
 
     #[test]
     fn test_raw_paths() {
@@ -289,5 +293,11 @@ mod tests {
                 )));
             }
         }
+    }
+
+    #[test]
+    fn test_matching_dirs() {
+        // Create a temporary directory with contents
+        // Ensure the function locates them using wildcards
     }
 }

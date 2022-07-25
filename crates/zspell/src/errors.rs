@@ -41,20 +41,27 @@ pub enum AffixError {
     BadEncodingType,
 }
 
+/// Error while creating the dictionary
+#[non_exhaustive]
+#[derive(Error, Debug, PartialEq, Eq)]
+pub enum DictError {
+    #[error("dictionary needs to be compiled before use")]
+    NotCompiled,
+
+    #[error("misc error")]
+    Other,
+
+    #[error("issue with file {fname}: {orig_e}")]
+    FileError {
+        fname: String,
+        orig_e: io::ErrorKind,
+    },
+}
+
 /// Error while compiling the dictionary
 #[non_exhaustive]
 #[derive(Error, Debug, PartialEq, Eq)]
 pub enum CompileError {
     #[error("missing root word {rootword}")]
     MissingRootWord { rootword: String },
-}
-
-/// Errors that occur while compiling a dictionary
-#[non_exhaustive]
-#[derive(Error, Debug)]
-pub enum UsageError {
-    // #[error(transparent)]
-    // FileError(#[from] io::Error),
-    #[error("issue with file {fname}: {orig_e}")]
-    FileError { fname: String, orig_e: io::Error },
 }

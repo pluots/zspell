@@ -13,6 +13,16 @@ macro_rules! graph_vec {
 }
 
 #[macro_export]
+macro_rules! unwrap_or_ret {
+    ($ex:expr, $ret:expr) => {
+        match $ex.ok() {
+            Some(v) => v,
+            None => return $ret,
+        }
+    };
+}
+
+#[macro_export]
 macro_rules! unwrap_or_ret_e {
     ($ex:expr, $ret:expr) => {
         match $ex {

@@ -38,7 +38,7 @@ pub use types::{Conversion, EncodingType, Rule, RuleType, TokenType};
 /// Any type that can be modified must be owned (e.g. String, Vec), others may
 /// be borrowed.
 #[non_exhaustive]
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct Config {
     /// Charset to use, reference to an [`EncodingType`] Currently this is
     /// unused; only UTF-8 is supported. However, the affix file must still have
@@ -199,14 +199,13 @@ impl Config {
             .iter()
             // Select rules whose identifier is in the desired keys
             .filter(|rule| keys_vec.contains(&rule.key))
-            .for_each(|rule| match rule.apply(rootword) {
-                Some(newword) => {
+            .for_each(|rule| {
+                if let Some(newword) = rule.apply(rootword) {
                     if rule.combine_pfx_sfx && rule.atype == RuleType::Prefix {
                         prefixed_words.push(newword.clone());
                     }
                     ret.push(newword);
                 }
-                None => (),
             });
 
         // Redo the same thing for rules that allow chaining
@@ -221,9 +220,8 @@ impl Config {
             })
             .for_each(|rule| {
                 for pfxword in &prefixed_words {
-                    match rule.apply(pfxword) {
-                        Some(newword) => ret.push(newword),
-                        None => (),
+                    if let Some(newword) = rule.apply(pfxword) {
+                        ret.push(newword);
                     }
                 }
             });
