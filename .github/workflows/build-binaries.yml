@@ -101,7 +101,7 @@ jobs:
           staging="zspell-${{ needs.create-release.outputs.rg_version }}-${{ matrix.target }}"
           mkdir -p "$staging"/{complete,doc}
           cp {README.md,LICENSE} "$staging/"
-          cp {CHANGELOG.md} "$staging/doc/"
+          cp CHANGELOG.md "$staging/doc/"
           if [ "${{ matrix.os }}" = "windows" ]; then
             cp "target/${{ matrix.target }}/release/zspell.exe" "$staging/"
             7z a "$staging.zip" "$staging"
