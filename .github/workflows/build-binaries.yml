@@ -98,7 +98,7 @@ jobs:
           ls
           # outdir="$(ci/cargo-out-dir "${{ env.TARGET_DIR }}")"
           outdir=target/release/${{ steps.get_repository_name.outputs.REPOSITORY_NAME }}${{ matrix.extension }}
-          staging="zspell-${{ needs.create-release.outputs.rg_version }}-${{ matrix.target }}"
+          staging="zspell-${GITHUB_REF##*/}-${{ matrix.target }}"
           mkdir -p "$staging"/{complete,doc}
           cp {README.md,LICENSE} "$staging/"
           cp CHANGELOG.md "$staging/doc/"
