@@ -102,7 +102,7 @@ jobs:
           mkdir -p "$staging"/{complete,doc}
           cp {README.md,LICENSE} "$staging/"
           cp CHANGELOG.md "$staging/doc/"
-          if [ "${{ matrix.os }}" = "windows" ]; then
+          if [ "${{ matrix.os }}" = "windows-lates" ]; then
             cp "target/${{ matrix.target }}/release/zspell.exe" "$staging/"
             7z a "$staging.zip" "$staging"
             echo "ASSET=$staging.zip" >> $GITHUB_ENV
