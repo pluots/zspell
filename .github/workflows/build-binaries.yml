@@ -3,12 +3,12 @@ name: "Rust binaries: build and release"
 
 # This configuration largely comes from ripgrep
 
-# on:
-#   push:
-#     tags:
-#     - 'v*'
 on:
-  pull_request:
+  push:
+    tags:
+    - 'v*'
+# on:
+#   pull_request:
 
 jobs:
   build_release:
