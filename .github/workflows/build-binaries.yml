@@ -3,10 +3,14 @@ name: "Rust binaries: build and release"
 
 # This configuration largely comes from ripgrep
 
+# on:
+#   push:
+#     tags:
+#     - 'v*'
 on:
-  push:
-    tags:
-    - 'v*'
+  pull_request_target:
+    branches:
+    - fix-builds
 
 jobs:
   build_release:
@@ -18,19 +22,20 @@ jobs:
           - build: linux
             os: ubuntu-latest
             target: x86_64-unknown-linux-musl
-            suffix: ''
-          - build: linux-arm
-            os: ubuntu-latest
-            target: arm-unknown-linux-gnueabihf
-            suffix: ''
+            extension: ''
+            # Unsuccessful compilation; try on local
+          # - build: linux-arm
+          #   os: ubuntu-latest
+          #   target: arm-unknown-linux-gnueabihf
+          #   extension: ''
           - build: macos
             os: macos-latest
             target: x86_64-apple-darwin
-            suffix: ''
+            extension: ''
           - build: windows-msvc
             os: windows-latest
             target: x86_64-pc-windows-msvc
-            suffix: .exe
+            extension: .exe
     env:
       CARGO: cargo
       TARGET_DIR: ./target
@@ -85,7 +90,8 @@ jobs:
       - name: Build archive
         shell: bash
         run: |
-          outdir="$(ci/cargo-out-dir "${{ env.TARGET_DIR }}")"
+          # outdir="$(ci/cargo-out-dir "${{ env.TARGET_DIR }}")"
+          outdir=./target/release/${{ steps.get_repository_name.outputs.REPOSITORY_NAME }}${{ matrix.extension }}
           staging="zspell-${{ needs.create-release.outputs.rg_version }}-${{ matrix.target }}"
           mkdir -p "$staging"/{complete,doc}
           cp {README.md,LICENSE} "$staging/"
