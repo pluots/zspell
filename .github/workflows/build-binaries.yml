@@ -62,6 +62,8 @@ jobs:
         # Debugging aid
       - name: Show commands
         run: |
+          pwd
+          ls
           echo "cargo command is: ${{ env.CARGO }}"
           echo "target flag is: ${{ env.TARGET_FLAGS }}"
           echo "target dir is: ${{ env.TARGET_DIR }}"
@@ -89,7 +91,7 @@ jobs:
         shell: bash
         run: |
           # outdir="$(ci/cargo-out-dir "${{ env.TARGET_DIR }}")"
-          outdir=./target/release/${{ steps.get_repository_name.outputs.REPOSITORY_NAME }}${{ matrix.extension }}
+          outdir=target/release/${{ steps.get_repository_name.outputs.REPOSITORY_NAME }}${{ matrix.extension }}
           staging="zspell-${{ needs.create-release.outputs.rg_version }}-${{ matrix.target }}"
           mkdir -p "$staging"/{complete,doc}
           cp {README.md,LICENSE} "$staging/"
