@@ -137,6 +137,7 @@ pub fn create_raw_paths() -> Vec<PathBuf> {
     search_paths
 }
 
+/// Find a directory that uses wildcards
 #[inline]
 pub fn find_matching_dirs(parent: &Path, pattern: &str) -> Vec<PathBuf> {
     let mut ret = Vec::new();
@@ -186,13 +187,18 @@ pub fn expand_dir_wildcards(paths: &mut Vec<PathBuf>) -> HashSet<PathBuf> {
 
     // Work to empty our stack
     while let Some(top) = paths.pop() {
+        // println!("working path {top:?}");
+        // println!("remaining paths: {:#?}", paths);
+
         // This will hold the "working" parent path
         let mut cur_base = PathBuf::new();
         let mut is_new = true;
 
         for comp in top.components() {
+            // println!("base: {cur_base:?} (new: {is_new}) comp {comp:?}");
             // If our parent doesn't exist or is not a dir, we're done here
             if !is_new && (!cur_base.exists() || !cur_base.is_dir()) {
+                // println!("breaking");
                 break;
             }
 
@@ -200,12 +206,15 @@ pub fn expand_dir_wildcards(paths: &mut Vec<PathBuf>) -> HashSet<PathBuf> {
                 // Enter here if this part of the
                 let val_str = value.to_string_lossy();
                 if val_str.contains('*') {
+                    // println!("finding matching");
                     find_matching_dirs(&cur_base, &val_str);
                 } else {
+                    // println!("adding normal");
                     // Just add anything else
                     cur_base.push(comp);
                 }
             } else {
+                // println!("adding other");
                 // Anything else just gets added on with no fanfare
                 cur_base.push(comp);
             }
@@ -269,6 +278,8 @@ pub fn create_dict_from_path(basepath: &str) -> Result<Dictionary, DictError> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::fs;
+    use tempfile::tempdir;
 
     #[test]
     fn test_raw_paths() {
@@ -299,5 +310,50 @@ mod tests {
     fn test_matching_dirs() {
         // Create a temporary directory with contents
         // Ensure the function locates them using wildcards
+        let dir = tempdir().unwrap();
+
+        let mut paths = vec![
+            dir.path().join("a/b/c-x-cxd"),
+            dir.path().join("a/b/c-yz-cxd"),
+            dir.path().join("a/b/c-.abc-cxd"),
+        ];
+        paths.sort();
+
+        for path in &paths {
+            fs::create_dir_all(path).unwrap();
+        }
+
+        let mut ret = find_matching_dirs(&dir.path().join("a/b"), "c-*-c?d");
+        ret.sort();
+
+        assert_eq!(paths, ret);
     }
+    // Test for expand_dir_wildcards
+    // #[test]
+    // fn test_matching_dirs() {
+    //     // Create a temporary directory with contents
+    //     // Ensure the function locates them using wildcards
+    //     let dir = tempdir().unwrap();
+
+    //     let paths = vec![
+    //         dir.path().join("aaa/bbb-x/ccc"),
+    //         dir.path().join("aaa/bbb-y/ccc"),
+    //         dir.path().join("ddd"),
+    //     ];
+
+    //     for path in &paths {
+    //         fs::create_dir_all(path).unwrap();
+    //     }
+
+    //     let mut input = vec![
+    //         PathBuf::from("aaa/bbb*/ccc"),
+    //         PathBuf::from("ddd"),
+    //     ];
+
+    //     let mut expanded = Vec::from_iter(expand_dir_wildcards(&mut input));
+    //     expanded.sort_unstable();
+
+    //     assert_eq!(paths, expanded);
+
+    // }
 }

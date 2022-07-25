@@ -4,11 +4,9 @@
 
 ## [Unreleased] - ReleaseDate
 
-### Added
-
 ### Changed
 
-### Removed
+- Updated wheel release configuration
 
 
 
