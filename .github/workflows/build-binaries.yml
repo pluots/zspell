@@ -9,8 +9,6 @@ name: "Rust binaries: build and release"
 #     - 'v*'
 on:
   pull_request:
-    branches:
-    - fix-builds
 
 jobs:
   build_release:
