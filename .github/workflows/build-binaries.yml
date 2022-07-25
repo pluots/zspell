@@ -62,7 +62,9 @@ jobs:
         # Debugging aid
       - name: Show commands
         run: |
+          echo pwd:
           pwd
+          echo ls:
           ls
           echo "cargo command is: ${{ env.CARGO }}"
           echo "target flag is: ${{ env.TARGET_FLAGS }}"
@@ -90,6 +92,10 @@ jobs:
       - name: Build archive
         shell: bash
         run: |
+          echo pwd:
+          pwd
+          echo ls:
+          ls
           # outdir="$(ci/cargo-out-dir "${{ env.TARGET_DIR }}")"
           outdir=target/release/${{ steps.get_repository_name.outputs.REPOSITORY_NAME }}${{ matrix.extension }}
           staging="zspell-${{ needs.create-release.outputs.rg_version }}-${{ matrix.target }}"
