@@ -19,11 +19,10 @@ jobs:
             os: ubuntu-latest
             target: x86_64-unknown-linux-musl
             suffix: ''
-          # Errors about not being installed
-          # - build: linux-arm
-          #   os: ubuntu-latest
-          #   target: arm-unknown-linux-gnueabihf
-          #   suffix: ''
+          - build: linux-arm
+            os: ubuntu-latest
+            target: arm-unknown-linux-gnueabihf
+            suffix: ''
           - build: macos
             os: macos-latest
             target: x86_64-apple-darwin
@@ -56,6 +55,7 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
+          target: ${{ matrix.target }}
         # Debugging aid
       - name: Show commands
         run: |
