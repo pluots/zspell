@@ -118,7 +118,7 @@ jobs:
         env:
           GITHUB_REPOSITORY: pluots/zspell
         with:
-          body_path: ${{ github.workspace }}-CHANGELOG.txt
+          body_path: CHANGELOG.md
           # note you'll typically need to create a personal access token
           # with permissions to create releases in the other repo
           token: ${{ secrets.GITHUB_TOKEN }}
