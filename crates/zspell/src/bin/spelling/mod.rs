@@ -5,7 +5,7 @@ use std::process::ExitCode;
 use std::time::{SystemTime, UNIX_EPOCH};
 use zspell::Dictionary;
 
-use zspell::errors::UsageError;
+use zspell::errors::DictError;
 use zspell::system::{create_dict_from_path, PKG_NAME, PKG_VERSION};
 
 use crate::Cli;
@@ -39,7 +39,7 @@ pub fn spellcheck_stdin_runner(dic: &Dictionary) -> ExitCode {
             }
         };
 
-        for word in dic.check_returning_list(unwrapped) {
+        for word in dic.check_returning_list(unwrapped).unwrap() {
             println!("{}", &word)
         }
     }
@@ -64,7 +64,7 @@ pub fn spellcheck_cli(cli: &Cli) -> ExitCode {
         Ok(v) => v,
         Err(e) => {
             match e {
-                UsageError::FileError { fname, orig_e } => {
+                DictError::FileError { fname, orig_e } => {
                     eprintln!("Error opening \"{}\"; {}", fname, orig_e)
                 }
                 _ => todo!(),
@@ -74,7 +74,7 @@ pub fn spellcheck_cli(cli: &Cli) -> ExitCode {
     };
 
     if cli.generate_wordlist {
-        for item in dic.wordlist_items() {
+        for item in dic.iter_wordlist_items().unwrap() {
             println!("{}", item);
         }
     } else {

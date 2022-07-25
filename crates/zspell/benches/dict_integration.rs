@@ -138,7 +138,11 @@ pub fn bench_parallel(c: &mut Criterion) {
 
 pub fn bench_lev(c: &mut Criterion) {
     let dic = fixture_create_en_dict();
-    let word_items = dic.wordlist_items();
+    let word_items: Vec<&str> = dic
+        .iter_wordlist_items()
+        .unwrap()
+        .map(|s| s.as_str())
+        .collect();
 
     c.bench_function("Lev nonparallel", |b| {
         b.iter(|| {

@@ -301,6 +301,9 @@ impl PartialEq for AffixRuleDef {
     }
 }
 
+// Just need to indicate the `Eq` relation applies
+impl Eq for AffixRuleDef {}
+
 impl AffixRuleDef {
     /// Create from the information we would expect to have in a table
     pub fn from_table_creation(
@@ -414,7 +417,7 @@ impl AffixRuleDef {
 /// This struct represents a prefix or suffix option that may be applied to any
 /// base word. It contains multiple possible rule definitions that describe how
 /// to apply the rule.
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub struct Rule {
     /// Character identifier for this specific affix, usually any uppercase
     /// letter
@@ -489,9 +492,8 @@ impl Rule {
     #[inline]
     pub fn apply(&self, rootword: &str) -> Option<String> {
         for rule in &self.rules {
-            match rule.apply_pattern(rootword) {
-                Some(applied) => return Some(applied),
-                None => (),
+            if let Some(applied) = rule.apply_pattern(rootword) {
+                return Some(applied);
             }
         }
 

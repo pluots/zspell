@@ -6,12 +6,13 @@
 use core::hash::Hash;
 use std::string::ToString;
 
+use hashbrown::hash_set::Iter as HashSetIter;
 use hashbrown::HashSet;
 use stringmetrics::tokenizers::split_whitespace_remove_punc;
 
 use crate::{
     affix::Config,
-    errors::{AffixError, CompileError},
+    errors::{AffixError, CompileError, DictError},
 };
 
 /// Main dictionary object used for spellchecking and autocorrect
@@ -20,6 +21,7 @@ use crate::{
 ///
 /// Load hunspell dicts, as described at
 /// <http://pwet.fr/man/linux/fichiers_speciaux/hunspell/>
+#[derive(Debug, PartialEq, Eq)]
 pub struct Dictionary {
     /// This contains the dictionary's configuration
     pub config: Config,
@@ -67,22 +69,32 @@ impl Dictionary {
     }
 
     /// Load this dictionary's word list from a string
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the load was unsuccessful
     #[inline]
-    pub fn load_dict_from_str(&mut self, s: &str) {
+    pub fn load_dict_from_str(&mut self, s: &str) -> Result<(), DictError> {
         self.compiled = false;
 
         let mut lines = s.lines();
         // First line is just a count of the number of items
         let _first = lines.next();
         self.raw_wordlist = lines.map(ToString::to_string).collect();
+        Ok(())
     }
 
     /// Load this dictionary's personal word list from a string
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the personal dictionary could not be loaded
     #[inline]
-    pub fn load_personal_dict_from_str(&mut self, s: &str) {
+    pub fn load_personal_dict_from_str(&mut self, s: &str) -> Result<(), DictError> {
         self.compiled = false;
 
         self.raw_wordlist_personal = s.lines().map(ToString::to_string).collect();
+        Ok(())
     }
 
     /// Match affixes, personal dict, etc
@@ -99,23 +111,20 @@ impl Dictionary {
             let split: Vec<&str> = word.split('/').collect();
             let _forbidden = word.starts_with('*');
 
-            match split.get(1) {
-                Some(rootword) => {
-                    // Find "otherword/" in main wordlist
-                    let mut tmp = (*rootword).to_owned();
-                    tmp.push('/');
-                    let filtval = tmp.trim_start_matches('*');
+            if let Some(rootword) = split.get(1) {
+                // Find "otherword/" in main wordlist
+                let mut tmp = (*rootword).to_owned();
+                tmp.push('/');
+                let filtval = tmp.trim_start_matches('*');
 
-                    match self.raw_wordlist.iter().find(|s| s.starts_with(&filtval)) {
-                        Some(_w) => (),
-                        None => {
-                            return Err(CompileError::MissingRootWord {
-                                rootword: (*rootword).to_owned(),
-                            })
-                        }
+                match self.raw_wordlist.iter().find(|s| s.starts_with(&filtval)) {
+                    Some(_w) => (),
+                    None => {
+                        return Err(CompileError::MissingRootWord {
+                            rootword: (*rootword).to_owned(),
+                        })
                     }
                 }
-                None => (),
             }
         }
 
@@ -125,7 +134,9 @@ impl Dictionary {
             match split.get(1) {
                 Some(rule_keys) => {
                     let wordlist = self.config.create_affixed_words(rootword, rule_keys);
-                    if rule_keys.contains(&self.config.nosuggest_flag) {
+                    if !&self.config.nosuggest_flag.is_empty()
+                        && rule_keys.contains(&self.config.nosuggest_flag)
+                    {
                         iter_to_hashset(wordlist, &mut self.wordlist_nosuggest);
                     } else {
                         iter_to_hashset(wordlist, &mut self.wordlist);
@@ -160,50 +171,66 @@ impl Dictionary {
     ///
     /// let mut dic = Dictionary::new();
     ///
-    /// let aff_content = fs::read_to_string("tests/files/short.aff").unwrap();
-    /// let dic_content = fs::read_to_string("tests/files/short.dic").unwrap();
+    /// let aff_content = fs::read_to_string("tests/files/w1_eng_short.aff").unwrap();
+    /// let dic_content = fs::read_to_string("tests/files/w1_eng_short.dic").unwrap();
     ///
     /// dic.config.load_from_str(aff_content.as_str()).unwrap();
     /// dic.load_dict_from_str(dic_content.as_str());
     /// dic.compile().unwrap();
     ///
-    /// assert_eq!(dic.check("yyication"), true);
+    /// assert_eq!(dic.check("reptiles"), Ok(true));
+    /// assert_eq!(dic.check("pillow"), Ok(true));
+    /// assert_eq!(dic.check("missssspelled"), Ok(false));
     /// ```
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if the dictionary has not yet been compiled
     #[inline]
-    pub fn check<T: AsRef<str>>(&self, s: T) -> bool {
+    pub fn check<T: AsRef<str>>(&self, s: T) -> Result<bool, DictError> {
         // We actually just need to check
-        self.break_if_not_compiled();
+        self.break_if_not_compiled()?;
 
         let sref = s.as_ref();
 
         for word in split_whitespace_remove_punc(sref) {
             if !self.check_word_no_break(word) {
-                return false;
+                return Ok(false);
             }
         }
 
-        true
+        Ok(true)
     }
 
     /// Perform spellcheck on a string, return a list of misspelled words.
     /// Returns an iterator.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DictError::NotCompiled`] if the dictionary has not yet been
+    /// compiled
     #[inline]
-    pub fn check_returning_list<T: AsRef<str>>(&self, s: T) -> Vec<String> {
+    pub fn check_returning_list<T: AsRef<str>>(&self, s: T) -> Result<Vec<String>, DictError> {
         // We actually just need to check
-        self.break_if_not_compiled();
+        self.break_if_not_compiled()?;
 
-        split_whitespace_remove_punc(s.as_ref())
+        Ok(split_whitespace_remove_punc(s.as_ref())
             .filter(|word| !self.check_word_no_break(word))
-            .collect::<Vec<String>>()
+            .collect::<Vec<String>>())
     }
 
     /// Perform spellcheck on a single word
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DictError::NotCompiled`] if the dictionary has not yet been
+    /// compiled
     #[inline]
-    pub fn check_word<T: AsRef<str>>(&self, s: T) -> bool {
+    pub fn check_word<T: AsRef<str>>(&self, s: T) -> Result<bool, DictError> {
         // We actually just need to check
-        self.break_if_not_compiled();
+        self.break_if_not_compiled()?;
 
-        self.check_word_no_break(s)
+        Ok(self.check_word_no_break(s))
     }
 
     // Private function that checks a single word. Same as check() but doesn't
@@ -228,26 +255,26 @@ impl Dictionary {
     ///
     /// Note that this is relatively slow. Prefer [`Dictionary::check`] for
     /// validating a word exists.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DictError::NotCompiled`] if the dictionary has not yet been
+    /// compiled
     #[inline]
-    pub fn wordlist_items(&self) -> Vec<&str> {
-        self.break_if_not_compiled();
+    pub fn iter_wordlist_items(&self) -> Result<HashSetIter<String>, DictError> {
+        self.break_if_not_compiled()?;
 
-        let mut items = self
-            .wordlist
-            .iter()
-            .map(String::as_str)
-            .collect::<Vec<&str>>();
-        items.sort_unstable();
-        items
+        Ok(self.wordlist.iter())
     }
 
     /// Helper function to error if we haven't compiled when we needed to
     #[inline]
-    const fn break_if_not_compiled(&self) {
-        assert!(
-            self.compiled,
-            "This method requires compiling the dictionary with `dic.compile()` first."
-        );
+    const fn break_if_not_compiled(&self) -> Result<(), DictError> {
+        if self.compiled {
+            Ok(())
+        } else {
+            Err(DictError::NotCompiled)
+        }
     }
 }
 
