@@ -1,0 +1,31 @@
+==== afx_str ====
+SET UTF-8
+
+PFX A Y 1
+PFX A   0     aa         .
+
+SFX B Y 2
+SFX B   y     bb         y
+SFX B   0     cc         [^y]
+
+
+==== dic_str =====
+3
+xxx/A
+yyy/B
+zzz/AB
+
+
+==== check_valid ====
+xxx
+yyy
+zzz
+aaxxx
+yybb
+aazzz
+zzzcc
+aazzzcc
+
+
+==== check_invalid ====
+not contained

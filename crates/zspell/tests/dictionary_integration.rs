@@ -1,4 +1,6 @@
 use std::fs;
+
+use util::TestCollection;
 use zspell::Dictionary;
 
 /// Run integration tests on a file located in tests/files
@@ -22,40 +24,22 @@ fn create_dic_from_file(fname: &str) -> Dictionary {
     dic
 }
 
-/// Validate a dictionary's wordlist is correct
-fn test_dic_wordlist(dic: &Dictionary, fname: &str) {
-    let out_name = format!("tests/files/{}.words", fname);
-
-    let out_content = fs::read_to_string(out_name.clone())
-        .expect(format!("error reading file {}", out_name).as_str());
-    let mut correct: Vec<_> = out_content.lines().collect();
-    correct.sort_unstable();
-    let mut result: Vec<_> = dic
-        .iter_wordlist_items()
-        .expect("Error getting wordlist")
-        .collect();
-    result.sort_unstable();
-
-    assert_eq!(result, correct);
-}
-
-/// Test compiling the dictionary from our short test file
-#[test]
-fn test_short_compile() {
-    let dic = create_dic_from_file("1_pfxsfx");
-    test_dic_wordlist(&dic, "1_pfxsfx");
-}
-
-/// Test check functionality on our short file
+/// Test check functionality on a real file
 #[test]
 fn test_short_check() {
-    let dic = create_dic_from_file("1_pfxsfx");
+    let dic = create_dic_from_file("w1_eng_short");
 
     // Test all ownership methods
-    assert_eq!(dic.check("xxx"), Ok(true));
-    assert_eq!(dic.check("yybb".to_string()), Ok(true));
-    assert_eq!(dic.check("aazzzcc".to_owned()), Ok(true));
-    assert_eq!(dic.check(&"zzz".to_string()), Ok(true));
+    assert_eq!(dic.check("bananas"), Ok(true));
+    assert_eq!(dic.check("pines".to_string()), Ok(true));
+    assert_eq!(dic.check("pillowing".to_owned()), Ok(true));
+    assert_eq!(dic.check(&"pined".to_string()), Ok(true));
 
     assert_eq!(dic.check("not contained"), Ok(false));
+}
+
+#[test]
+fn test_prefixes() {
+    let coll = TestCollection::load("1_pfxsfx.test");
+    coll.validate();
 }

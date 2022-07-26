@@ -8,6 +8,7 @@ use std::{
     env,
     path::{Component, Path, PathBuf},
 };
+// use sys_locale::get_locale;
 
 use crate::errors::DictError;
 // use crate::errors::FileError;
@@ -230,6 +231,10 @@ pub fn expand_dir_wildcards(paths: &mut Vec<PathBuf>) -> HashSet<PathBuf> {
     ret
 }
 
+// pub fn find_dict_from_path() {
+//     let locale = get_locale().unwrap_or_else(|| String::from("en-US"));
+// }
+
 /// Take in a path and load the dictionary
 ///
 /// # Errors
@@ -271,9 +276,6 @@ pub fn create_dict_from_path(basepath: &str) -> Result<Dictionary, DictError> {
 
     Ok(dic)
 }
-
-// Need function to expand wildcard paths. Will need to look through the parent
-// directory and see if anything is a RE match
 
 #[cfg(test)]
 mod tests {

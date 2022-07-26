@@ -251,7 +251,8 @@ impl Dictionary {
                 || self.wordlist_nosuggest.contains(lower))
     }
 
-    /// Create a sorted vector of all items in the word list
+    /// Create a iterator over all items in the dictionary's wordlist. That is,
+    /// words that will always be accepted and succested.
     ///
     /// Note that this is relatively slow. Prefer [`Dictionary::check`] for
     /// validating a word exists.
@@ -265,6 +266,41 @@ impl Dictionary {
         self.break_if_not_compiled()?;
 
         Ok(self.wordlist.iter())
+    }
+
+    /// Create a iterator over all items in the dictionary's nonsuggesting
+    /// wordlist. These are words that will always be accepted but never be
+    /// suggested.
+    ///
+    /// Note that this is relatively slow. Prefer [`Dictionary::check`] for
+    /// validating a word exists.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DictError::NotCompiled`] if the dictionary has not yet been
+    /// compiled
+    #[inline]
+    pub fn iter_wordlist_nosuggest_items(&self) -> Result<HashSetIter<String>, DictError> {
+        self.break_if_not_compiled()?;
+
+        Ok(self.wordlist_nosuggest.iter())
+    }
+
+    /// Create a iterator over all items in the dictionary's forbidden wordlist.
+    /// These are words that are never accepted as correct.
+    ///
+    /// Note that this is relatively slow. Prefer [`Dictionary::check`] for
+    /// validating a word exists.
+    ///
+    /// # Errors
+    ///
+    /// Returns [`DictError::NotCompiled`] if the dictionary has not yet been
+    /// compiled
+    #[inline]
+    pub fn iter_wordlist_forbidden_items(&self) -> Result<HashSetIter<String>, DictError> {
+        self.break_if_not_compiled()?;
+
+        Ok(self.wordlist_forbidden.iter())
     }
 
     /// Helper function to error if we haven't compiled when we needed to
