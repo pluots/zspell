@@ -1,11 +1,11 @@
-use std::fs;
+use util::TestCollection;
 use zspell::Config;
 
 #[test]
 fn affix_create_words() {
     let mut afx = Config::new();
 
-    let content = fs::read_to_string("tests/files/1_pfxsfx.aff").unwrap();
+    let content = TestCollection::load("1_pfxsfx.test").afx_str;
 
     afx.load_from_str(content.as_str()).unwrap();
 

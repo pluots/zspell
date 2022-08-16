@@ -1,0 +1,29 @@
+# Example test file
+
+==== afx_str ====
+# This section contains contents of the .aff file
+
+==== dic_str ====
+# This section contains contents of the .dic file
+
+==== check_valid ====
+# Words that should come up as "valid" when checked
+
+==== check_valid ====
+# These words should appear as valid
+
+==== check_invalid ====
+# These words should not be valid
+
+==== wordlist ====
+# The dictionary's internal word list contents
+
+==== wordlist_nosuggest ====
+# Contents of the never suggested wordlist
+
+==== wordlist_forbidden ====
+# Contents of the non-accepted wordlist
+
+==== suggestions ====
+# Something like the following
+appl > apple | Apfel | app
