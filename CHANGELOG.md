@@ -12,6 +12,16 @@
 
 
 
+## [0.1.3] - 2022-08-16
+
+### Added
+
+### Changed
+
+### Removed
+
+
+
 ## [0.1.2] - 2022-08-16
 
 ### Added
@@ -42,7 +52,8 @@
 - Behind the scenes work to prepare for automatic dictionary location
 
 <!-- next-url -->
-[Unreleased]: https://github.com/pluots/stringmetrics/compare/v0.1.2...HEAD
+[Unreleased]: https://github.com/pluots/stringmetrics/compare/v0.1.3...HEAD
+[0.1.3]: https://github.com/pluots/stringmetrics/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/pluots/stringmetrics/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/pluots/stringmetrics/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/pluots/zspell/compare/v0.0.1...v0.1.0
