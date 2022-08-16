@@ -115,7 +115,7 @@ jobs:
           perl -0777 -ne "print /(## \[$ref_name_stripped\].*?\n)(?=\n*^## )/gms" CHANGELOG.md > RNOTES.md
           echo '\n' >> "$staging/doc/RNOTES.md"
           # Select the diff URL for this version only
-          perl -0777 -ne "print /\[$ref_name_stripped\]:.*?$\n/gms" CHANGELOG.md >> RNOTES.md
+          perl -0777 -ne "print /\[$ref_name_stripped\]:.*?\n/gms" CHANGELOG.md >> RNOTES.md
           echo "\nRelease notes:" && cat RNOTES.md
 
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
