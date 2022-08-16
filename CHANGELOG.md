@@ -14,11 +14,9 @@
 
 ## [0.1.3] - 2022-08-16
 
-### Added
-
 ### Changed
 
-### Removed
+- Correction to output generation
 
 
 

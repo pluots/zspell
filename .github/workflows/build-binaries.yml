@@ -92,25 +92,32 @@ jobs:
       - name: Build archive
         shell: bash
         run: |
-          echo '\nWorking directory:'
-          pwd
-          echo '\nls:'
-          ls
+          echo '\nWorking directory:' && pwd
+          echo '\nls:' && ls
+
           # outdir="$(ci/cargo-out-dir "${{ env.TARGET_DIR }}")"
           outdir=target/release/${{ steps.get_repository_name.outputs.REPOSITORY_NAME }}${{ matrix.extension }}
           ref_name=${GITHUB_REF##*/}
+
+          # Remove leading 'v' for use where needed
+          ref_name_stripped=$(echo $ref_name | perl -0pe 's/^v//')
           echo "\nRef name: \"$ref_name\""
+          echo "\nRef name stripped: \"$ref_name_stripped\""
+
           staging="zspell-$ref_name-${{ matrix.target }}"
+
           mkdir -p "$staging"/{complete,doc}
+
           cp {README.md,LICENSE} "$staging/"
           cp CHANGELOG.md "$staging/doc/"
+
           # Select the release notes from our latest version only
-          perl -0777 -ne "print /(## \[$ref_name\].*?\n)(?=\n*^## )/gms" CHANGELOG.md > RNOTES.md
+          perl -0777 -ne "print /(## \[$ref_name_stripped\].*?\n)(?=\n*^## )/gms" CHANGELOG.md > RNOTES.md
           echo '\n' >> "$staging/doc/RNOTES.md"
           # Select the diff URL for this version only
-          perl -0777 -ne "print /\[$ref_name\]:.*?$\n/gms" CHANGELOG.md >> RNOTES.md
-          echo "\nRelease notes:"
-          cat RNOTES.md
+          perl -0777 -ne "print /\[$ref_name_stripped\]:.*?$\n/gms" CHANGELOG.md >> RNOTES.md
+          echo "\nRelease notes:" && cat RNOTES.md
+
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
             cp "target/${{ matrix.target }}/release/zspell.exe" "$staging/"
             7z a "$staging.zip" "$staging"
