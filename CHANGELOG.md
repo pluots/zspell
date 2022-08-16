@@ -6,9 +6,11 @@
 
 ### Added
 
+- Framework for locating files on a user's local machine
+
 ### Changed
 
-### Removed
+- Updated binary output configuration
 
 
 
