@@ -6,6 +6,16 @@
 
 ### Added
 
+### Changed
+
+### Removed
+
+
+
+## [0.1.2] - 2022-08-16
+
+### Added
+
 - Framework for locating files on a user's local machine
 
 ### Changed
@@ -32,6 +42,7 @@
 - Behind the scenes work to prepare for automatic dictionary location
 
 <!-- next-url -->
-[Unreleased]: https://github.com/pluots/stringmetrics/compare/v0.1.1...HEAD
+[Unreleased]: https://github.com/pluots/stringmetrics/compare/v0.1.2...HEAD
+[0.1.2]: https://github.com/pluots/stringmetrics/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/pluots/stringmetrics/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/pluots/zspell/compare/v0.0.1...v0.1.0
