@@ -113,7 +113,7 @@ jobs:
 
           # Select the release notes from our latest version only
           perl -0777 -ne "print /(## \[$ref_name_stripped\].*?\n)(?=\n*^## )/gms" CHANGELOG.md > RNOTES.md
-          echo '\n' >> "$staging/doc/RNOTES.md"
+          echo '\n\n' >> "$staging/doc/RNOTES.md"
           # Select the diff URL for this version only
           perl -0777 -ne "print /\[$ref_name_stripped\]:.*?\n/gms" CHANGELOG.md >> RNOTES.md
           echo "\nRelease notes:" && cat RNOTES.md
