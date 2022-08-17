@@ -112,7 +112,7 @@ jobs:
           cp {README.md,LICENSE} "$staging/"
           cp CHANGELOG.md "$staging/doc/"
           cp "$cargo_outdir"/zspell.1 "$staging/doc"
-          cp "$cargo_outdir"/{_zspell, _zspell.ps1, zspell.bash, zspell.elv, zspell.fish} "$staging/completion"
+          cp "$cargo_outdir"/{_zspell,_zspell.ps1,zspell.bash,zspell.elv,zspell.fish} "$staging/completion"
 
           # Select the release notes from our latest version only
           perl -0777 -ne "print /(## \[$ref_name_stripped\].*?\n)(?=\n*^## )/gms" CHANGELOG.md > RNOTES.md
