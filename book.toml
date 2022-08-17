@@ -1,0 +1,6 @@
+[book]
+authors = ["Trevor Gross"]
+language = "en"
+multilingual = false
+src = "book_src"
+title = "The ZSpell Book"

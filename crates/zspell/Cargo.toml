@@ -55,6 +55,11 @@ predicates = "2.1"
 tempfile = "3.3"
 util = { path = "util" }
 
+[build-dependencies]
+clap = { version = "3.2", features = ["derive"] }
+clap_mangen = "0.1"
+clap_complete = "3.0"
+
 [[bench]]
 name = "datastructure"
 harness = false

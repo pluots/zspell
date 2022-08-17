@@ -1,4 +1,6 @@
 //! Helpers for CLI spelling features
+//!
+//! This is a mod.rs so that we can expand this directory at some point
 
 use std::io::{self, BufRead, Write};
 use std::process::ExitCode;
@@ -8,7 +10,7 @@ use zspell::Dictionary;
 use zspell::errors::DictError;
 use zspell::system::{create_dict_from_path, PKG_NAME, PKG_VERSION};
 
-use crate::Cli;
+use crate::cli::Cli;
 
 // A reminder that code is written by humans
 const SALUTATIONS: [&str; 9] = [
@@ -58,9 +60,17 @@ pub fn spellcheck_stdin_runner(dic: &Dictionary) -> ExitCode {
 
 pub fn spellcheck_cli(cli: &Cli) -> ExitCode {
     print!("{} {} loading dictionaries... ", PKG_NAME, PKG_VERSION);
+
     io::stdout().flush().unwrap();
 
-    let dic = match create_dict_from_path(cli.dict_path.as_ref().expect("No dict path").as_str()) {
+    let dict_path = if let Some(v) = cli.dict_path.as_ref() {
+        v.as_str()
+    } else {
+        eprintln!("Dictionary path not specified. Please specify with `-d /path/to/dic`.");
+        return ExitCode::FAILURE;
+    };
+
+    let dic = match create_dict_from_path(dict_path) {
         Ok(v) => v,
         Err(e) => {
             match e {

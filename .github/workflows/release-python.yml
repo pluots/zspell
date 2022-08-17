@@ -1,4 +1,4 @@
-name: "Python wheels: build & release"
+name: "Python release"
 
 on:
   push:
@@ -59,7 +59,7 @@ jobs:
         path: dist
 
   release_all_wheels:
-    name: Release
+    name: Release wheels
     runs-on: ubuntu-latest
     # needs: [ linux ]
     needs: [ linux_wheels, macos_wheels, windows_wheels ]
