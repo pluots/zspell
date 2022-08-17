@@ -1,18 +1,43 @@
 # ZSpell
 
-This is a Rust library implementing a spellchecker that handles Hunspell
-dictionaries. It comes with a library for programmatic use, as well as a command
-line interface. The library is usable via WASM.
+This project is a spellchecker written completely in rust, that maintains
+compatibility with the venerable Hunspell dictionary format. It is entirely
+native and does not rely on any other backends (Enchant, Hunspell, Aspell,
+etc.).
 
-Crate info:
-[https://crates.io/crates/zspell](https://crates.io/crates/zspell)
+This library also has the goal of being usable via WASM.
 
-Crate docs:
-[https://docs.rs/zspell/](https://docs.rs/zspell/).
+The library side has a stabalized checker, but the suggestion API is not yet
+finalized. The CLI side is usable but not yet considered stabalized.
+See [Feature Status](#feature-status) for more information on what is available.
 
-Crate source:
-[https://github.com/pluots/zspell](https://github.com/pluots/zspell)
+Here are some useful quick links:
 
+- Crate info: <https://crates.io/crates/zspell>
+- Crate CLI docs: <https://pluots.github.io/zspell/>
+- Crate library docs: <https://docs.rs/zspell/>
+- Crate source: <https://github.com/pluots/zspell>
+
+## Interfaces
+
+### CLI Interface
+
+Just want to use this spellchecker from the command line? Check out the book,
+located here <https://pluots.github.io/zspell/>, for a more in-depth explanation
+of installation and usage.
+
+If you don't want to read further, the easiest way to get started is to download
+a prebuilt binary from here: <https://github.com/pluots/zspell/releases>.
+
+### Library Interface
+
+This project also aims to create a fully functional spellchecking library, for
+easy programmatic use. See the documentation for the library side here
+<https://docs.rs/zspell/>. This also includes a lot of design methodology
+
+### Usage via WASM
+
+The library API should work out of the bos
 
 ## Spellcheck
 
@@ -21,23 +46,18 @@ compatibility with the venerable Hunspell dictionary format, it does not rely on
 Hunspell or any other underlying checker. NOTE: Spellchecker is currently in
 alpha.
 
-Spellcheck functionality is found in the `spellcheck` module.
-
-### Functionality
-
-NOTE: The spellcheck portion of this project is still under development and is
-not guaranteed to work properly. Completed and future planned support include:
+## Feature Status
 
 - [x] Basic prefix/suffix dictionary files
 - [ ] Forbidden word handling
-- [ ]
+- [ ] Suggestions
 - [ ] Morphological/Phonetic handling
+- [ ] WASM 
 
-### Performance
+## Performance
 
-In general, this program has been shown to be quite fast. On an average laptop,
-benchmarks give approximately 40-50 ns per word. This is fast enough to
-spellcheck the entire million words of the Harry Potter series in about 40 ms.
+This repository has the goal of highly prioritizing the most expected usage,
+i.e., that most words to be checked are correct. This 
 
 ## License
 
