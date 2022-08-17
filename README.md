@@ -49,13 +49,6 @@ in the [zspell_py crate](crates/zspell_py).
 The library API should work out of the box. Official WASM bindings will be
 added at some point.
 
-## Spellcheck
-
-This is a spellchecker written completely in Rust. While maintaining
-compatibility with the venerable Hunspell dictionary format, it does not rely on
-Hunspell or any other underlying checker. NOTE: Spellchecker is currently in
-alpha.
-
 ## Feature Status
 
 | Feature                        | Available via Library | Available via CLI | Tracking Issue |
