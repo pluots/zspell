@@ -54,12 +54,12 @@ added at some point.
 | Feature                        | Available via Library | Available via CLI | Tracking Issue |
 |--------------------------------|-----------------------|-------------------|----------------|
 | Basic spellcheck functionality | ✓                     | ✓                 |                |
-| Forbidden word handling        | ✕                     | ✕                 | #17            |
-| Suggestions                    | ✕                     | ✕                 | #16            |
+| Forbidden word handling        | ✕                     | ✕                 | [#17](https://github.com/pluots/zspell/issues/17) |
+| Suggestions                    | ✕                     | ✕                 | [#16](https://github.com/pluots/zspell/issues/16) |
 | Compound word handling         | ✕                     | ✕                 |                |
 | Full Morph/Phone Handling      | ✕                     | ✕                 |                |
-| Python Interface               | ✕                     | ✕                 |                |
-| Prebuilt WASM bindings         | ✕                     | ✕                 |                |
+| Python Interface               | ✕                     | ✕                 | [#18](https://github.com/pluots/zspell/issues/18) |
+| Prebuilt WASM bindings         | ✕                     | ✕                 | [#19](https://github.com/pluots/zspell/issues/19) |
 
 ## Performance
 
