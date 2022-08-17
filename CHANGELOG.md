@@ -6,6 +6,9 @@
 
 ### Added
 
+- Started generating manpages and autocomplete scripts on build
+- Started generating a documentation book for the CLI
+
 ### Changed
 
 - Better reserve & shrink vectors and hash sets to save a small ammount of
