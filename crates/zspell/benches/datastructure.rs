@@ -44,7 +44,7 @@ const NOT_CONTAINS_LIST: [&str; 15] = [
 /// Load lines from a file
 /// Strip the affix "/" directive
 fn lines_loader() -> Vec<String> {
-    let file = File::open("../../dictionaries/en.dic").unwrap();
+    let file = File::open("../../dictionaries/en_US.dic").unwrap();
     let lines = io::BufReader::new(file).lines();
 
     let mut v: Vec<String> = Vec::new();

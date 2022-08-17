@@ -1,5 +1,5 @@
 ---
-name: "Rust binaries: build and release"
+name: "Rust Build & Release"
 
 # This configuration largely comes from ripgrep
 
@@ -12,7 +12,7 @@ on:
 
 jobs:
   build_release:
-    name: "cargo-build: Build binaries on ${{ matrix.build }}"
+    name: "Build ${{ matrix.build }} binaries (cargo build)"
     runs-on: ${{ matrix.os }}
     strategy:
       matrix:

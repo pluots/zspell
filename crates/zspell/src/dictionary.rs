@@ -3,9 +3,6 @@
 //! This module is generally not imported, since [`Dictionary`] can be directly
 //! imported from [`crate`].
 
-use core::hash::Hash;
-use std::string::ToString;
-
 use hashbrown::hash_set::Iter as HashSetIter;
 use hashbrown::HashSet;
 use stringmetrics::tokenizers::split_whitespace_remove_punc;
@@ -78,9 +75,28 @@ impl Dictionary {
         self.compiled = false;
 
         let mut lines = s.lines();
-        // First line is just a count of the number of items
-        let _first = lines.next();
-        self.raw_wordlist = lines.map(ToString::to_string).collect();
+
+        // First line "should" be a rough length of the list, need to extract it
+        let firstline = if let Some(v) = lines.next() {
+            v
+        } else {
+            self.raw_wordlist = Vec::new();
+            return Ok(());
+        };
+
+        // Don't sweat it if we can't extract a number, just add it
+        // to the list
+        if let Ok(v) = firstline.parse::<usize>() {
+            self.raw_wordlist = Vec::with_capacity(v);
+        } else {
+            self.raw_wordlist = Vec::with_capacity(10000);
+            self.raw_wordlist.push(firstline.to_owned());
+        };
+
+        // Add all our items then shrink capacity as needed
+        self.raw_wordlist.extend(lines.map(ToOwned::to_owned));
+        self.raw_wordlist.shrink_to_fit();
+
         Ok(())
     }
 
@@ -93,7 +109,7 @@ impl Dictionary {
     pub fn load_personal_dict_from_str(&mut self, s: &str) -> Result<(), DictError> {
         self.compiled = false;
 
-        self.raw_wordlist_personal = s.lines().map(ToString::to_string).collect();
+        self.raw_wordlist_personal = s.lines().map(ToOwned::to_owned).collect();
         Ok(())
     }
 
@@ -128,18 +144,23 @@ impl Dictionary {
             }
         }
 
+        // The english dictionay has about 3 words per line, use that as a baseline
+        self.wordlist.reserve(self.raw_wordlist.len() * 3);
+
         for word in &self.raw_wordlist {
             let split: Vec<&str> = word.split('/').collect();
             let rootword = *split.first().unwrap();
             match split.get(1) {
                 Some(rule_keys) => {
-                    let wordlist = self.config.create_affixed_words(rootword, rule_keys);
+                    // Create all relevant words from this root word and affix
+                    let tmp_wordlist = self.config.create_affixed_words(rootword, rule_keys);
+
                     if !&self.config.nosuggest_flag.is_empty()
                         && rule_keys.contains(&self.config.nosuggest_flag)
                     {
-                        iter_to_hashset(wordlist, &mut self.wordlist_nosuggest);
+                        self.wordlist_nosuggest.extend(tmp_wordlist);
                     } else {
-                        iter_to_hashset(wordlist, &mut self.wordlist);
+                        self.wordlist.extend(tmp_wordlist);
                     }
                 }
                 None => {
@@ -147,6 +168,8 @@ impl Dictionary {
                 }
             }
         }
+
+        self.wordlist.shrink_to_fit();
 
         self.compiled = true;
 
@@ -318,15 +341,5 @@ impl Default for Dictionary {
     #[inline]
     fn default() -> Self {
         Self::new()
-    }
-}
-
-fn iter_to_hashset<I, T>(items: I, hs: &mut HashSet<T>)
-where
-    I: IntoIterator<Item = T>,
-    T: Eq + Hash,
-{
-    for item in items {
-        hs.insert(item);
     }
 }

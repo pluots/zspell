@@ -69,7 +69,7 @@ fn fixture_create_en_dict() -> Dictionary {
     let dic_content = fs::read_to_string("../../dictionaries/en_US.dic").unwrap();
 
     dic.config.load_from_str(aff_content.as_str()).unwrap();
-    dic.load_dict_from_str(dic_content.as_str());
+    dic.load_dict_from_str(dic_content.as_str()).unwrap();
     dic.compile().unwrap();
     dic
 }
@@ -94,7 +94,7 @@ pub fn bench_dict_simple(c: &mut Criterion) {
     c.bench_function("Spellcheck: 15 correct words", |b| {
         b.iter(|| {
             for item in CONTAINS_LIST {
-                dic.check(item);
+                dic.check(item).unwrap();
             }
         })
     });
@@ -102,7 +102,7 @@ pub fn bench_dict_simple(c: &mut Criterion) {
     c.bench_function("Spellcheck: 15 incorrect words", |b| {
         b.iter(|| {
             for item in NOT_CONTAINS_LIST {
-                dic.check(item);
+                dic.check(item).unwrap();
             }
         })
     });
@@ -116,7 +116,7 @@ pub fn bench_dict_paragraph(c: &mut Criterion) {
     c.bench_function("Spellcheck: 188 word paragraph", |b| {
         b.iter(|| {
             words.iter().for_each(|s| {
-                dic.check(s);
+                dic.check(s).unwrap();
             })
         })
     });
@@ -130,7 +130,7 @@ pub fn bench_parallel(c: &mut Criterion) {
     c.bench_function("Spellcheck: 188 word paragraph parallel", |b| {
         b.iter(|| {
             words.par_iter().for_each(|s| {
-                dic.check(s);
+                dic.check(s).unwrap();
             })
         })
     });
@@ -152,6 +152,7 @@ pub fn bench_lev(c: &mut Criterion) {
                 .min()
         })
     });
+
     c.bench_function("Lev parallel", |b| {
         b.iter(|| {
             word_items
@@ -160,6 +161,7 @@ pub fn bench_lev(c: &mut Criterion) {
                 .min()
         })
     });
+
     c.bench_function("Lev limit nonparallel", |b| {
         b.iter(|| {
             word_items
@@ -180,7 +182,7 @@ pub fn bench_lev(c: &mut Criterion) {
 
 criterion_group!(
     dict_integration,
-    // bench_dict_compile,
+    bench_dict_compile,
     // bench_dict_simple,
     // bench_dict_paragraph,
     // bench_parallel,
