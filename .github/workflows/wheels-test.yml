@@ -1,4 +1,4 @@
-name: "Python wheels: build test"
+name: "Python Wheels Build Test"
 
 on:
   push:

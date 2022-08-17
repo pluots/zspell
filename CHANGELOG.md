@@ -8,6 +8,9 @@
 
 ### Changed
 
+- Better reserve & shrink vectors and hash sets to save a small ammount of
+  overhead
+
 ### Removed
 
 
