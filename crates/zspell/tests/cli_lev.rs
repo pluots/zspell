@@ -1,4 +1,4 @@
-//! Tests for the command line interface
+//! Tests for the levenshtein command line interface
 
 use assert_cmd::prelude::*; // Add methods on commands
 use predicates::prelude::*; // Used for writing assertions

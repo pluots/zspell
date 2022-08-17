@@ -1,4 +1,4 @@
-name: "Python Wheels Build Test"
+name: "Python Validation"
 
 on:
   push:
@@ -30,3 +30,5 @@ jobs:
       with:
         name: wheels
         path: dist
+
+# Add pytest here when applicable

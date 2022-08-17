@@ -4,6 +4,7 @@ dictionaries/*.dic
 dictionaries/*.aff
 dictionaries/*.license
 tests/files/odyssey.txt
+/book
 
 Pipfile.lock
 

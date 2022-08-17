@@ -153,3 +153,31 @@ jobs:
       - uses: ammaraskar/sphinx-action@master
         with:
           docs-folder: "crates/zspell_py/docs/"
+
+  book:
+    name: "Book (mdbook)"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/cache@v3
+        with:
+          path: |
+            ~/.cargo/bin/
+            ~/.cargo/registry/index/
+            ~/.cargo/registry/cache/
+            ~/.cargo/git/db/
+            ~/mdbook
+            target/
+            book/
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+      - run: |
+          mkdir -p ~/mdbook
+          # Tar is weird with ~ as home
+          curl -sSL https://github.com/rust-lang/mdBook/releases/download/v0.4.21/mdbook-v0.4.21-x86_64-unknown-linux-gnu.tar.gz \
+          | tar -xz --directory=$(echo ~)/mdbook
+      - run: ~/mdbook/mdbook test
