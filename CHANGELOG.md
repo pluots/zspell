@@ -6,6 +6,16 @@
 
 ### Added
 
+### Changed
+
+### Removed
+
+
+
+## [0.1.4] - 2022-08-17
+
+### Added
+
 - Started generating manpages and autocomplete scripts on build
 - Started generating a documentation book for the CLI
 
@@ -56,7 +66,8 @@
 - Behind the scenes work to prepare for automatic dictionary location
 
 <!-- next-url -->
-[Unreleased]: https://github.com/pluots/stringmetrics/compare/v0.1.3...HEAD
+[Unreleased]: https://github.com/pluots/stringmetrics/compare/v0.1.4...HEAD
+[0.1.4]: https://github.com/pluots/stringmetrics/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/pluots/stringmetrics/compare/v0.1.2...v0.1.3
 [0.1.2]: https://github.com/pluots/stringmetrics/compare/v0.1.1...v0.1.2
 [0.1.1]: https://github.com/pluots/stringmetrics/compare/v0.1.0...v0.1.1
