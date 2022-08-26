@@ -153,19 +153,10 @@ pub fn find_matching_dirs(parent: &Path, pattern: &str) -> Vec<PathBuf> {
     let matched_iter = dir_items
         // Get Ok() values
         .filter_map(Result::ok)
-        // Looks tricky, but just returns the path if our item is a directory
-        .filter_map(|x| match x.file_type() {
-            Ok(ft) => {
-                if ft.is_dir() {
-                    Some(x.path())
-                } else {
-                    None
-                }
-            }
-            Err(_) => None,
-        })
-        // Get items that match
-        .filter(|x| re.is_match(&x.to_string_lossy()));
+        // Looks tricky, but just filters out anything that isn't a directory
+        .filter(|dir_entry| dir_entry.file_type().map_or(false, |v| v.is_dir()))
+        .map(|dir_entry| dir_entry.path())
+        .filter(|path_buf| re.is_match(&path_buf.to_string_lossy()));
 
     // Create a new item for the parent paths if exists
     for item in matched_iter {
@@ -182,47 +173,55 @@ pub fn find_matching_dirs(parent: &Path, pattern: &str) -> Vec<PathBuf> {
 ///
 /// This takes a mutable vector that will be drained (used as a stack).
 #[inline]
-pub fn expand_dir_wildcards(paths: &mut Vec<PathBuf>) -> HashSet<PathBuf> {
+pub fn expand_dir_wildcards(path_queue: &mut Vec<PathBuf>) -> HashSet<PathBuf> {
     // We will collect only the existing values here
     let mut ret = HashSet::new();
 
     // Work to empty our stack
-    while let Some(top) = paths.pop() {
-        // println!("working path {top:?}");
-        // println!("remaining paths: {:#?}", paths);
-
+    'queueloop: while let Some(path) = path_queue.pop() {
         // This will hold the "working" parent path
         let mut cur_base = PathBuf::new();
-        let mut is_new = true;
+        let mut comp_iter = path.components();
+        let mut is_first_comp = true;
 
-        for comp in top.components() {
-            // println!("base: {cur_base:?} (new: {is_new}) comp {comp:?}");
+        // The first component will be
+        'comploop: while let Some(comp) = comp_iter.next() {
             // If our parent doesn't exist or is not a dir, we're done here
-            if !is_new && (!cur_base.exists() || !cur_base.is_dir()) {
-                // println!("breaking");
-                break;
+            // Don't check this on the first loop when we have an empty buffer
+            if !is_first_comp && !(cur_base.exists() && cur_base.is_dir()) {
+                break 'comploop;
             }
 
-            if let Component::Normal(value) = comp {
-                // Enter here if this part of the
-                let val_str = value.to_string_lossy();
-                if val_str.contains('*') {
-                    // println!("finding matching");
-                    find_matching_dirs(&cur_base, &val_str);
-                } else {
-                    // println!("adding normal");
-                    // Just add anything else
+            match comp {
+                Component::Normal(value) if value.to_string_lossy().contains('*') => {
+                    // This block handles strings with wildcards
+
+                    // Optimizer should get this reuse
+                    let val_str = value.to_string_lossy();
+                    let remaining_path: PathBuf = comp_iter.collect();
+
+                    // Find directories that match the wildcard
+                    let mut matching_dirs = find_matching_dirs(&cur_base, &val_str);
+
+                    // Append the rest of our buffer to each of them
+                    matching_dirs.iter_mut().for_each(|matching_path_buf| {
+                        matching_path_buf.push(remaining_path.clone())
+                    });
+
+                    // Save the existing paths to our queue
+                    path_queue.append(&mut matching_dirs);
+                    continue 'queueloop;
+                }
+                _ => {
+                    // Anything else just gets added on with no fanfare
                     cur_base.push(comp);
                 }
-            } else {
-                // println!("adding other");
-                // Anything else just gets added on with no fanfare
-                cur_base.push(comp);
             }
 
-            is_new = false;
+            is_first_comp = false;
         }
 
+        // Check if our base exists and is valid; if so, add it
         if cur_base.exists() && cur_base.is_dir() {
             ret.insert(cur_base);
         }
@@ -315,9 +314,9 @@ mod tests {
         let dir = tempdir().unwrap();
 
         let mut paths = vec![
-            dir.path().join("a/b/c-x-cxd"),
-            dir.path().join("a/b/c-yz-cxd"),
-            dir.path().join("a/b/c-.abc-cxd"),
+            dir.path().join("a").join("b").join("c-x-cxd"),
+            dir.path().join("a").join("b").join("c-yz-cxd"),
+            dir.path().join("a").join("b").join("c-.abc-cxd"),
         ];
         paths.sort();
 
@@ -325,37 +324,34 @@ mod tests {
             fs::create_dir_all(path).unwrap();
         }
 
-        let mut ret = find_matching_dirs(&dir.path().join("a/b"), "c-*-c?d");
+        let mut ret = find_matching_dirs(&dir.path().join("a").join("b"), "c-*-c?d");
         ret.sort();
 
         assert_eq!(paths, ret);
     }
-    // Test for expand_dir_wildcards
-    // #[test]
-    // fn test_matching_dirs() {
-    //     // Create a temporary directory with contents
-    //     // Ensure the function locates them using wildcards
-    //     let dir = tempdir().unwrap();
 
-    //     let paths = vec![
-    //         dir.path().join("aaa/bbb-x/ccc"),
-    //         dir.path().join("aaa/bbb-y/ccc"),
-    //         dir.path().join("ddd"),
-    //     ];
+    #[test]
+    fn test_expand_dir_wildcards() {
+        let dir = tempdir().unwrap();
 
-    //     for path in &paths {
-    //         fs::create_dir_all(path).unwrap();
-    //     }
+        let paths = vec![
+            dir.path().join("aaa").join("bbb-x").join("ccc"),
+            dir.path().join("aaa").join("bbb-y").join("ccc"),
+            dir.path().join("ddd"),
+        ];
 
-    //     let mut input = vec![
-    //         PathBuf::from("aaa/bbb*/ccc"),
-    //         PathBuf::from("ddd"),
-    //     ];
+        for path in &paths {
+            fs::create_dir_all(path).unwrap();
+        }
 
-    //     let mut expanded = Vec::from_iter(expand_dir_wildcards(&mut input));
-    //     expanded.sort_unstable();
+        let mut input = vec![
+            dir.path().join("aaa").join("bbb*").join("ccc"),
+            dir.path().join("ddd").to_owned(),
+        ];
 
-    //     assert_eq!(paths, expanded);
+        let mut expanded = Vec::from_iter(expand_dir_wildcards(&mut input));
+        expanded.sort_unstable();
 
-    // }
+        assert_eq!(paths, expanded);
+    }
 }
