@@ -1,10 +1,8 @@
 [package]
 name = "zspell_py"
 version = "0.1.4"
-edition = "2018"
+edition = "2021"
 publish = false
-# Limitation of parking-lot from pyo3
-rust-version = "1.49"
 
 readme = "README.md"
 # Note: this is symlinked from top level
