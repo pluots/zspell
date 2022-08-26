@@ -51,11 +51,8 @@ pub enum DictError {
     #[error("misc error")]
     Other,
 
-    #[error("issue with file {fname}: {orig_e}")]
-    FileError {
-        fname: String,
-        orig_e: io::ErrorKind,
-    },
+    #[error("issue with file {fname}: {e}")]
+    FileError { fname: String, e: io::ErrorKind },
 }
 
 /// Error while compiling the dictionary
@@ -64,4 +61,12 @@ pub enum DictError {
 pub enum CompileError {
     #[error("missing root word {rootword}")]
     MissingRootWord { rootword: String },
+}
+
+/// Error while compiling the dictionary
+#[non_exhaustive]
+#[derive(Error, Debug, PartialEq, Eq)]
+pub enum SystemError {
+    #[error("issue with {name}: {e}")]
+    IOError { name: String, e: io::ErrorKind },
 }

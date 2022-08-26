@@ -74,8 +74,8 @@ pub fn spellcheck_cli(cli: &Cli) -> ExitCode {
         Ok(v) => v,
         Err(e) => {
             match e {
-                DictError::FileError { fname, orig_e } => {
-                    eprintln!("Error opening \"{}\"; {}", fname, orig_e)
+                DictError::FileError { fname, e } => {
+                    eprintln!("Error opening \"{}\"; {}", fname, e)
                 }
                 _ => todo!(),
             };
