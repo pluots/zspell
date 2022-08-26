@@ -270,7 +270,7 @@ impl Conversion {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum RuleType {
     Prefix,
     Suffix,
@@ -459,7 +459,7 @@ impl Rule {
             let condition = unwrap_or_ret_err!(rule.get(3), AffixError::Syntax(rule.join("")));
 
             ruledefs.push(AffixRuleDef::from_table_creation(
-                atype,
+                atype.clone(),
                 strip_text,
                 affix_text,
                 condition,
