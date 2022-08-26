@@ -201,7 +201,7 @@ pub fn expand_dir_wildcards(path_queue: &mut Vec<PathBuf>) -> HashSet<PathBuf> {
         'loop_comps: while let Some(comp) = comp_iter.next() {
             // If our parent doesn't exist or is not a dir, we're done here
             // Don't check this on the first loop when we have an empty buffer
-            if !is_first_comp && !(cur_base.exists() && cur_base.is_dir()) {
+            if !(is_first_comp || cur_base.exists() && cur_base.is_dir()) {
                 break 'loop_comps;
             }
 
@@ -217,9 +217,9 @@ pub fn expand_dir_wildcards(path_queue: &mut Vec<PathBuf>) -> HashSet<PathBuf> {
                     let mut matching_dirs = find_matching_dirs(&cur_base, &val_str);
 
                     // Append the rest of our buffer to each of them
-                    matching_dirs.iter_mut().for_each(|matching_path_buf| {
-                        matching_path_buf.push(remaining_path.clone())
-                    });
+                    for matching_path_buf in &mut matching_dirs {
+                        matching_path_buf.push(remaining_path.clone());
+                    }
 
                     // Save the existing paths to our queue
                     path_queue.append(&mut matching_dirs);
@@ -254,6 +254,10 @@ pub struct DictPaths {
 }
 
 /// Given a path and a language, find any potential dictionary files
+///
+/// # Errors
+///
+/// Passes on errors if the directory cannot be accessed
 #[inline]
 pub fn find_dict_from_path<T: AsRef<str>>(
     path: &Path,
@@ -264,9 +268,9 @@ pub fn find_dict_from_path<T: AsRef<str>>(
     // Sometimes we get something that's e.g. en_US and sometimes en-US
     // Might have duplicates here, no problem since we only use `contains`
     let loc_bases = [
-        lang_ref.to_owned(),
-        lang_ref.replace("-", "_"),
-        lang_ref.replace("-", "_"),
+        lang_ref.clone(),
+        lang_ref.replace('-', "_"),
+        lang_ref.replace('-', "_"),
         lang_ref.split(['-', '_']).next().unwrap().to_owned(),
     ];
 
@@ -282,7 +286,7 @@ pub fn find_dict_from_path<T: AsRef<str>>(
 
     // Collect all paths that are files and are named the location base
     let possible_paths: Vec<_> = dir_iter
-        .filter_map(|entry| entry.ok())
+        .filter_map(Result::ok)
         .map(|entry| entry.path())
         .filter(|path| path.is_file())
         .filter(|path| path.file_stem().is_some())
@@ -302,13 +306,10 @@ pub fn find_dict_from_path<T: AsRef<str>>(
             possible_paths
                 .iter()
                 .filter(|pi| pi.stem == pinfo.stem)
-                .filter(|pi| AFF_EXTENSIONS.contains(&pi.extension.as_str()))
-                .next()
-                .and_then(|pi| {
-                    Some(DictPaths {
-                        dictionary: pinfo.buf.clone(),
-                        affix: pi.buf.clone(),
-                    })
+                .find(|pi| AFF_EXTENSIONS.contains(&pi.extension.as_str()))
+                .map(|pi| DictPaths {
+                    dictionary: pinfo.buf.clone(),
+                    affix: pi.buf.clone(),
                 })
         })
         .collect();
