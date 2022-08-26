@@ -588,7 +588,7 @@ mod tests {
         // Check with default condition
         ard.condition = ".".into();
         ard.compile_re();
-        assert_eq!(ard.check_condition("xxx"), true);
+        assert!(ard.check_condition("xxx"));
     }
 
     #[test]
@@ -604,17 +604,17 @@ mod tests {
         };
         ard.compile_re();
 
-        assert_eq!(ard.apply_pattern("xxxy"), Some("xxxzzz".to_string()));
+        assert_eq!(ard.apply_pattern("xxxy"), Some("xxxzzz".to_owned()));
 
         ard.atype = RuleType::Prefix;
         ard.condition = "y[^aeiou]".into();
         ard.compile_re();
-        assert_eq!(ard.apply_pattern("yxxx"), Some("zzzxxx".to_string()));
+        assert_eq!(ard.apply_pattern("yxxx"), Some("zzzxxx".to_owned()));
 
         ard.atype = RuleType::Suffix;
         ard.condition = ".".into();
         ard.compile_re();
-        assert_eq!(ard.apply_pattern("xxx"), Some("xxxzzz".to_string()));
+        assert_eq!(ard.apply_pattern("xxx"), Some("xxxzzz".to_owned()));
     }
 
     #[test]
@@ -648,8 +648,8 @@ mod tests {
             ],
         };
 
-        assert_eq!(ar.apply("blurry"), Some("blurriness".to_string()));
-        assert_eq!(ar.apply("coy"), Some("coyness".to_string()));
-        assert_eq!(ar.apply("acute"), Some("acuteness".to_string()));
+        assert_eq!(ar.apply("blurry"), Some("blurriness".to_owned()));
+        assert_eq!(ar.apply("coy"), Some("coyness".to_owned()));
+        assert_eq!(ar.apply("acute"), Some("acuteness".to_owned()));
     }
 }
