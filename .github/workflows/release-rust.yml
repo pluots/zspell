@@ -97,6 +97,7 @@ jobs:
 
           # outdir="$(ci/cargo-out-dir "${{ env.TARGET_DIR }}")"
           # outdir=target/release/${{ steps.get_repository_name.outputs.REPOSITORY_NAME }}${{ matrix.extension }}
+          # Find the output directory with the latest timestamp
           cargo_outdir="$(find "${{ env.TARGET_DIR }}" -name zspell-stamp -print0 | xargs -0 ls -t | head -n1 | xargs dirname)"
           ref_name=${GITHUB_REF##*/}
 
