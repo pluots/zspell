@@ -1,4 +1,4 @@
-name: "Python Validation"
+name: Python Validation
 
 on:
   push:
@@ -18,17 +18,18 @@ jobs:
         command: build
         # container default is manylinux
         args: --release -o dist --manifest-path crates/zspell_py/Cargo.toml
-    - name: Build musl wheels
-      uses: messense/maturin-action@v1
-      with:
-        target: x86_64-unknown-linux-musl
-        manylinux: musllinux_1_1
-        command: build
-        args: --release -o dist -i 3.7 3.8 3.9 3.10 --manifest-path crates/zspell_py/Cargo.toml
     - name: Upload wheels
       uses: actions/upload-artifact@v2
       with:
         name: wheels
         path: dist
+
+  doc:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: ammaraskar/sphinx-action@master
+        with:
+          docs-folder: "crates/zspell_py/docs/"
 
 # Add pytest here when applicable
