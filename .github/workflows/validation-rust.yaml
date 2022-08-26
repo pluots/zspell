@@ -150,9 +150,6 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: doc
-      - uses: ammaraskar/sphinx-action@master
-        with:
-          docs-folder: "crates/zspell_py/docs/"
 
   book:
     name: "Book (mdbook)"
