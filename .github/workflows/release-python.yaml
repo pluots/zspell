@@ -1,4 +1,4 @@
-name: "Python release"
+name: Python Release
 
 on:
   push:
