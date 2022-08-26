@@ -285,28 +285,39 @@ pub fn find_dict_from_path<T: AsRef<str>>(
     };
 
     // Collect all paths that are files and are named the location base
-    let possible_paths: Vec<_> = dir_iter
+    let possible_paths: Vec<PathInfo> = dir_iter
         .filter_map(Result::ok)
         .map(|entry| entry.path())
         .filter(|path| path.is_file())
-        .filter(|path| path.file_stem().is_some())
-        .filter(|path| path.extension().is_some())
+        // Keep the path, file name, and extension together
         .map(|path| PathInfo {
-            stem: path.file_stem().unwrap().to_string_lossy().to_lowercase(),
-            extension: path.extension().unwrap().to_string_lossy().to_lowercase(),
+            stem: path
+                .file_stem()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .to_lowercase(),
+            extension: path
+                .extension()
+                .unwrap_or_default()
+                .to_string_lossy()
+                .to_lowercase(),
             buf: path,
         })
+        // Only get possible matching locale file names
         .filter(|pinfo| loc_bases.contains(&pinfo.stem))
         .collect();
 
-    let existing_files: Vec<_> = possible_paths
+    let existing_file_maps: Vec<DictPaths> = possible_paths
         .iter()
+        // Start with a dictionary file
         .filter(|pinfo| DIC_EXTENSIONS.contains(&pinfo.extension.as_str()))
-        .filter_map(|pinfo| {
+        // Existing same names with an affix file
+        .flat_map(|pinfo| {
             possible_paths
                 .iter()
                 .filter(|pi| pi.stem == pinfo.stem)
-                .find(|pi| AFF_EXTENSIONS.contains(&pi.extension.as_str()))
+                .filter(|pi| AFF_EXTENSIONS.contains(&pi.extension.as_str()))
+                // Put matches into a struct
                 .map(|pi| DictPaths {
                     dictionary: pinfo.buf.clone(),
                     affix: pi.buf.clone(),
@@ -314,7 +325,7 @@ pub fn find_dict_from_path<T: AsRef<str>>(
         })
         .collect();
 
-    Ok(existing_files)
+    Ok(existing_file_maps)
 }
 
 /// Take in a path and load the dictionary
