@@ -429,7 +429,7 @@ mod tests {
 
         let mut input = vec![
             dir.path().join("aaa").join("bbb*").join("ccc"),
-            dir.path().join("ddd").to_owned(),
+            dir.path().join("ddd").clone(),
         ];
 
         let mut expanded = Vec::from_iter(expand_dir_wildcards(&mut input));
