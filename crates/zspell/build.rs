@@ -29,7 +29,7 @@ fn build_shell_completion(cmd: &mut App, outdir: &PathBuf) -> Result<(), Error> 
     Ok(())
 }
 
-fn build_man_pages(cmd: App, outdir: &PathBuf) -> Result<(), Error> {
+fn build_man_pages(cmd: App, outdir: &Path) -> Result<(), Error> {
     // Generate man pages
     let man = clap_mangen::Man::new(cmd);
     let mut buffer: Vec<u8> = Default::default();

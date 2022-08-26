@@ -1,17 +1,18 @@
-use cfg_if::cfg_if;
-use hashbrown::HashSet;
-use home::home_dir;
-use regex::{escape, Regex};
+use std::collections::HashSet;
 use std::ffi::OsStr;
 use std::fs;
 use std::{
     env,
     path::{Component, Path, PathBuf},
 };
-// use sys_locale::get_locale;
 
-use crate::errors::DictError;
+use cfg_if::cfg_if;
+use home::home_dir;
+use regex::{escape, Regex};
+use sys_locale::get_locale;
+
 // use crate::errors::FileError;
+use crate::errors::{DictError, SystemError};
 use crate::{unwrap_or_ret, Dictionary};
 
 pub const PKG_NAME: &str = env!("CARGO_PKG_NAME");
@@ -76,6 +77,18 @@ const CHILD_DIR_NAMES: [&str; 8] = [
     "hunspell",
     "dicts",
 ];
+
+const AFF_EXTENSIONS: [&str; 3] = [".aff", ".afx", ".affix"];
+const DIC_EXTENSIONS: [&str; 3] = [".dic", ".dict", ".dictionary"];
+
+/// Get the user's language from their system
+///
+/// Currently this only uses locale and defaults to en-US. Eventually we will
+/// have it adapt to the user's config file in ~/.zspell.
+#[inline]
+pub fn get_preferred_lang() {
+    get_locale().unwrap_or_else(|| String::from("en-US"));
+}
 
 /// Create a list of possible locations to find dictionary files. Expands home;
 /// does not expand windcards
@@ -178,18 +191,18 @@ pub fn expand_dir_wildcards(path_queue: &mut Vec<PathBuf>) -> HashSet<PathBuf> {
     let mut ret = HashSet::new();
 
     // Work to empty our stack
-    'queueloop: while let Some(path) = path_queue.pop() {
+    'loop_queue: while let Some(path) = path_queue.pop() {
         // This will hold the "working" parent path
         let mut cur_base = PathBuf::new();
         let mut comp_iter = path.components();
         let mut is_first_comp = true;
 
         // The first component will be
-        'comploop: while let Some(comp) = comp_iter.next() {
+        'loop_comps: while let Some(comp) = comp_iter.next() {
             // If our parent doesn't exist or is not a dir, we're done here
             // Don't check this on the first loop when we have an empty buffer
             if !is_first_comp && !(cur_base.exists() && cur_base.is_dir()) {
-                break 'comploop;
+                break 'loop_comps;
             }
 
             match comp {
@@ -210,7 +223,7 @@ pub fn expand_dir_wildcards(path_queue: &mut Vec<PathBuf>) -> HashSet<PathBuf> {
 
                     // Save the existing paths to our queue
                     path_queue.append(&mut matching_dirs);
-                    continue 'queueloop;
+                    continue 'loop_queue;
                 }
                 _ => {
                     // Anything else just gets added on with no fanfare
@@ -230,9 +243,78 @@ pub fn expand_dir_wildcards(path_queue: &mut Vec<PathBuf>) -> HashSet<PathBuf> {
     ret
 }
 
-// pub fn find_dict_from_path() {
-//     let locale = get_locale().unwrap_or_else(|| String::from("en-US"));
-// }
+struct PathInfo {
+    buf: PathBuf,
+    stem: String,
+    extension: String,
+}
+pub struct DictPaths {
+    pub dictionary: PathBuf,
+    pub affix: PathBuf,
+}
+
+/// Given a path and a language, find any potential dictionary files
+#[inline]
+pub fn find_dict_from_path<T: AsRef<str>>(
+    path: &Path,
+    lang: T,
+) -> Result<Vec<DictPaths>, SystemError> {
+    let lang_ref = lang.as_ref().to_lowercase();
+
+    // Sometimes we get something that's e.g. en_US and sometimes en-US
+    // Might have duplicates here, no problem since we only use `contains`
+    let loc_bases = [
+        lang_ref.to_owned(),
+        lang_ref.replace("-", "_"),
+        lang_ref.replace("-", "_"),
+        lang_ref.split(['-', '_']).next().unwrap().to_owned(),
+    ];
+
+    let dir_iter = match fs::read_dir(path) {
+        Ok(v) => v,
+        Err(e) => {
+            return Err(SystemError::IOError {
+                name: path.to_string_lossy().to_string(),
+                e: e.kind(),
+            })
+        }
+    };
+
+    // Collect all paths that are files and are named the location base
+    let possible_paths: Vec<_> = dir_iter
+        .filter_map(|entry| entry.ok())
+        .map(|entry| entry.path())
+        .filter(|path| path.is_file())
+        .filter(|path| path.file_stem().is_some())
+        .filter(|path| path.extension().is_some())
+        .map(|path| PathInfo {
+            stem: path.file_stem().unwrap().to_string_lossy().to_lowercase(),
+            extension: path.extension().unwrap().to_string_lossy().to_lowercase(),
+            buf: path,
+        })
+        .filter(|pinfo| loc_bases.contains(&pinfo.stem))
+        .collect();
+
+    let existing_files: Vec<_> = possible_paths
+        .iter()
+        .filter(|pinfo| DIC_EXTENSIONS.contains(&pinfo.extension.as_str()))
+        .filter_map(|pinfo| {
+            possible_paths
+                .iter()
+                .filter(|pi| pi.stem == pinfo.stem)
+                .filter(|pi| AFF_EXTENSIONS.contains(&pi.extension.as_str()))
+                .next()
+                .and_then(|pi| {
+                    Some(DictPaths {
+                        dictionary: pinfo.buf.clone(),
+                        affix: pi.buf.clone(),
+                    })
+                })
+        })
+        .collect();
+
+    Ok(existing_files)
+}
 
 /// Take in a path and load the dictionary
 ///
@@ -254,7 +336,7 @@ pub fn create_dict_from_path(basepath: &str) -> Result<Dictionary, DictError> {
         Err(e) => {
             return Err(DictError::FileError {
                 fname: affix_file_path,
-                orig_e: e.kind(),
+                e: e.kind(),
             })
         }
     }
@@ -264,7 +346,7 @@ pub fn create_dict_from_path(basepath: &str) -> Result<Dictionary, DictError> {
         Err(e) => {
             return Err(DictError::FileError {
                 fname: dict_file_path,
-                orig_e: e.kind(),
+                e: e.kind(),
             })
         }
     }
