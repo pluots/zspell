@@ -1,4 +1,4 @@
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use criterion::{criterion_group, criterion_main, Criterion};
 use hashbrown;
 use std::collections::{BTreeSet, HashSet};
 use std::fs::File;
@@ -72,7 +72,7 @@ pub fn bench_vec(c: &mut Criterion) {
     c.bench_function("Vec Contains", |b| {
         b.iter(|| {
             for item in CONTAINS_LIST {
-                vec.contains(&item.to_string());
+                assert_eq!(vec.contains(&item.to_string()), true);
             }
         })
     });
@@ -80,7 +80,7 @@ pub fn bench_vec(c: &mut Criterion) {
     c.bench_function("Vec Not Contains", |b| {
         b.iter(|| {
             for item in NOT_CONTAINS_LIST {
-                vec.contains(&item.to_string());
+                assert_eq!(vec.contains(&item.to_string()), false);
             }
         })
     });
