@@ -78,8 +78,8 @@ const CHILD_DIR_NAMES: [&str; 8] = [
     "dicts",
 ];
 
-const AFF_EXTENSIONS: [&str; 3] = [".aff", ".afx", ".affix"];
-const DIC_EXTENSIONS: [&str; 3] = [".dic", ".dict", ".dictionary"];
+const AFF_EXTENSIONS: [&str; 3] = ["aff", "afx", "affix"];
+const DIC_EXTENSIONS: [&str; 3] = ["dic", "dict", "dictionary"];
 
 /// Get the user's language from their system
 ///
@@ -243,11 +243,14 @@ pub fn expand_dir_wildcards(path_queue: &mut Vec<PathBuf>) -> HashSet<PathBuf> {
     ret
 }
 
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 struct PathInfo {
     buf: PathBuf,
     stem: String,
     extension: String,
 }
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct DictPaths {
     pub dictionary: PathBuf,
     pub affix: PathBuf,
@@ -257,9 +260,10 @@ pub struct DictPaths {
 ///
 /// # Errors
 ///
-/// Passes on errors if the directory cannot be accessed
+/// If the directory cannot be accessed, return an error. This wraps a
+/// [`std::io::ErrorKind`] error.
 #[inline]
-pub fn find_dict_from_path<T: AsRef<str>>(
+pub fn find_dicts_from_path<T: AsRef<str>>(
     path: &Path,
     lang: T,
 ) -> Result<Vec<DictPaths>, SystemError> {
@@ -270,7 +274,7 @@ pub fn find_dict_from_path<T: AsRef<str>>(
     let loc_bases = [
         lang_ref.clone(),
         lang_ref.replace('-', "_"),
-        lang_ref.replace('-', "_"),
+        lang_ref.replace('_', "-"),
         lang_ref.split(['-', '_']).next().unwrap().to_owned(),
     ];
 
@@ -373,7 +377,8 @@ pub fn create_dict_from_path(basepath: &str) -> Result<Dictionary, DictError> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use std::fs;
+    use crate::errors;
+    use std::{fs, io};
     use tempfile::tempdir;
 
     #[test]
@@ -447,5 +452,61 @@ mod tests {
         expanded.sort_unstable();
 
         assert_eq!(paths, expanded);
+    }
+
+    #[test]
+    fn test_find_dict_from_path() {
+        let dir = tempdir().unwrap();
+
+        let fnames = vec![
+            dir.path().join("test_found.dic"),
+            dir.path().join("test_found.aff"),
+            dir.path().join("test_found.afx"),
+            dir.path().join("test.dict"),
+            dir.path().join("test.affix"),
+            dir.path().join("notfound.dic"),
+            dir.path().join("notfound.aff"),
+            dir.path().join("test"),
+        ];
+
+        let mut expected = vec![
+            DictPaths {
+                dictionary: fnames[0].clone(),
+                affix: fnames[1].clone(),
+            },
+            DictPaths {
+                dictionary: fnames[0].clone(),
+                affix: fnames[2].clone(),
+            },
+            DictPaths {
+                dictionary: fnames[3].clone(),
+                affix: fnames[4].clone(),
+            },
+        ];
+        expected.sort();
+
+        for fname in fnames {
+            fs::File::create(fname).unwrap();
+        }
+        fs::read_dir(dir.path()).unwrap();
+
+        let mut res = find_dicts_from_path(dir.path(), "test_found").unwrap();
+        res.sort();
+
+        assert_eq!(res, expected);
+    }
+
+    #[test]
+    fn test_find_dict_from_path_err() {
+        let fakepath = tempdir().unwrap().path().join("fake");
+        let res = find_dicts_from_path(&fakepath, "test_found");
+
+        assert_eq!(
+            Err(errors::SystemError::IOError {
+                name: fakepath.to_string_lossy().to_string(),
+                e: io::ErrorKind::NotFound
+            }),
+            res
+        )
     }
 }
