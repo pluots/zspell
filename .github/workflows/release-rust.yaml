@@ -73,12 +73,12 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: build
-          # We only want to build zspell, not zspell_py (does not support cdylib)
-          args: --package zspell --release --verbose --target ${{ matrix.target }}
+          # We only want to build zspell_cli, not plain zspell or zspell_py (does not support cdylib)
+          args: --package zspell_cli --release --verbose --target ${{ matrix.target }}
         # Remove debug symbols
       - name: Strip release binary (linux and macos)
         if: matrix.build == 'linux' || matrix.build == 'macos'
-        run: strip "target/${{ matrix.target }}/release/zspell"
+        run: strip "target/${{ matrix.target }}/release/zspell_cli"
         # Remove debug symbols
       - name: Strip release binary (arm)
         if: matrix.build == 'linux-arm'
@@ -87,7 +87,7 @@ jobs:
           "$PWD/target:/target:Z"
           rustembedded/cross:arm-unknown-linux-gnueabihf
           arm-linux-gnueabihf-strip
-          /target/arm-unknown-linux-gnueabihf/release/zspell
+          /target/arm-unknown-linux-gnueabihf/release/zspell_cli
         # Create .zip or .tar.gz file
       - name: Build archive
         shell: bash
