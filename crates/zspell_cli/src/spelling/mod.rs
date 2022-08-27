@@ -53,7 +53,7 @@ pub fn spellcheck_stdin_runner(dic: &Dictionary) -> ExitCode {
         .as_micros() as usize
         % SALUTATIONS.len()];
 
-    println!("\n\nsession ended, {}", bye);
+    println!("\n\nsession ended, {bye}");
 
     ExitCode::SUCCESS
 }
