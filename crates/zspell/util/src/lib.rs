@@ -1,3 +1,4 @@
+/// Utilities intended to help with test collection
 use std::fs;
 
 use zspell::Dictionary;

@@ -1,6 +1,10 @@
 [workspace]
 
-members = ["crates/zspell", "crates/zspell_py"]
+members = [
+    "crates/zspell",
+    "crates/zspell_py",
+    "crates/zspell_cli"
+]
 
 # Build with `cargo build --profile=release-debug`
 # Alternatively `cargo bench --profile=release-debug`
