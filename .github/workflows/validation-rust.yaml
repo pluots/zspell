@@ -73,6 +73,8 @@ jobs:
           toolchain: stable
           override: true
       - uses: actions-rs/cargo@v1
+        env:
+          RUST_BACKTRACE: "1"
         with:
           command: test
 
