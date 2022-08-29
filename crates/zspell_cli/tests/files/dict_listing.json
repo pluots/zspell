@@ -1,0 +1,30 @@
+[
+    {
+        "name": "de-AT",
+        "path": "dictionaries/de-AT",
+        "size": 0,
+        "url": "{{ROOT_URL}}/contents/dictionaries/de-AT?ref=main",
+        "html_url": "{{ROOT_URL}}/tree/main/dictionaries/de-AT",
+        "git_url": "{{ROOT_URL}}git/trees/88cde3b407898339e61aa2015acafbe6950a1c35",
+        "type": "dir",
+        "_links": {}
+    },
+    {
+        "name": "de",
+        "path": "dictionaries/de",
+        "url": "{{ROOT_URL}}/contents/dictionaries/de?ref=main",
+        "type": "dir"
+    },
+    {
+        "name": "en-GB",
+        "path": "dictionaries/en-GB",
+        "url": "{{ROOT_URL}}/contents/dictionaries/en-GB?ref=main",
+        "type": "dir"
+    },
+    {
+        "name": "en",
+        "path": "dictionaries/en",
+        "url": "{{ROOT_URL}}/contents/dictionaries/en?ref=main",
+        "type": "dir"
+    }
+]
