@@ -1,13 +1,13 @@
-mod spelling;
-
 use std::process::ExitCode;
 
 use clap::Parser;
 
+mod cli;
+mod download;
+mod spelling;
+
 use spelling::spellcheck_cli;
 use stringmetrics::levenshtein_limit;
-
-mod cli;
 
 fn main() -> ExitCode {
     let cli_parse = cli::Cli::parse();
