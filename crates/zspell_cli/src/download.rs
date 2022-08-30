@@ -210,7 +210,7 @@ async fn download_file_with_bar(
 
     let pb = ProgressBar::new(total_size);
     pb.set_style(ProgressStyle::default_bar()
-        .template("{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})")?
+        .template("{msg}\n{spinner:.green} [{elapsed_precise}] [{bar:.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})")?
         .progress_chars("#>-"));
     pb.set_message(format!("Downloading {}", url));
 
@@ -220,6 +220,7 @@ async fn download_file_with_bar(
     while let Some(item) = stream.next().await {
         let chunk = item?;
         buffer.write_all(&chunk)?;
+
         let new = min(finished_bytes + (chunk.len() as u64), total_size);
         finished_bytes = new;
         pb.set_position(new);
@@ -239,7 +240,12 @@ async fn download_file_with_bar(
     Ok(())
 }
 
-pub async fn download_dict(lang: &str, dest: &Path, overwrite: bool) -> anyhow::Result<()> {
+pub async fn download_dict(
+    lang: &str,
+    dest: &Path,
+    overwrite: bool,
+    _manifest: &Path,
+) -> anyhow::Result<()> {
     let client = Client::builder()
         .timeout(Duration::from_secs(10))
         .user_agent(APP_USER_AGENT)
@@ -257,24 +263,17 @@ pub async fn download_dict(lang: &str, dest: &Path, overwrite: bool) -> anyhow::
 
     // We control these strings, unwrap should be safe
     // Want to split "sha$some_sha_hex$some_url" into (some_sha_hex, some_url)
-    let info_aff = urls
-        .affix
-        .split_once('$')
-        .map(|x| x.1.split_once('$'))
-        .unwrap()
-        .unwrap();
-    let info_dic = urls
-        .affix
-        .split_once('$')
-        .map(|x| x.1.split_once('$'))
-        .unwrap()
-        .unwrap();
-    let info_lic = urls
-        .affix
-        .split_once('$')
-        .map(|x| x.1.split_once('$'))
-        .unwrap()
-        .unwrap();
+
+    fn split_url_sha(s: &str) -> (&str, &str) {
+        s.split_once('$')
+            .map(|x| x.1.split_once('$'))
+            .unwrap()
+            .unwrap()
+    }
+
+    let info_aff = split_url_sha(urls.affix.as_str());
+    let info_dic = split_url_sha(urls.dictionary.as_str());
+    let info_lic = split_url_sha(urls.license.as_str());
 
     download_file_with_bar(
         &dest.join(fnames.affix),
@@ -283,8 +282,7 @@ pub async fn download_dict(lang: &str, dest: &Path, overwrite: bool) -> anyhow::
         info_aff.1,
         hex::decode(info_aff.0.as_bytes())?.as_slice(),
     )
-    .await
-    .unwrap();
+    .await?;
 
     download_file_with_bar(
         &dest.join(fnames.dictionary),
@@ -318,7 +316,7 @@ mod tests {
     use super::*;
     use test_mocks::*;
 
-    use std::fs;
+    use std::{fs, path::PathBuf};
     use tempfile::tempdir;
 
     #[test]
@@ -373,7 +371,7 @@ mod tests {
         let mocks = mock_server_setup();
         let dir = tempdir().unwrap();
 
-        let res = download_dict("de-AT", dir.path(), false).await;
+        let res = download_dict("de-AT", dir.path(), false, &PathBuf::default()).await;
 
         println!("{res:?}");
         res.unwrap();
@@ -385,15 +383,10 @@ mod tests {
         }
 
         mocks.dict_listing.assert();
-        println!("1");
         mocks.de_at_listing.assert();
-        println!("2");
         mocks.de_at_aff.assert();
-        println!("3");
         mocks.de_at_dic.assert();
-        println!("4");
         mocks.de_at_lic.assert();
-        println!("5");
     }
 }
 
