@@ -2,7 +2,7 @@
     {
         "name": "index.aff",
         "path": "dictionaries/de-AT/index.aff",
-        "sha": "f62a44eda24fc7e85fb05c3cb320bc81bbe14b45",
+        "sha": "a464def0d8bb136f20012d431b60faae2cc915b5",
         "size": 19199,
         "url": "{{ROOT_URL}}/contents/dictionaries/de-AT/index.aff?ref=main",
         "html_url": "{{ROOT_URL}}/blob/main/dictionaries/de-AT/index.aff",
@@ -20,7 +20,7 @@
     {
         "name": "index.dic",
         "path": "dictionaries/de-AT/index.dic",
-        "sha": "b2cd1e9947848f3940893c2a60d2f277f45b15c5",
+        "sha": "eee2f5c4eddac4175d67c00bc808032b02058b5d",
         "download_url": "{{ROOT_URL}}/main/dictionaries/de-AT/index.dic",
         "type": "file"
     },

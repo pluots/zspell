@@ -69,15 +69,11 @@ fn calculate_git_hash_buf<R: Read>(mut reader: R, len: usize) -> anyhow::Result<
     let mut buffer = [0; 1024];
 
     loop {
-        println!("inner");
         let count = reader.read(&mut buffer).unwrap();
-        println!("unw");
-
         if count == 0 {
-            println!("br");
             break;
         }
-        println!("xxx");
+
         hasher.update(&buffer[..count]);
     }
 
@@ -87,13 +83,11 @@ fn calculate_git_hash_buf<R: Read>(mut reader: R, len: usize) -> anyhow::Result<
 
 /// Helper function for getting the root URL that we can "patch" for testing
 fn get_root_url() -> String {
-    cfg_if! {
-        if #[cfg(not(test))] {
-            ROOT_URL.to_owned()
-        } else {
-            TEST_SERVER.url("/contents/dictionaries")
-        }
-    }
+    #[cfg(not(test))]
+    return ROOT_URL.to_owned();
+
+    #[cfg(test)]
+    return TEST_SERVER.url("/contents/dictionaries");
 }
 
 /// Gather the URLs to download dictionary, affix, and license files from a client
@@ -210,20 +204,15 @@ async fn download_file_with_bar(
     sha: &[u8],
 ) -> anyhow::Result<()> {
     let mut buffer = open_new_file(path, overwrite)?;
-    println!("opened {path:?}");
 
     let res = client.get(url).send().await?;
     let total_size = res.content_length().unwrap_or(100);
 
-    println!("OJOI");
-
-    // let pb = ProgressBar::new(total_size);
-    // pb.set_style(ProgressStyle::default_bar()
-    //     .template("{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})")?
-    //     .progress_chars("#>-"));
-    // pb.set_message(format!("Downloading {}", url));
-
-    println!("configured");
+    let pb = ProgressBar::new(total_size);
+    pb.set_style(ProgressStyle::default_bar()
+        .template("{msg}\n{spinner:.green} [{elapsed_precise}] [{wide_bar:.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})")?
+        .progress_chars("#>-"));
+    pb.set_message(format!("Downloading {}", url));
 
     let mut finished_bytes: u64 = 0;
     let mut stream = res.bytes_stream();
@@ -233,30 +222,19 @@ async fn download_file_with_bar(
         buffer.write_all(&chunk)?;
         let new = min(finished_bytes + (chunk.len() as u64), total_size);
         finished_bytes = new;
-        // pb.set_position(new);
+        pb.set_position(new);
     }
-    println!("post while");
+
     let buf_len = buffer.stream_position().unwrap();
     buffer.rewind().context("error writing file").unwrap();
 
     let hash = calculate_git_hash_buf(&buffer, buf_len.try_into()?).unwrap();
-    let mut buf = [0u8; 1000];
-    buffer.rewind().unwrap();
-    let mut ss = String::new();
-    buffer.read_to_string(&mut ss);
-    println!("String: {ss}");
-    println!(
-        "Hashes: \n{:?} and \n{:?}. Expected: \n{:?}",
-        hash,
-        calculate_git_hash(&ss),
-        sha
-    );
 
     if hash != sha {
         bail!("error downloading file; checksum failure");
     }
 
-    // pb.finish_with_message(format!("Downloaded {} to {}", url, path.to_string_lossy()));
+    pb.finish_with_message(format!("Downloaded {} to {}", url, path.to_string_lossy()));
 
     Ok(())
 }
@@ -298,9 +276,6 @@ pub async fn download_dict(lang: &str, dest: &Path, overwrite: bool) -> anyhow::
         .unwrap()
         .unwrap();
 
-    println!("middle");
-    println!("raw hash: {:?} {:?}", info_aff.0, info_aff.0.as_bytes());
-
     download_file_with_bar(
         &dest.join(fnames.affix),
         overwrite,
@@ -310,7 +285,7 @@ pub async fn download_dict(lang: &str, dest: &Path, overwrite: bool) -> anyhow::
     )
     .await
     .unwrap();
-    println!("first");
+
     download_file_with_bar(
         &dest.join(fnames.dictionary),
         overwrite,
@@ -319,7 +294,7 @@ pub async fn download_dict(lang: &str, dest: &Path, overwrite: bool) -> anyhow::
         hex::decode(info_dic.0.as_bytes())?.as_slice(),
     )
     .await?;
-    println!("second");
+
     download_file_with_bar(
         &dest.join(fnames.license),
         overwrite,
@@ -341,8 +316,8 @@ pub async fn download_dict(lang: &str, dest: &Path, overwrite: bool) -> anyhow::
 #[cfg(test)]
 mod tests {
     use super::*;
+    use test_mocks::*;
 
-    use httpmock::{prelude::*, Mock};
     use std::fs;
     use tempfile::tempdir;
 
@@ -357,47 +332,6 @@ mod tests {
         )
     }
 
-    struct TestMocks<'a> {
-        dict_listing: Mock<'a>,
-        de_listing: Mock<'a>,
-    }
-
-    fn mock_server_setup<'a>() -> TestMocks<'a> {
-        let dict_listing = TEST_SERVER.mock(|when, then| {
-            when.method(GET).path("/contents/dictionaries");
-            then.status(200)
-                .header("content-type", "application/json; charset=utf-8")
-                .body(
-                    fs::read_to_string("tests/files/dict_listing.json")
-                        .unwrap()
-                        .replace(r"{{ROOT_URL}}", &TEST_SERVER.base_url()),
-                );
-        });
-        let de_listing = TEST_SERVER.mock(|when, then| {
-            when.method(GET).path("/contents/dictionaries/de-AT");
-            then.status(200)
-                .header("content-type", "application/json; charset=utf-8")
-                .body(
-                    fs::read_to_string("tests/files/de_at_listing.json")
-                        .unwrap()
-                        .replace(r"{{ROOT_URL}}", &TEST_SERVER.base_url()),
-                );
-        });
-
-        TestMocks {
-            dict_listing,
-            de_listing,
-        }
-    }
-
-    fn make_test_client() -> Client {
-        Client::builder()
-            .timeout(Duration::from_secs(5))
-            .user_agent(APP_USER_AGENT)
-            .build()
-            .unwrap()
-    }
-
     #[tokio::test]
     async fn retreive_urls_ok() {
         let mocks = mock_server_setup();
@@ -407,26 +341,29 @@ mod tests {
         // SHA sums joined with files
         let expected = DownloadInfo {
             affix: format!(
-                "sha1$f62a44eda24fc7e85fb05c3cb320bc81bbe14b45${}",
+                "sha1${}${}",
+                CONTENT_AFF_HASH,
                 TEST_SERVER
                     .url("/main/dictionaries/de-AT/index.aff")
                     .as_str()
             ),
             dictionary: format!(
-                "sha1$b2cd1e9947848f3940893c2a60d2f277f45b15c5${}",
+                "sha1${}${}",
+                CONTENT_DIC_HASH,
                 TEST_SERVER
                     .url("/main/dictionaries/de-AT/index.dic")
                     .as_str()
             ),
             license: format!(
-                "sha1$c4d083267263c478591c4856981f32f31690456d${}",
+                "sha1${}${}",
+                CONTENT_LIC_HASH,
                 TEST_SERVER.url("/main/dictionaries/de-AT/license").as_str()
             ),
             lang: "de-AT".to_owned(),
         };
 
         mocks.dict_listing.assert();
-        mocks.de_listing.assert();
+        mocks.de_at_listing.assert();
 
         assert_eq!(urls, expected);
     }
@@ -446,9 +383,100 @@ mod tests {
         for path in paths {
             println!("Name: {}", path.unwrap().path().display())
         }
+
+        mocks.dict_listing.assert();
+        println!("1");
+        mocks.de_at_listing.assert();
+        println!("2");
+        mocks.de_at_aff.assert();
+        println!("3");
+        mocks.de_at_dic.assert();
+        println!("4");
+        mocks.de_at_lic.assert();
+        println!("5");
+    }
+}
+
+#[cfg(test)]
+mod test_mocks {
+    use super::*;
+    use httpmock::{prelude::*, Mock};
+    use std::fs;
+
+    pub struct TestMocks<'a> {
+        pub dict_listing: Mock<'a>,
+        pub de_at_listing: Mock<'a>,
+        pub de_at_aff: Mock<'a>,
+        pub de_at_dic: Mock<'a>,
+        pub de_at_lic: Mock<'a>,
     }
 
-    // "Dictionary Content\n" b2cd1e9947848f3940893c2a60d2f277f45b15c5
-    // "Affix Content\n" f62a44eda24fc7e85fb05c3cb320bc81bbe14b45
-    // "License Content\n" c4d083267263c478591c4856981f32f31690456d
+    // Content for our mock server
+    pub const CONTENT_DIC: &str = "Dictionary Content\n";
+    pub const CONTENT_DIC_HASH: &str = "eee2f5c4eddac4175d67c00bc808032b02058b5d";
+    pub const CONTENT_AFF: &str = "Affix Content\n";
+    pub const CONTENT_AFF_HASH: &str = "a464def0d8bb136f20012d431b60faae2cc915b5";
+    pub const CONTENT_LIC: &str = "License Content\n";
+    pub const CONTENT_LIC_HASH: &str = "c4d083267263c478591c4856981f32f31690456d";
+
+    macro_rules! make_resp {
+        ($path:expr, $ctype:expr, $body:expr) => {
+            TEST_SERVER.mock(|when, then| {
+                when.method(GET).path($path);
+                then.status(200)
+                    .header("content-type", "$ctyle; charset=utf-8")
+                    .body($body);
+            })
+        };
+    }
+
+    pub fn mock_server_setup<'a>() -> TestMocks<'a> {
+        let dict_listing = make_resp!(
+            "/contents/dictionaries",
+            "application/json",
+            fs::read_to_string("tests/files/dict_listing.json")
+                .unwrap()
+                .replace(r"{{ROOT_URL}}", &TEST_SERVER.base_url())
+        );
+
+        let de_at_listing = make_resp!(
+            "/contents/dictionaries/de-AT",
+            "application/json",
+            fs::read_to_string("tests/files/de_at_listing.json")
+                .unwrap()
+                .replace(r"{{ROOT_URL}}", &TEST_SERVER.base_url())
+        );
+
+        let de_at_aff = make_resp!(
+            "/main/dictionaries/de-AT/index.aff",
+            "text/plain",
+            CONTENT_AFF
+        );
+        let de_at_dic = make_resp!(
+            "/main/dictionaries/de-AT/index.dic",
+            "text/plain",
+            CONTENT_DIC
+        );
+        let de_at_lic = make_resp!(
+            "/main/dictionaries/de-AT/license",
+            "text/plain",
+            CONTENT_LIC
+        );
+
+        TestMocks {
+            dict_listing,
+            de_at_listing,
+            de_at_aff,
+            de_at_dic,
+            de_at_lic,
+        }
+    }
+
+    pub fn make_test_client() -> Client {
+        Client::builder()
+            .timeout(Duration::from_secs(5))
+            .user_agent(APP_USER_AGENT)
+            .build()
+            .unwrap()
+    }
 }
