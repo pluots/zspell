@@ -8,7 +8,6 @@ use strum::EnumString;
 
 use crate::affix::{t_data_unwrap, ProcessedToken, ProcessedTokenData};
 use crate::errors::AffixError;
-use crate::unwrap_or_ret_err;
 
 /// All possible types found in hunspell affix files
 /// This represents a generic token type that will have associated
@@ -454,9 +453,9 @@ impl Rule {
 
         // Create rule definitions for that identifier
         for rule in iter {
-            let strip_text = unwrap_or_ret_err!(rule.get(1), AffixError::Syntax(rule.join("")));
-            let affix_text = unwrap_or_ret_err!(rule.get(2), AffixError::Syntax(rule.join("")));
-            let condition = unwrap_or_ret_err!(rule.get(3), AffixError::Syntax(rule.join("")));
+            let strip_text = rule.get(1).ok_or(AffixError::Syntax(rule.join("")))?;
+            let affix_text = rule.get(2).ok_or(AffixError::Syntax(rule.join("")))?;
+            let condition = rule.get(3).ok_or(AffixError::Syntax(rule.join("")))?;
 
             ruledefs.push(AffixRuleDef::from_table_creation(
                 atype.clone(),
@@ -475,8 +474,11 @@ impl Rule {
         // Populate with information from the first line
         Ok(Self {
             atype,
-            key: (*unwrap_or_ret_err!(start.first(), AffixError::MissingIdentifier)).to_owned(),
-            combine_pfx_sfx: match *unwrap_or_ret_err!(start.get(1), AffixError::BadCrossProduct) {
+            key: start
+                .first()
+                .ok_or(AffixError::MissingIdentifier)?
+                .to_string(),
+            combine_pfx_sfx: match *start.get(1).ok_or(AffixError::BadCrossProduct)? {
                 "Y" => true,
                 "N" => false,
                 _ => return Err(AffixError::BadCrossProduct),

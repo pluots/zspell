@@ -12,7 +12,6 @@ use crate::affix::Config;
 use crate::affix::{Conversion, EncodingType, Rule, TokenType};
 use crate::errors::AffixError;
 use crate::graph_vec;
-use crate::unwrap_or_ret_err;
 
 /// Unwrap a [`TokenData`] type
 macro_rules! t_data_unwrap {
@@ -198,11 +197,9 @@ fn get_table_item_count(token: &AffixRawToken) -> Result<u16, AffixError> {
         _ => return Ok(0),
     };
 
-    let to_parse = unwrap_or_ret_err!(count_str, AffixError::Syntax(token.content.join(" ")));
-    match to_parse.parse() {
-        Ok(v) => Ok(v),
-        Err(e) => Err(AffixError::NumParse(e)),
-    }
+    let to_parse = count_str.ok_or(AffixError::Syntax(token.content.join(" ")))?;
+
+    to_parse.parse().map_err(|e| AffixError::NumParse(e))
 }
 
 /// Loop through a vector of raw tokens and create the processed version
