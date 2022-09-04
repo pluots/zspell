@@ -21,35 +21,3 @@ macro_rules! unwrap_or_ret {
         }
     };
 }
-
-#[macro_export]
-macro_rules! unwrap_or_ret_err {
-    ($ex:expr, $ret:expr) => {
-        match $ex {
-            Some(v) => v,
-            None => return Err($ret),
-        }
-    };
-}
-
-// #[macro_export]
-// macro_rules! ok_or_ret {
-//     ($ex:expr, e.$ret:tt) => {
-//         match $ex {
-//             Ok(v) => v,
-//             Err(e) => return e.$ret,
-//         }
-//     };
-//     // ($ex:expr, $ret1:expr(e)$ret2:expr) => {
-//     //     match $ex.ok() {
-//     //         Ok(v) => v,
-//     //         Err(e) => return $ret1:expr(e)$ret2:expr,
-//     //     }
-//     // },
-//     ($ex:expr, $ret:tt) => {
-//         match $ex.ok() {
-//             Ok(v) => v,
-//             Err(e) => return $ret,
-//         }
-//     };
-// }
