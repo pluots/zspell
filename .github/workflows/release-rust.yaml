@@ -73,8 +73,8 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: build
-          # We only want to build zspell_cli, not plain zspell or zspell_py (does not support cdylib)
-          args: --package zspell_cli --release --verbose --target ${{ matrix.target }}
+          # We only want to build zspell-cli, not plain zspell or zspell-py (does not support cdylib)
+          args: --package zspell-cli --release --verbose --target ${{ matrix.target }}
         # Create .zip or .tar.gz file
       - name: Build archive
         shell: bash

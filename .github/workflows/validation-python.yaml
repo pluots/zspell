@@ -17,7 +17,7 @@ jobs:
         manylinux: auto
         command: build
         # container default is manylinux
-        args: --release -o dist --manifest-path crates/zspell_py/Cargo.toml
+        args: --release -o dist --manifest-path crates/zspell-py/Cargo.toml
     - name: Upload wheels
       uses: actions/upload-artifact@v2
       with:
@@ -30,6 +30,6 @@ jobs:
       - uses: actions/checkout@v3
       - uses: ammaraskar/sphinx-action@master
         with:
-          docs-folder: "crates/zspell_py/docs/"
+          docs-folder: "crates/zspell-py/docs/"
 
 # Add pytest here when applicable

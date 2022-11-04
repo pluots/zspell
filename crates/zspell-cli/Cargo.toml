@@ -1,5 +1,5 @@
 [package]
-name = "zspell_cli"
+name = "zspell-cli"
 version = "0.1.4"
 edition = "2021"
 publish = false
@@ -8,7 +8,7 @@ publish = false
 readme = "README.md"
 license-file = "LICENSE"
 
-# Required to make name "zspell" instead of "zspell_cli"
+# Required to make name "zspell" instead of "zspell-cli"
 [[bin]]
 name = "zspell"
 path = "src/main.rs"
