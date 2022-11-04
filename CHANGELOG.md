@@ -6,10 +6,13 @@
 
 ### Added
 
-- Ability to automatically locate dictionaries on the system
+- Ability to automatically locate dictionaries on the system, WIP and not yet
+  documented
 - Command line option to download dictionaries
 
 ### Changed
+
+- Rename helper CLI and py crates (only relevant within this project)
 
 ### Removed
 
