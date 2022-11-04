@@ -5,7 +5,7 @@
 
 use hashbrown::hash_set::Iter as HashSetIter;
 use hashbrown::HashSet;
-use stringmetrics::tokenizers::split_whitespace_remove_punc;
+use unicode_segmentation::UnicodeSegmentation;
 
 use crate::{
     affix::Config,
@@ -211,18 +211,13 @@ impl Dictionary {
     /// Returns an error if the dictionary has not yet been compiled
     #[inline]
     pub fn check<T: AsRef<str>>(&self, s: T) -> Result<bool, DictError> {
-        // We actually just need to check
         self.break_if_not_compiled()?;
 
-        let sref = s.as_ref();
-
-        for word in split_whitespace_remove_punc(sref) {
-            if !self.check_word_no_break(word) {
-                return Ok(false);
-            }
-        }
-
-        Ok(true)
+        // Just check if any words are spelled incorrectly, then return the opposite
+        Ok(!s
+            .as_ref()
+            .unicode_words()
+            .any(|w| !self.check_word_no_break(w)))
     }
 
     /// Perform spellcheck on a string, return a list of misspelled words.
@@ -237,8 +232,10 @@ impl Dictionary {
         // We actually just need to check
         self.break_if_not_compiled()?;
 
-        Ok(split_whitespace_remove_punc(s.as_ref())
+        Ok(s.as_ref()
+            .unicode_words()
             .filter(|word| !self.check_word_no_break(word))
+            .map(ToOwned::to_owned)
             .collect::<Vec<String>>())
     }
 
