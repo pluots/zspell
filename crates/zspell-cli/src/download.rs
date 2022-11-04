@@ -1,6 +1,6 @@
 //! Things required to download dictionaries
-//!
-//!
+
+#![allow(unused)] // WIP
 
 use std::cmp::min;
 use std::fs::{File, OpenOptions};

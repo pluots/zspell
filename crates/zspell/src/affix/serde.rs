@@ -197,9 +197,9 @@ fn get_table_item_count(token: &AffixRawToken) -> Result<u16, AffixError> {
         _ => return Ok(0),
     };
 
-    let to_parse = count_str.ok_or(AffixError::Syntax(token.content.join(" ")))?;
+    let to_parse = count_str.ok_or_else(|| AffixError::Syntax(token.content.join(" ")))?;
 
-    to_parse.parse().map_err(|e| AffixError::NumParse(e))
+    to_parse.parse().map_err(AffixError::NumParse)
 }
 
 /// Loop through a vector of raw tokens and create the processed version

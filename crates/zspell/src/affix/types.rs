@@ -382,13 +382,9 @@ impl AffixRuleDef {
             RuleType::Prefix => {
                 // If stripping chars exist, strip them from the prefix
                 // If not or if no prefix to strip, working is unchanged
-                working = match &self.stripping_chars {
-                    Some(sc) => match working.strip_prefix(sc) {
-                        Some(w) => w,
-                        None => working,
-                    },
-                    None => working,
-                };
+                working = self.stripping_chars.as_ref().map_or(working, |sc| {
+                    working.strip_prefix(sc).map_or(working, |w| w)
+                });
 
                 let mut w_s = self.affix.clone();
                 w_s.push_str(working);
@@ -396,13 +392,11 @@ impl AffixRuleDef {
             }
             RuleType::Suffix => {
                 // Same logic as above
-                working = match &self.stripping_chars {
-                    Some(sc) => match working.strip_suffix(sc) {
-                        Some(w) => w,
-                        None => working,
-                    },
-                    None => working,
-                };
+
+                working = self
+                    .stripping_chars
+                    .as_ref()
+                    .map_or(working, |sc| working.strip_suffix(sc).unwrap_or(working));
                 let mut w_s = working.to_owned();
                 w_s.push_str(&self.affix);
                 Some(w_s)
@@ -453,9 +447,15 @@ impl Rule {
 
         // Create rule definitions for that identifier
         for rule in iter {
-            let strip_text = rule.get(1).ok_or(AffixError::Syntax(rule.join("")))?;
-            let affix_text = rule.get(2).ok_or(AffixError::Syntax(rule.join("")))?;
-            let condition = rule.get(3).ok_or(AffixError::Syntax(rule.join("")))?;
+            let strip_text = rule
+                .get(1)
+                .ok_or_else(|| AffixError::Syntax(rule.join("")))?;
+            let affix_text = rule
+                .get(2)
+                .ok_or_else(|| AffixError::Syntax(rule.join("")))?;
+            let condition = rule
+                .get(3)
+                .ok_or_else(|| AffixError::Syntax(rule.join("")))?;
 
             ruledefs.push(AffixRuleDef::from_table_creation(
                 atype.clone(),
@@ -474,10 +474,7 @@ impl Rule {
         // Populate with information from the first line
         Ok(Self {
             atype,
-            key: start
-                .first()
-                .ok_or(AffixError::MissingIdentifier)?
-                .to_string(),
+            key: (*start.first().ok_or(AffixError::MissingIdentifier)?).to_owned(),
             combine_pfx_sfx: match *start.get(1).ok_or(AffixError::BadCrossProduct)? {
                 "Y" => true,
                 "N" => false,
