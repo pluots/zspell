@@ -73,21 +73,8 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: build
-          # We only want to build zspell, not zspell_py (does not support cdylib)
-          args: --package zspell --release --verbose --target ${{ matrix.target }}
-        # Remove debug symbols
-      - name: Strip release binary (linux and macos)
-        if: matrix.build == 'linux' || matrix.build == 'macos'
-        run: strip "target/${{ matrix.target }}/release/zspell"
-        # Remove debug symbols
-      - name: Strip release binary (arm)
-        if: matrix.build == 'linux-arm'
-        run: >
-          docker run --rm -v
-          "$PWD/target:/target:Z"
-          rustembedded/cross:arm-unknown-linux-gnueabihf
-          arm-linux-gnueabihf-strip
-          /target/arm-unknown-linux-gnueabihf/release/zspell
+          # We only want to build zspell-cli, not plain zspell or zspell-py (does not support cdylib)
+          args: --package zspell-cli --release --verbose --target ${{ matrix.target }}
         # Create .zip or .tar.gz file
       - name: Build archive
         shell: bash
@@ -97,6 +84,7 @@ jobs:
 
           # outdir="$(ci/cargo-out-dir "${{ env.TARGET_DIR }}")"
           # outdir=target/release/${{ steps.get_repository_name.outputs.REPOSITORY_NAME }}${{ matrix.extension }}
+          # Find the output directory with the latest timestamp
           cargo_outdir="$(find "${{ env.TARGET_DIR }}" -name zspell-stamp -print0 | xargs -0 ls -t | head -n1 | xargs dirname)"
           ref_name=${GITHUB_REF##*/}
 

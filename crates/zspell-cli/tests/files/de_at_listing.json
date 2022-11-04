@@ -1,0 +1,52 @@
+[
+    {
+        "name": "index.aff",
+        "path": "dictionaries/de-AT/index.aff",
+        "sha": "a464def0d8bb136f20012d431b60faae2cc915b5",
+        "size": 19199,
+        "url": "{{ROOT_URL}}/contents/dictionaries/de-AT/index.aff?ref=main",
+        "html_url": "{{ROOT_URL}}/blob/main/dictionaries/de-AT/index.aff",
+        "git_url": "{{ROOT_URL}}/git/blobs/904a091b0b6ff066fb44e7d77fcb16edca74ef6a",
+        "download_url": "{{ROOT_URL}}/main/dictionaries/de-AT/index.aff",
+        "type": "file",
+        "_links": {}
+    },
+    {
+        "name": "index.d.ts",
+        "path": "dictionaries/de-AT/index.d.ts",
+        "download_url": "{{ROOT_URL}}/main/dictionaries/de-AT/index.d.ts",
+        "type": "file"
+    },
+    {
+        "name": "index.dic",
+        "path": "dictionaries/de-AT/index.dic",
+        "sha": "eee2f5c4eddac4175d67c00bc808032b02058b5d",
+        "download_url": "{{ROOT_URL}}/main/dictionaries/de-AT/index.dic",
+        "type": "file"
+    },
+    {
+        "name": "index.js",
+        "path": "dictionaries/de-AT/index.js",
+        "download_url": "{{ROOT_URL}}/main/dictionaries/de-AT/index.js",
+        "type": "file"
+    },
+    {
+        "name": "license",
+        "path": "dictionaries/de-AT/license",
+        "sha": "c4d083267263c478591c4856981f32f31690456d",
+        "download_url": "{{ROOT_URL}}/main/dictionaries/de-AT/license",
+        "type": "file"
+    },
+    {
+        "name": "package.json",
+        "path": "dictionaries/de-AT/package.json",
+        "download_url": "{{ROOT_URL}}/main/dictionaries/de-AT/package.json",
+        "type": "file"
+    },
+    {
+        "name": "readme.md",
+        "path": "dictionaries/de-AT/readme.md",
+        "download_url": "{{ROOT_URL}}/main/dictionaries/de-AT/readme.md",
+        "type": "file"
+    }
+]

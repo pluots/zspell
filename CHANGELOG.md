@@ -6,6 +6,9 @@
 
 ### Added
 
+- Ability to automatically locate dictionaries on the system
+- Command line option to download dictionaries
+
 ### Changed
 
 ### Removed

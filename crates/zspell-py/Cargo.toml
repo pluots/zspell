@@ -1,5 +1,5 @@
 [package]
-name = "zspell_py"
+name = "zspell-py"
 version = "0.1.4"
 edition = "2021"
 publish = false

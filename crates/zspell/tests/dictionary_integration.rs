@@ -9,9 +9,9 @@ fn create_dic_from_file(fname: &str) -> Dictionary {
     let dic_name = format!("tests/files/{}.dic", fname);
 
     let aff_content = fs::read_to_string(aff_name.clone())
-        .expect(format!("error reading file {}", aff_name).as_str());
+        .unwrap_or_else(|_| panic!("error reading file {}", aff_name));
     let dic_content = fs::read_to_string(dic_name.clone())
-        .expect(format!("error reading file {}", dic_name).as_str());
+        .unwrap_or_else(|_| panic!("error reading file {}", dic_name));
 
     let mut dic = Dictionary::new();
     dic.config

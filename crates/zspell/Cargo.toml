@@ -22,43 +22,32 @@ maintenance = { status = "actively-developed" }
 name = "zspell"
 path = "src/lib.rs"
 
-[[bin]]
-name = "zspell"
-path = "src/bin/bin.rs"
 
 [dependencies]
 # Base dependencies
 atty = "0.2"
 cfg-if = "1.0"
 futures = "0.3"
-hashbrown = { version = "0.12", features = ["rayon"] }
+hashbrown = "0.12"
 home = "0.5"
 lazy_static = "1.4"
-rayon = "1.5"
 regex = "1"
-stringmetrics = "2"
+stringmetrics = "2.1"
 strum = { version = "0.24", features = ["derive"] }
 strum_macros = "0.24"
 sys-locale = "0.2"
 thiserror = "1.0"
 unicode-segmentation = "1.9.0"
 
-# CLI dependencies
-# At some point, we may wish to split these crates off
-clap = { version = "3.2", features = ["derive"] }
-termcolor = "1.1"
 
 [dev-dependencies]
 criterion = "0.3"
-assert_cmd = "2.0"
 predicates = "2.1"
 tempfile = "3.3"
 util = { path = "util" }
 
 [build-dependencies]
-clap = { version = "3.2", features = ["derive"] }
-clap_mangen = "0.1"
-clap_complete = "3.0"
+
 
 [[bench]]
 name = "datastructure"

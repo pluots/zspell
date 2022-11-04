@@ -1,0 +1,47 @@
+[package]
+name = "zspell-cli"
+version = "0.1.4"
+edition = "2021"
+publish = false
+
+# Note: this is symlinked from top level
+readme = "README.md"
+license-file = "LICENSE"
+
+# Required to make name "zspell" instead of "zspell-cli"
+[[bin]]
+name = "zspell"
+path = "src/main.rs"
+
+[dependencies]
+anyhow = "1.0"
+cfg-if = "1.0"
+clap = { version = "3.2", features = ["derive"] }
+futures-util = "0.3"
+hex = "0.4"
+indicatif = "0.17"
+reqwest = { version = "0.11", features = ["blocking", "stream"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+sha1 = "0.10"
+stringmetrics = "2.1"
+termcolor = "1.1"
+tokio = "1.20"
+zspell = { path = "../zspell" }
+
+[dev-dependencies]
+criterion = "0.3"
+assert_cmd = "2.0"
+predicates = "2.1"
+tempfile = "3.3"
+httpmock = "0.6"
+lazy_static = "1.4"
+# util = { path = "util" }
+
+[build-dependencies]
+clap = { version = "3.2", features = ["derive"] }
+clap_mangen = "0.1"
+clap_complete = "3.0"
+
+[package.metadata.release]
+shared-version = true

@@ -42,7 +42,7 @@ discussions, for those who are interested.
 
 There is a python wrapper for this library with prebuilt wheels, available
 here: <https://pypi.org/project/zspell/>. Its source is located
-in the [zspell_py crate](crates/zspell_py).
+in the [zspell-py crate](crates/zspell-py).
 
 ### Usage via WASM
 

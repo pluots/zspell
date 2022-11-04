@@ -21,13 +21,3 @@ macro_rules! unwrap_or_ret {
         }
     };
 }
-
-#[macro_export]
-macro_rules! unwrap_or_ret_e {
-    ($ex:expr, $ret:expr) => {
-        match $ex {
-            Some(v) => v,
-            None => return Err($ret),
-        }
-    };
-}

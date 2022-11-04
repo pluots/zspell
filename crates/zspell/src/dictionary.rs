@@ -133,7 +133,7 @@ impl Dictionary {
                 tmp.push('/');
                 let filtval = tmp.trim_start_matches('*');
 
-                match self.raw_wordlist.iter().find(|s| s.starts_with(&filtval)) {
+                match self.raw_wordlist.iter().find(|s| s.starts_with(filtval)) {
                     Some(_w) => (),
                     None => {
                         return Err(CompileError::MissingRootWord {

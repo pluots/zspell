@@ -1,6 +1,10 @@
 [workspace]
 
-members = ["crates/zspell", "crates/zspell_py"]
+members = [
+    "crates/zspell",
+    "crates/zspell-py",
+    "crates/zspell-cli"
+]
 
 # Build with `cargo build --profile=release-debug`
 # Alternatively `cargo bench --profile=release-debug`
@@ -8,3 +12,7 @@ members = ["crates/zspell", "crates/zspell_py"]
 [profile.release-debug]
 inherits = "release"
 debug = true
+
+[profile.release.package.zspell-cli]
+# Minimize binary size by removing all symbols
+strip = "symbols"

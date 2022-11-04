@@ -53,7 +53,7 @@ pub fn spellcheck_stdin_runner(dic: &Dictionary) -> ExitCode {
         .as_micros() as usize
         % SALUTATIONS.len()];
 
-    println!("\n\nsession ended, {}", bye);
+    println!("\n\nsession ended, {bye}");
 
     ExitCode::SUCCESS
 }
@@ -74,8 +74,8 @@ pub fn spellcheck_cli(cli: &Cli) -> ExitCode {
         Ok(v) => v,
         Err(e) => {
             match e {
-                DictError::FileError { fname, orig_e } => {
-                    eprintln!("Error opening \"{}\"; {}", fname, orig_e)
+                DictError::FileError { fname, e } => {
+                    eprintln!("Error opening \"{}\"; {}", fname, e)
                 }
                 _ => todo!(),
             };

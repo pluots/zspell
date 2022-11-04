@@ -8,7 +8,6 @@ use strum::EnumString;
 
 use crate::affix::{t_data_unwrap, ProcessedToken, ProcessedTokenData};
 use crate::errors::AffixError;
-use crate::unwrap_or_ret_e;
 
 /// All possible types found in hunspell affix files
 /// This represents a generic token type that will have associated
@@ -270,7 +269,7 @@ impl Conversion {
     }
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum RuleType {
     Prefix,
     Suffix,
@@ -383,13 +382,9 @@ impl AffixRuleDef {
             RuleType::Prefix => {
                 // If stripping chars exist, strip them from the prefix
                 // If not or if no prefix to strip, working is unchanged
-                working = match &self.stripping_chars {
-                    Some(sc) => match working.strip_prefix(sc) {
-                        Some(w) => w,
-                        None => working,
-                    },
-                    None => working,
-                };
+                working = self.stripping_chars.as_ref().map_or(working, |sc| {
+                    working.strip_prefix(sc).map_or(working, |w| w)
+                });
 
                 let mut w_s = self.affix.clone();
                 w_s.push_str(working);
@@ -397,13 +392,11 @@ impl AffixRuleDef {
             }
             RuleType::Suffix => {
                 // Same logic as above
-                working = match &self.stripping_chars {
-                    Some(sc) => match working.strip_suffix(sc) {
-                        Some(w) => w,
-                        None => working,
-                    },
-                    None => working,
-                };
+
+                working = self
+                    .stripping_chars
+                    .as_ref()
+                    .map_or(working, |sc| working.strip_suffix(sc).unwrap_or(working));
                 let mut w_s = working.to_owned();
                 w_s.push_str(&self.affix);
                 Some(w_s)
@@ -454,12 +447,18 @@ impl Rule {
 
         // Create rule definitions for that identifier
         for rule in iter {
-            let strip_text = unwrap_or_ret_e!(rule.get(1), AffixError::Syntax(rule.join("")));
-            let affix_text = unwrap_or_ret_e!(rule.get(2), AffixError::Syntax(rule.join("")));
-            let condition = unwrap_or_ret_e!(rule.get(3), AffixError::Syntax(rule.join("")));
+            let strip_text = rule
+                .get(1)
+                .ok_or_else(|| AffixError::Syntax(rule.join("")))?;
+            let affix_text = rule
+                .get(2)
+                .ok_or_else(|| AffixError::Syntax(rule.join("")))?;
+            let condition = rule
+                .get(3)
+                .ok_or_else(|| AffixError::Syntax(rule.join("")))?;
 
             ruledefs.push(AffixRuleDef::from_table_creation(
-                atype,
+                atype.clone(),
                 strip_text,
                 affix_text,
                 condition,
@@ -475,8 +474,8 @@ impl Rule {
         // Populate with information from the first line
         Ok(Self {
             atype,
-            key: (*unwrap_or_ret_e!(start.first(), AffixError::MissingIdentifier)).to_owned(),
-            combine_pfx_sfx: match *unwrap_or_ret_e!(start.get(1), AffixError::BadCrossProduct) {
+            key: (*start.first().ok_or(AffixError::MissingIdentifier)?).to_owned(),
+            combine_pfx_sfx: match *start.get(1).ok_or(AffixError::BadCrossProduct)? {
                 "Y" => true,
                 "N" => false,
                 _ => return Err(AffixError::BadCrossProduct),
@@ -588,7 +587,7 @@ mod tests {
         // Check with default condition
         ard.condition = ".".into();
         ard.compile_re();
-        assert_eq!(ard.check_condition("xxx"), true);
+        assert!(ard.check_condition("xxx"));
     }
 
     #[test]
@@ -604,17 +603,17 @@ mod tests {
         };
         ard.compile_re();
 
-        assert_eq!(ard.apply_pattern("xxxy"), Some("xxxzzz".to_string()));
+        assert_eq!(ard.apply_pattern("xxxy"), Some("xxxzzz".to_owned()));
 
         ard.atype = RuleType::Prefix;
         ard.condition = "y[^aeiou]".into();
         ard.compile_re();
-        assert_eq!(ard.apply_pattern("yxxx"), Some("zzzxxx".to_string()));
+        assert_eq!(ard.apply_pattern("yxxx"), Some("zzzxxx".to_owned()));
 
         ard.atype = RuleType::Suffix;
         ard.condition = ".".into();
         ard.compile_re();
-        assert_eq!(ard.apply_pattern("xxx"), Some("xxxzzz".to_string()));
+        assert_eq!(ard.apply_pattern("xxx"), Some("xxxzzz".to_owned()));
     }
 
     #[test]
@@ -648,8 +647,8 @@ mod tests {
             ],
         };
 
-        assert_eq!(ar.apply("blurry"), Some("blurriness".to_string()));
-        assert_eq!(ar.apply("coy"), Some("coyness".to_string()));
-        assert_eq!(ar.apply("acute"), Some("acuteness".to_string()));
+        assert_eq!(ar.apply("blurry"), Some("blurriness".to_owned()));
+        assert_eq!(ar.apply("coy"), Some("coyness".to_owned()));
+        assert_eq!(ar.apply("acute"), Some("acuteness".to_owned()));
     }
 }
