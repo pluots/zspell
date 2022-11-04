@@ -235,7 +235,7 @@ impl Dictionary {
         Ok(s.as_ref()
             .unicode_words()
             .filter(|word| !self.check_word_no_break(word))
-            .map(|s| s.to_owned())
+            .map(ToOwned::to_owned)
             .collect::<Vec<String>>())
     }
 
