@@ -20,7 +20,8 @@ clap = { version = "4.0.18", features = ["derive", "wrap_help"] }
 futures-util = "0.3.25"
 hex = "0.4.3"
 indicatif = "0.17.1"
-reqwest = { version = "0.11.12", features = ["blocking", "stream"] }
+# We opt to use rustls instead of linking openssl
+reqwest = { version = "0.11.12", features = ["blocking", "stream", "rustls-tls"], default-features = false }
 serde = { version = "1.0.147", features = ["derive"] }
 serde_json = "1.0.87"
 sha1 = "0.10.5"
