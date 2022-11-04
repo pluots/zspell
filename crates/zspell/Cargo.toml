@@ -28,10 +28,9 @@ path = "src/lib.rs"
 atty = "0.2"
 cfg-if = "1.0"
 futures = "0.3"
-hashbrown = { version = "0.12", features = ["rayon"] }
+hashbrown = "0.12"
 home = "0.5"
 lazy_static = "1.4"
-rayon = "1.5"
 regex = "1"
 stringmetrics = "2.1"
 strum = { version = "0.24", features = ["derive"] }
