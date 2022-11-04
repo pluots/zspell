@@ -8,6 +8,8 @@
 
 ### Changed
 
+- Changed word breaking to use unicode segmentation, as suggested by @saona-raimundo
+
 ### Removed
 
 

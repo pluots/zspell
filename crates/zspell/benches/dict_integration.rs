@@ -1,5 +1,4 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
-use rayon::prelude::*;
 use std::fs;
 use stringmetrics::{levenshtein, levenshtein_limit};
 use zspell::Dictionary;
@@ -122,20 +121,6 @@ pub fn bench_dict_paragraph(c: &mut Criterion) {
     });
 }
 
-pub fn bench_parallel(c: &mut Criterion) {
-    let dic = fixture_create_en_dict();
-
-    let words = TEXT.split_whitespace().collect::<Vec<&str>>();
-
-    c.bench_function("Spellcheck: 188 word paragraph parallel", |b| {
-        b.iter(|| {
-            words.par_iter().for_each(|s| {
-                dic.check(s).unwrap();
-            })
-        })
-    });
-}
-
 pub fn bench_lev(c: &mut Criterion) {
     let dic = fixture_create_en_dict();
     let word_items: Vec<&str> = dic
@@ -153,15 +138,6 @@ pub fn bench_lev(c: &mut Criterion) {
         })
     });
 
-    c.bench_function("Lev parallel", |b| {
-        b.iter(|| {
-            word_items
-                .par_iter()
-                .map(|s| levenshtein(s, "turbiditated"))
-                .min()
-        })
-    });
-
     c.bench_function("Lev limit nonparallel", |b| {
         b.iter(|| {
             word_items
@@ -170,22 +146,14 @@ pub fn bench_lev(c: &mut Criterion) {
                 .min()
         })
     });
-    c.bench_function("Lev limit parallel", |b| {
-        b.iter(|| {
-            word_items
-                .par_iter()
-                .map(|s| levenshtein_limit(s, "turbiditated", 4))
-                .min()
-        })
-    });
 }
 
 criterion_group!(
     dict_integration,
-    bench_dict_compile,
+    // bench_dict_compile,
     // bench_dict_simple,
-    // bench_dict_paragraph,
+    bench_dict_paragraph,
     // bench_parallel,
-    bench_lev
+    // bench_lev
 );
 criterion_main!(dict_integration);
