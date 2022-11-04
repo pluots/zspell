@@ -45,3 +45,7 @@ clap_complete = "3.0"
 
 [package.metadata.release]
 shared-version = true
+
+[profile.release]
+# Minimize binary size
+strip = "symbols"

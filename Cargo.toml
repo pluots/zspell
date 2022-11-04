@@ -12,3 +12,7 @@ members = [
 [profile.release-debug]
 inherits = "release"
 debug = true
+
+[profile.release.package.zspell-cli]
+# Minimize binary size by removing all symbols
+strip = "symbols"
