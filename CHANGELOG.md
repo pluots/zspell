@@ -8,6 +8,16 @@
 
 ### Changed
 
+### Removed
+
+
+
+## [0.2.1] - 2022-11-04
+
+### Added
+
+### Changed
+
 - Changed word breaking to use unicode segmentation, as suggested by @saona-raimundo
 
 ### Removed
@@ -84,7 +94,8 @@
 - Behind the scenes work to prepare for automatic dictionary location
 
 <!-- next-url -->
-[Unreleased]: https://github.com/pluots/stringmetrics/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/pluots/stringmetrics/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/pluots/stringmetrics/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/pluots/stringmetrics/compare/v0.1.4...v0.2.0
 [0.1.4]: https://github.com/pluots/stringmetrics/compare/v0.1.3...v0.1.4
 [0.1.3]: https://github.com/pluots/stringmetrics/compare/v0.1.2...v0.1.3
