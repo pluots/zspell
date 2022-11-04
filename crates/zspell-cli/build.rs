@@ -3,12 +3,12 @@ use std::io::Error;
 use std::path::PathBuf;
 use std::{env, path::Path};
 
-use clap::{App, CommandFactory};
+use clap::{Command, CommandFactory};
 use clap_complete::{generate_to, shells::Shell};
 
 include!("src/cli/mod.rs");
 
-fn build_shell_completion(cmd: &mut App, outdir: &PathBuf) -> Result<(), Error> {
+fn build_shell_completion(cmd: &mut Command, outdir: &PathBuf) -> Result<(), Error> {
     // Generate shell completion scripts for our
     for shell in [
         Shell::Bash,
@@ -29,7 +29,7 @@ fn build_shell_completion(cmd: &mut App, outdir: &PathBuf) -> Result<(), Error> 
     Ok(())
 }
 
-fn build_man_pages(cmd: App, outdir: &Path) -> Result<(), Error> {
+fn build_man_pages(cmd: Command, outdir: &Path) -> Result<(), Error> {
     // Generate man pages
     let man = clap_mangen::Man::new(cmd);
     let mut buffer: Vec<u8> = Default::default();
