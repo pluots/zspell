@@ -5,6 +5,7 @@ dictionaries/*.aff
 dictionaries/*.license
 tests/files/odyssey.txt
 /book
+.docker-cargo
 
 Pipfile.lock
 
