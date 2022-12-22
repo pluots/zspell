@@ -1,4 +1,5 @@
 use std::{io, num};
+
 use thiserror::Error;
 
 #[non_exhaustive]

@@ -504,8 +504,9 @@ impl Rule {
 mod tests {
     use std::convert::TryFrom;
 
-    use super::*;
     use strum::{EnumProperty, VariantNames};
+
+    use super::*;
 
     // Spot check deserialization of encoding
     #[test]

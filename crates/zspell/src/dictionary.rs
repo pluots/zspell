@@ -7,10 +7,8 @@ use hashbrown::hash_set::Iter as HashSetIter;
 use hashbrown::HashSet;
 use unicode_segmentation::UnicodeSegmentation;
 
-use crate::{
-    affix::Config,
-    errors::{AffixError, CompileError, DictError},
-};
+use crate::affix::Config;
+use crate::errors::{AffixError, CompileError, DictError};
 
 /// Main dictionary object used for spellchecking and autocorrect
 ///
@@ -190,6 +188,7 @@ impl Dictionary {
     ///
     /// ```
     /// use std::fs;
+    ///
     /// use zspell::Dictionary;
     ///
     /// let mut dic = Dictionary::new();

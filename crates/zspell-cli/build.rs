@@ -1,10 +1,11 @@
+use std::env;
 use std::fs::File;
 use std::io::Error;
-use std::path::PathBuf;
-use std::{env, path::Path};
+use std::path::{Path, PathBuf};
 
 use clap::{Command, CommandFactory};
-use clap_complete::{generate_to, shells::Shell};
+use clap_complete::generate_to;
+use clap_complete::shells::Shell;
 
 include!("src/cli/mod.rs");
 

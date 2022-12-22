@@ -5,10 +5,10 @@
 use std::io::{self, BufRead, Write};
 use std::process::ExitCode;
 use std::time::{SystemTime, UNIX_EPOCH};
-use zspell::Dictionary;
 
 use zspell::errors::DictError;
 use zspell::system::{create_dict_from_path, PKG_NAME, PKG_VERSION};
+use zspell::Dictionary;
 
 use crate::cli::Cli;
 

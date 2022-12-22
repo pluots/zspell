@@ -7,7 +7,8 @@
 use std::cmp::min;
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Seek, Write};
-use std::{path::Path, time::Duration};
+use std::path::Path;
+use std::time::Duration;
 
 use anyhow::{bail, Context};
 use cfg_if::cfg_if;
@@ -316,11 +317,13 @@ async fn download_dict(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use std::fs;
+    use std::path::PathBuf;
+
+    use tempfile::tempdir;
     use test_mocks::*;
 
-    use std::{fs, path::PathBuf};
-    use tempfile::tempdir;
+    use super::*;
 
     #[test]
     fn calculate_git_hash_ok() {
@@ -397,9 +400,12 @@ mod tests {
 
 #[cfg(test)]
 mod test_mocks {
-    use super::*;
-    use httpmock::{prelude::*, Mock};
     use std::fs;
+
+    use httpmock::prelude::*;
+    use httpmock::Mock;
+
+    use super::*;
 
     pub struct TestMocks<'a> {
         pub dict_listing: Mock<'a>,

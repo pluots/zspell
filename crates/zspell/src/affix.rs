@@ -11,14 +11,13 @@
 mod serde;
 mod types;
 
+use serde::t_data_unwrap;
+pub use serde::{load_affix_from_str, ProcessedToken, ProcessedTokenData};
+pub use types::{Conversion, EncodingType, Rule, RuleType, TokenType};
 use unicode_segmentation::UnicodeSegmentation;
 
 use crate::errors::AffixError;
 use crate::graph_vec;
-
-use serde::t_data_unwrap;
-pub use serde::{load_affix_from_str, ProcessedToken, ProcessedTokenData};
-pub use types::{Conversion, EncodingType, Rule, RuleType, TokenType};
 
 /// Dictionary configuration object that holds affix file data
 ///

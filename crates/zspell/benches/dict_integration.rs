@@ -1,5 +1,6 @@
-use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use std::fs;
+
+use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use stringmetrics::{levenshtein, levenshtein_limit};
 use zspell::Dictionary;
 

@@ -1,9 +1,10 @@
-use criterion::{criterion_group, criterion_main, Criterion};
-use hashbrown;
 use std::collections::{BTreeSet, HashSet};
 use std::fs::File;
 use std::io::{self, BufRead};
 use std::iter::FromIterator;
+
+use criterion::{criterion_group, criterion_main, Criterion};
+use hashbrown;
 
 const CONTAINS_LIST: [&str; 15] = [
     "Accenture",
