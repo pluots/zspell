@@ -77,7 +77,7 @@ fn fixture_create_en_dict() -> Dictionary {
 /// This test just creates a dictionary. The compiling is the slow step.
 pub fn bench_dict_compile(c: &mut Criterion) {
     c.bench_function("Spellcheck: compile dictionary", |b| {
-        b.iter(|| fixture_create_en_dict())
+        b.iter(fixture_create_en_dict)
     });
 }
 

@@ -110,7 +110,7 @@ impl TestCollection {
                     ret.suggestions = Some(tmp_ret)
                 }
                 "end" => break,
-                other => panic!("Bad section heading '{}'. Collection:\n{:#?}\n", other, ret),
+                other => panic!("Bad section heading '{other}'. Collection:\n{ret:#?}\n"),
             };
         }
 
@@ -123,7 +123,7 @@ impl TestCollection {
             Some(v) => {
                 for item in v {
                     let res = dic.check(item).expect("Dictionary error");
-                    assert!(res, "{} failed check (expected true)", item);
+                    assert!(res, "{item} failed check (expected true)");
                 }
                 println!("Validated {} items as true", v.len());
             }
@@ -133,7 +133,7 @@ impl TestCollection {
             Some(v) => {
                 for item in v {
                     let res = dic.check(item).expect("Dictionary error");
-                    assert!(!res, "{} failed check (expected false)", item)
+                    assert!(!res, "{item} failed check (expected false)")
                 }
                 println!("Validated {} items as false", v.len());
             }

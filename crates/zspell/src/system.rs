@@ -506,6 +506,6 @@ mod tests {
                 e: io::ErrorKind::NotFound
             }),
             res
-        )
+        );
     }
 }

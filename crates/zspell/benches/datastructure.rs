@@ -4,7 +4,6 @@ use std::io::{self, BufRead};
 use std::iter::FromIterator;
 
 use criterion::{criterion_group, criterion_main, Criterion};
-use hashbrown;
 
 const CONTAINS_LIST: [&str; 15] = [
     "Accenture",
@@ -73,7 +72,7 @@ pub fn bench_vec(c: &mut Criterion) {
     c.bench_function("Vec Contains", |b| {
         b.iter(|| {
             for item in CONTAINS_LIST {
-                assert_eq!(vec.contains(&item.to_string()), true);
+                assert!(vec.contains(&item.to_string()));
             }
         })
     });
@@ -81,7 +80,7 @@ pub fn bench_vec(c: &mut Criterion) {
     c.bench_function("Vec Not Contains", |b| {
         b.iter(|| {
             for item in NOT_CONTAINS_LIST {
-                assert_eq!(vec.contains(&item.to_string()), false);
+                assert!(!vec.contains(&item.to_string()));
             }
         })
     });
