@@ -28,8 +28,8 @@ use crate::graph_vec;
 ///
 /// # Internal working
 ///
-/// Generally within this class, a "string" is represented as a Vec<String> or
-/// Vec<&str>, i.e. a vector of string graphemes. This is because many languages
+/// Generally within this class, a "string" is represented as a `Vec<String>` or
+/// `Vec<&str>`, i.e. a vector of string graphemes. This is because many languages
 /// may require accurate unicode segmentation to work properly. It is not yet
 /// understood whether this is the best practice, so this may change in the
 /// future.

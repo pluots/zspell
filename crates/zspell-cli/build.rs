@@ -24,7 +24,7 @@ fn build_shell_completion(cmd: &mut Command, outdir: &PathBuf) -> Result<(), Err
             outdir,   // We need to specify where to write
         )?;
 
-        println!("cargo:warning=completion file written to {:?}", path);
+        println!("cargo:warning=completion file written to {path:?}");
     }
 
     Ok(())
@@ -39,7 +39,7 @@ fn build_man_pages(cmd: Command, outdir: &Path) -> Result<(), Error> {
 
     let manpage_out = outdir.join("zspell.1");
 
-    println!("cargo:warning=manpage written to {:?}", manpage_out);
+    println!("cargo:warning=manpage written to {manpage_out:?}");
 
     std::fs::write(manpage_out, buffer)?;
 

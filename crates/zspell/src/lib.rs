@@ -1,11 +1,11 @@
 //! # Zspell library
 //!
-//! The main operations of this module include [`AffixConfig`], which represents
-//! configuration options, and [`Dictionary`], which contains the affix
+//! The main operations of this module include [`Config`], which represents
+//! affix configuration options, and [`Dictionary`], which contains the
 //! configuration and the implementation to perform spell checking.
 //!
 //! Please note that the spellchecker is currently in alpha, and really not
-//! ready for any mainstream use. Contributions are more than welcome at,
+//! ready for any mainstream use. Contributions are more than welcome at
 //! <https://github.com/pluots/zspell>.
 #![warn(
     clippy::pedantic,

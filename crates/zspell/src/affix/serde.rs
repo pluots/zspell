@@ -1,6 +1,6 @@
 //! Affix Ser/Des module
 //!
-//! This module handles loading in an affix file to an [`AffixConfig`] object.
+//! This module handles loading in an affix file to a [`Config`] object.
 //! Usually it is not accessed directly.
 
 use std::convert::TryFrom;
@@ -63,8 +63,8 @@ macro_rules! parentify {
 }
 
 /// Populate an Affix class from the string version of a file. This is the main
-/// function exported from this module. `ax` is the [`AffixConfig`] object to
-/// load, `s` is the file raw string to load in
+/// function exported from this module. `ax` is the [`Config`] object to load,
+/// `s` is the file raw string to load in
 ///
 /// # Errors
 ///

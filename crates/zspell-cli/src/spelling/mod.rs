@@ -36,7 +36,7 @@ pub fn spellcheck_stdin_runner(dic: &Dictionary) -> ExitCode {
         let unwrapped = match line {
             Ok(v) => v,
             Err(e) => {
-                eprintln!("Input error: {}", e);
+                eprintln!("Input error: {e}");
                 return ExitCode::FAILURE;
             }
         };
@@ -59,7 +59,7 @@ pub fn spellcheck_stdin_runner(dic: &Dictionary) -> ExitCode {
 }
 
 pub fn spellcheck_cli(cli: &Cli) -> ExitCode {
-    print!("{} {} loading dictionaries... ", PKG_NAME, PKG_VERSION);
+    print!("{PKG_NAME} {PKG_VERSION} loading dictionaries... ");
 
     io::stdout().flush().unwrap();
 
@@ -75,7 +75,7 @@ pub fn spellcheck_cli(cli: &Cli) -> ExitCode {
         Err(e) => {
             match e {
                 DictError::FileError { fname, e } => {
-                    eprintln!("Error opening \"{}\"; {}", fname, e)
+                    eprintln!("Error opening '{fname}'; {e}")
                 }
                 _ => todo!(),
             };
@@ -85,7 +85,7 @@ pub fn spellcheck_cli(cli: &Cli) -> ExitCode {
 
     if cli.generate_wordlist {
         for item in dic.iter_wordlist_items().unwrap() {
-            println!("{}", item);
+            println!("{item}");
         }
     } else {
         return spellcheck_stdin_runner(&dic);

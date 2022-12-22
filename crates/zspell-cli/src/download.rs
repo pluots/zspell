@@ -48,7 +48,7 @@ struct DownloadInfo {
 /// Perform the function that Git does to calculate its hash
 ///
 /// Implementation taken from the git help page, located here
-/// https://git-scm.com/book/en/v2/Git-Internals-Git-Objects
+/// <https://git-scm.com/book/en/v2/Git-Internals-Git-Objects>
 fn calculate_git_hash(s: &str) -> [u8; 20] {
     let mut tmp = String::from("blob ");
     tmp.push_str(&s.len().to_string());
@@ -215,7 +215,7 @@ async fn download_file_with_bar(
     pb.set_style(ProgressStyle::default_bar()
         .template("{msg}\n{spinner:.green} [{elapsed_precise}] [{bar:.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})")?
         .progress_chars("#>-"));
-    pb.set_message(format!("Downloading {}", url));
+    pb.set_message(format!("Downloading {url}"));
 
     let mut finished_bytes: u64 = 0;
     let mut stream = res.bytes_stream();
