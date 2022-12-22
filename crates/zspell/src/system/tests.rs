@@ -134,5 +134,5 @@ fn test_find_dict_from_path_err() {
             e: io::ErrorKind::NotFound
         }),
         res
-    )
+    );
 }
