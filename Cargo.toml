@@ -3,7 +3,8 @@
 members = [
     "crates/zspell",
     "crates/zspell-py",
-    "crates/zspell-cli"
+    "crates/zspell-cli",
+    "crates/zspell-next"
 ]
 
 # Build with `cargo build --profile=release-debug`

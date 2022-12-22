@@ -1,0 +1,100 @@
+[package]
+name = "zspell-next"
+version = "0.2.2"
+edition = "2021"
+authors = ["Trevor Gross <tmgross@umich.edu>"]
+description = "Native Rust library for spellchecking, with a command line interface"
+
+readme = "README.md"
+license-file = "LICENSE"
+
+documentation = "https://docs.rs/zspell"
+repository = "https://github.com/pluots/zspell"
+
+keywords = ["spellcheck", "spelling", "cli"]
+categories = ["algorithms", "text-processing", "command-line-utilities"]
+
+[badges]
+maintenance = { status = "actively-developed" }
+
+# Config for the rust-usable library and the executable binary
+[lib]
+name = "zspell_next"
+path = "src/lib.rs"
+
+
+[dependencies]
+# Base dependencies
+atty = "0.2.14"
+cfg-if = "1.0"
+futures = "0.3.25"
+hashbrown = "0.12.3"
+home = "0.5.4"
+lazy_static = "1.4.0"
+regex = "1.6"
+stringmetrics = "2.1"
+strum = { version = "0.24.1", features = ["derive"] }
+strum_macros = "0.24.3"
+sys-locale = "0.2.1"
+thiserror = "1.0.37"
+unicode-segmentation = "1.10.0"
+
+
+[dev-dependencies]
+criterion = "0.4"
+predicates = "2.1"
+tempfile = "3.3"
+# util = { path = "util" }
+
+[build-dependencies]
+
+
+# [[bench]]
+# name = "datastructure"
+# harness = false
+
+# [[bench]]
+# name = "dict_integration"
+# harness = false
+
+[package.metadata.release]
+shared-version = true
+
+
+# Can't run replacements at workspace root. Need to use this "hacky" sort of way.
+[[package.metadata.release.pre-release-replacements]]
+file = "../../CHANGELOG.md"
+search = "Unreleased"
+replace = "{{version}}"
+
+[[package.metadata.release.pre-release-replacements]]
+file = "../../CHANGELOG.md"
+search = "\\.\\.\\.HEAD"
+replace = "...{{tag_name}}"
+exactly = 1
+
+[[package.metadata.release.pre-release-replacements]]
+file = "../../CHANGELOG.md"
+search = "ReleaseDate"
+replace = "{{date}}"
+
+[[package.metadata.release.pre-release-replacements]]
+file = "../../CHANGELOG.md"
+search = "<!-- next-header -->"
+replace = """\
+  <!-- next-header -->\n\n\
+  ## [Unreleased] - ReleaseDate\n\n\
+  ### Added\n\n\
+  ### Changed\n\n\
+  ### Removed\n\n\
+  """
+exactly = 1
+
+[[package.metadata.release.pre-release-replacements]]
+file = "../../CHANGELOG.md"
+search = "<!-- next-url -->"
+replace = """\
+  <!-- next-url -->\n\
+  [Unreleased]: https://github.com/pluots/stringmetrics/compare/{{tag_name}}...HEAD\
+  """
+exactly = 1

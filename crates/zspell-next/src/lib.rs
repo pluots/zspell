@@ -24,14 +24,17 @@
     clippy::missing_panics_doc,
     clippy::must_use_candidate,
     clippy::use_self, // disabled because strum doesn't enforce it
+    clippy::redundant_pub_crate
 )]
+#![allow(unused)]
 
-pub mod affix;
-pub mod dictionary;
-pub mod errors;
-pub mod system;
-
-mod helpers;
+mod affix;
+mod check;
+mod dict;
+mod meta;
+mod parser_affix;
+mod parser_dict;
+mod suggestions;
+mod system;
 
 pub use affix::Config;
-pub use dictionary::Dictionary;
