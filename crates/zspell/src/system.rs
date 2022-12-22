@@ -1,9 +1,11 @@
+//! System & environment interfaces for tasks like detecting and downloading
+//! dictionaries
+
 use std::collections::HashSet;
 use std::ffi::OsStr;
 use std::path::{Component, Path, PathBuf};
 use std::{env, fs};
 
-use cfg_if::cfg_if;
 use home::home_dir;
 use regex::{escape, Regex};
 use sys_locale::get_locale;
@@ -15,48 +17,30 @@ use crate::{unwrap_or_ret, Dictionary};
 pub const PKG_NAME: &str = env!("CARGO_PKG_NAME");
 pub const PKG_VERSION: &str = env!("CARGO_PKG_VERSION");
 
-#[allow(dead_code)]
-#[derive(Debug, PartialEq, Eq)]
-enum Plat {
-    Windows,
-    Posix,
-}
+/// Search paths for dictionaries
+#[cfg(windows)]
+const BASE_DIR_NAMES: [&str; 2] = ["~", r"C:\Program files\OpenOffice.org*\share\dict\ooo"];
 
-cfg_if! {
-    if #[cfg(windows)] {
-        // windows config
-        #[allow(dead_code)]
-        const PLAT: Plat = Plat::Windows;
-        const BASE_DIR_NAMES: [&str; 2] = [
-            "~",
-            r"C:\Program files\OpenOffice.org*\share\dict\ooo"
-        ];
+#[cfg(not(windows))]
+const BASE_DIR_NAMES: [&str; 15] = [
+    "~",
+    "~/.local/share",
+    "/usr/share",
+    "/usr/local/share",
+    "/usr/share/myspell/dicts",
+    "/Library/Spelling",
+    "~/Library/Spelling",
+    "/Library/Application Support",
+    "~/Library/Application Support",
+    "~/.openoffice.org/*/user/wordbook",
+    "~/.openoffice.org*/user/wordbook",
+    "/opt/openoffice.org/basis*/share/dict/ooo",
+    "/usr/lib/openoffice.org/basis*/share/dict/ooo",
+    "/opt/openoffice.org*/share/dict/ooo",
+    "/usr/lib/openoffice.org*/share/dict/ooo",
+];
 
-    } else {
-        // unix or WASM
-        #[allow(dead_code)]
-        const PLAT: Plat = Plat::Posix;
-        const BASE_DIR_NAMES: [&str; 15] = [
-            "~",
-            "~/.local/share",
-            "/usr/share",
-            "/usr/local/share",
-            "/usr/share/myspell/dicts",
-            "/Library/Spelling",
-            "~/Library/Spelling",
-            "/Library/Application Support",
-            "~/Library/Application Support",
-            "~/.openoffice.org/*/user/wordbook",
-            "~/.openoffice.org*/user/wordbook",
-            "/opt/openoffice.org/basis*/share/dict/ooo",
-            "/usr/lib/openoffice.org/basis*/share/dict/ooo",
-            "/opt/openoffice.org*/share/dict/ooo",
-            "/usr/lib/openoffice.org*/share/dict/ooo",
-        ];
-    }
-}
-
-/// All of these paths will be added to the relevant `DIR_NAME` lists
+/// All of these paths will be added to the relevant `BASE_DIR_NAMES` lists
 const ENV_VAR_NAMES: [&str; 5] = [
     "DICPATH",
     "XDG_DATA_HOME",
@@ -64,6 +48,8 @@ const ENV_VAR_NAMES: [&str; 5] = [
     "XDG_CONFIG_DIRS",
     "HOME",
 ];
+
+/// Directories to search within a data directory
 const CHILD_DIR_NAMES: [&str; 8] = [
     ".zspell",
     "zspell",
@@ -83,35 +69,38 @@ const DIC_EXTENSIONS: [&str; 3] = ["dic", "dict", "dictionary"];
 /// Currently this only uses locale and defaults to en-US. Eventually we will
 /// have it adapt to the user's config file in ~/.zspell.
 #[inline]
-pub fn get_preferred_lang() {
-    get_locale().unwrap_or_else(|| String::from("en-US"));
+pub fn get_preferred_lang() -> String {
+    get_locale().unwrap_or_else(|| String::from("en-US"))
 }
 
-/// Create a list of possible locations to find dictionary files. Expands home;
-/// does not expand windcards
-#[inline]
-pub fn create_raw_paths() -> Vec<PathBuf> {
-    // Please excuse the iterators but Rust is cool
-
-    // Loop through all our environment variables
+/// Git a list of all default search paths from environment variables and
+/// default locations
+fn collect_search_paths() -> Vec<PathBuf> {
+    // Loop through possible environment variables, take only those that exist,
+    // and split by ENV separator (':' on unix, ';' on Windows)
     let env_paths = ENV_VAR_NAMES
         .iter()
-        // Get values of only the vars that exist
         .filter_map(env::var_os)
-        // Split these by PATH separator (':' on Unix, ';' on Windows) and flatten
         .flat_map(|x| env::split_paths(&x).collect::<Vec<PathBuf>>());
 
     // Create a PathBuf for each of our non-env paths
     let base_paths = BASE_DIR_NAMES.iter().map(PathBuf::from);
 
     // Put our env paths and base paths together in a vector
-    let mut search_paths_raw: Vec<PathBuf> = env_paths.chain(base_paths).collect();
+    env_paths.chain(base_paths).collect()
+}
+
+/// Create a list of possible locations to find dictionary files. Expands home;
+/// does not expand windcards
+#[inline]
+pub fn create_raw_paths() -> Vec<PathBuf> {
+    let mut search_paths_raw = collect_search_paths();
 
     // Go through each pathbuf and add all possible suffixes to the search path.
     // Need to clone so we don't append while we iter.
-    for pathbuf in search_paths_raw.clone() {
+    for path in search_paths_raw.clone() {
         for child_dir in CHILD_DIR_NAMES {
-            let mut cloned = pathbuf.clone();
+            let mut cloned = path.clone();
             cloned.push(child_dir);
             search_paths_raw.push(cloned);
         }
@@ -120,7 +109,6 @@ pub fn create_raw_paths() -> Vec<PathBuf> {
     // Values to expand to the home path
     let home_options = [OsStr::new("$HOME"), OsStr::new("~")];
     let home_path = home_dir();
-
     let mut search_paths = Vec::new();
 
     // Expand "$HOME" and "~"
@@ -148,7 +136,7 @@ pub fn create_raw_paths() -> Vec<PathBuf> {
     search_paths
 }
 
-/// Find a directory that uses wildcards
+/// Expand paths that use wildcards to all possible matches
 #[inline]
 pub fn find_matching_dirs(parent: &Path, pattern: &str) -> Vec<PathBuf> {
     let mut ret = Vec::new();
@@ -240,13 +228,18 @@ pub fn expand_dir_wildcards(path_queue: &mut Vec<PathBuf>) -> HashSet<PathBuf> {
     ret
 }
 
+/// Information about a file and its location
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 struct PathInfo {
+    /// The full path name
     buf: PathBuf,
+    /// The non-extension part of the file name
     stem: String,
+    /// The file extension
     extension: String,
 }
 
+/// Pathing to an associated dictionary file and affix file
 #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct DictPaths {
     pub dictionary: PathBuf,
@@ -372,140 +365,4 @@ pub fn create_dict_from_path(basepath: &str) -> Result<Dictionary, DictError> {
 }
 
 #[cfg(test)]
-mod tests {
-    use std::{fs, io};
-
-    use tempfile::tempdir;
-
-    use super::*;
-    use crate::errors;
-
-    #[test]
-    fn test_raw_paths() {
-        // Just spot check what we have here
-        let paths = create_raw_paths();
-
-        match PLAT {
-            Plat::Posix => {
-                assert!(paths.contains(&PathBuf::from("/usr/share")));
-                assert!(paths.contains(&PathBuf::from("/usr/share/zspell")));
-                assert!(paths.contains(&PathBuf::from("/usr/share/myspell")));
-                assert!(paths.contains(&PathBuf::from("/usr/share/hunspell")));
-                assert!(paths.contains(&PathBuf::from("/Library/Spelling/hunspell")));
-                assert!(paths.contains(&PathBuf::from("/Library/Spelling/hunspell")));
-            }
-            Plat::Windows => {
-                assert!(paths.contains(&PathBuf::from(
-                    r"C:\Program files\OpenOffice.org*\share\dict\ooo"
-                )));
-                assert!(paths.contains(&PathBuf::from(
-                    r"C:\Program files\OpenOffice.org*\share\dict\ooo\hunspell"
-                )));
-            }
-        }
-    }
-
-    #[test]
-    fn test_matching_dirs() {
-        // Create a temporary directory with contents
-        // Ensure the function locates them using wildcards
-        let dir = tempdir().unwrap();
-
-        let mut paths = vec![
-            dir.path().join("a").join("b").join("c-x-cxd"),
-            dir.path().join("a").join("b").join("c-yz-cxd"),
-            dir.path().join("a").join("b").join("c-.abc-cxd"),
-        ];
-        paths.sort();
-
-        for path in &paths {
-            fs::create_dir_all(path).unwrap();
-        }
-
-        let mut ret = find_matching_dirs(&dir.path().join("a").join("b"), "c-*-c?d");
-        ret.sort();
-
-        assert_eq!(paths, ret);
-    }
-
-    #[test]
-    fn test_expand_dir_wildcards() {
-        let dir = tempdir().unwrap();
-
-        let paths = vec![
-            dir.path().join("aaa").join("bbb-x").join("ccc"),
-            dir.path().join("aaa").join("bbb-y").join("ccc"),
-            dir.path().join("ddd"),
-        ];
-
-        for path in &paths {
-            fs::create_dir_all(path).unwrap();
-        }
-
-        let mut input = vec![
-            dir.path().join("aaa").join("bbb*").join("ccc"),
-            dir.path().join("ddd"),
-        ];
-
-        let mut expanded = Vec::from_iter(expand_dir_wildcards(&mut input));
-        expanded.sort_unstable();
-
-        assert_eq!(paths, expanded);
-    }
-
-    #[test]
-    fn test_find_dict_from_path() {
-        let dir = tempdir().unwrap();
-
-        let fnames = vec![
-            dir.path().join("test_found.dic"),
-            dir.path().join("test_found.aff"),
-            dir.path().join("test_found.afx"),
-            dir.path().join("test.dict"),
-            dir.path().join("test.affix"),
-            dir.path().join("notfound.dic"),
-            dir.path().join("notfound.aff"),
-            dir.path().join("test"),
-        ];
-
-        let mut expected = vec![
-            DictPaths {
-                dictionary: fnames[0].clone(),
-                affix: fnames[1].clone(),
-            },
-            DictPaths {
-                dictionary: fnames[0].clone(),
-                affix: fnames[2].clone(),
-            },
-            DictPaths {
-                dictionary: fnames[3].clone(),
-                affix: fnames[4].clone(),
-            },
-        ];
-        expected.sort();
-
-        for fname in fnames {
-            fs::File::create(fname).unwrap();
-        }
-        fs::read_dir(dir.path()).unwrap();
-
-        let mut res = find_dicts_from_path(dir.path(), "test_found").unwrap();
-        res.sort();
-
-        assert_eq!(res, expected);
-    }
-
-    #[test]
-    fn test_find_dict_from_path_err() {
-        let fakepath = tempdir().unwrap().path().join("fake");
-        let res = find_dicts_from_path(&fakepath, "test_found");
-
-        assert_eq!(
-            Err(errors::SystemError::IOError {
-                name: fakepath.to_string_lossy().to_string(),
-                e: io::ErrorKind::NotFound
-            }),
-            res
-        );
-    }
-}
+mod tests;
