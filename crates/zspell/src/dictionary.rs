@@ -75,9 +75,7 @@ impl Dictionary {
         let mut lines = s.lines();
 
         // First line "should" be a rough length of the list, need to extract it
-        let firstline = if let Some(v) = lines.next() {
-            v
-        } else {
+        let Some(firstline) = lines.next() else {
             self.raw_wordlist = Vec::new();
             return Ok(());
         };
