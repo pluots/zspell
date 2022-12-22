@@ -1,7 +1,9 @@
+use std::{fs, io};
+
+use tempfile::tempdir;
+
 use super::*;
 use crate::errors;
-use std::{fs, io};
-use tempfile::tempdir;
 
 #[test]
 #[cfg(windows)]
