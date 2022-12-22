@@ -1,11 +1,7 @@
 use std::collections::HashSet;
 use std::ffi::OsStr;
-use std::fs;
-
-use std::{
-    env,
-    path::{Component, Path, PathBuf},
-};
+use std::path::{Component, Path, PathBuf};
+use std::{env, fs};
 
 use cfg_if::cfg_if;
 use home::home_dir;
@@ -377,10 +373,12 @@ pub fn create_dict_from_path(basepath: &str) -> Result<Dictionary, DictError> {
 
 #[cfg(test)]
 mod tests {
+    use std::{fs, io};
+
+    use tempfile::tempdir;
+
     use super::*;
     use crate::errors;
-    use std::{fs, io};
-    use tempfile::tempdir;
 
     #[test]
     fn test_raw_paths() {
@@ -508,6 +506,6 @@ mod tests {
                 e: io::ErrorKind::NotFound
             }),
             res
-        )
+        );
     }
 }

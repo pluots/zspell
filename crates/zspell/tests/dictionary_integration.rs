@@ -5,13 +5,13 @@ use zspell::Dictionary;
 
 /// Run integration tests on a file located in tests/files
 fn create_dic_from_file(fname: &str) -> Dictionary {
-    let aff_name = format!("tests/files/{}.aff", fname);
-    let dic_name = format!("tests/files/{}.dic", fname);
+    let aff_name = format!("tests/files/{fname}.aff");
+    let dic_name = format!("tests/files/{fname}.dic");
 
-    let aff_content = fs::read_to_string(aff_name.clone())
-        .unwrap_or_else(|_| panic!("error reading file {}", aff_name));
-    let dic_content = fs::read_to_string(dic_name.clone())
-        .unwrap_or_else(|_| panic!("error reading file {}", dic_name));
+    let aff_content =
+        fs::read_to_string(&aff_name).unwrap_or_else(|_| panic!("error reading file {aff_name}"));
+    let dic_content =
+        fs::read_to_string(dic_name).unwrap_or_else(|_| panic!("error reading file {aff_name}"));
 
     let mut dic = Dictionary::new();
     dic.config
@@ -26,15 +26,13 @@ fn create_dic_from_file(fname: &str) -> Dictionary {
 
 /// Test check functionality on a real file
 #[test]
+#[allow(clippy::unnecessary_to_owned)]
 fn test_short_check() {
     let dic = create_dic_from_file("w1_eng_short");
 
     // Test all ownership methods
     assert_eq!(dic.check("bananas"), Ok(true));
     assert_eq!(dic.check("pines".to_string()), Ok(true));
-    assert_eq!(dic.check("pillowing".to_owned()), Ok(true));
-    assert_eq!(dic.check(&"pined".to_string()), Ok(true));
-
     assert_eq!(dic.check("not contained"), Ok(false));
 }
 

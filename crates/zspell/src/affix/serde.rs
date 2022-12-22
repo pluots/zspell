@@ -1,6 +1,6 @@
 //! Affix Ser/Des module
 //!
-//! This module handles loading in an affix file to an [`AffixConfig`] object.
+//! This module handles loading in an affix file to a [`Config`] object.
 //! Usually it is not accessed directly.
 
 use std::convert::TryFrom;
@@ -8,14 +8,13 @@ use std::convert::TryFrom;
 use strum::{EnumProperty, VariantNames};
 use unicode_segmentation::UnicodeSegmentation;
 
-use crate::affix::Config;
-use crate::affix::{Conversion, EncodingType, Rule, TokenType};
+use crate::affix::{Config, Conversion, EncodingType, Rule, TokenType};
 use crate::errors::AffixError;
 use crate::graph_vec;
 
 /// Unwrap a [`TokenData`] type
 macro_rules! t_data_unwrap {
-    ( $token:ident, $field:ident ) => {
+    ($token:ident, $field:ident) => {
         match $token.data {
             ProcessedTokenData::$field(f) => f,
             _ => return Err(AffixError::BadTokenType),
@@ -28,19 +27,19 @@ pub(crate) use t_data_unwrap;
 macro_rules! parentify {
     // Boolean field just assigns true and returns Ok (Flag is just either there
     // or not)
-    ( $parent:ident.$field:ident, $token:ident, bool ) => {
+    ($parent:ident. $field:ident, $token:ident,bool) => {
         match $token.data {
             ProcessedTokenData::Bool(b) => $parent.$field = b,
             _ => return Err(AffixError::BadTokenType),
         }
     };
-    ( $parent:ident.$field:ident, $token:ident, int ) => {
+    ($parent:ident. $field:ident, $token:ident,int) => {
         match $token.data {
             ProcessedTokenData::Int(b) => $parent.$field = b,
             _ => return Err(AffixError::BadTokenType),
         }
     };
-    ( $parent:ident.$field:ident, $token:ident, str_replace ) => {
+    ($parent:ident. $field:ident, $token:ident,str_replace) => {
         match $token.data {
             ProcessedTokenData::String(s) => $parent.$field = s.to_owned(),
             _ => return Err(AffixError::BadTokenType),
@@ -50,7 +49,7 @@ macro_rules! parentify {
     // Use str_add any time we have a `String` that we want to append to.
     // Basically the same as above except we append to the existing vector and
     // sort rather than replacing what's there. Usable for `Vec<&str>`.
-    ( $parent:ident.$field:ident, $token:ident, str_append ) => {
+    ($parent:ident. $field:ident, $token:ident,str_append) => {
         match $token.data {
             ProcessedTokenData::String(s) => {
                 let mut tmp = graph_vec!(s);
@@ -64,8 +63,8 @@ macro_rules! parentify {
 }
 
 /// Populate an Affix class from the string version of a file. This is the main
-/// function exported from this module. `ax` is the [`AffixConfig`] object to
-/// load, `s` is the file raw string to load in
+/// function exported from this module. `ax` is the [`Config`] object to load,
+/// `s` is the file raw string to load in
 ///
 /// # Errors
 ///

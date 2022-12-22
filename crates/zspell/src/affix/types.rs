@@ -504,8 +504,9 @@ impl Rule {
 mod tests {
     use std::convert::TryFrom;
 
-    use super::*;
     use strum::{EnumProperty, VariantNames};
+
+    use super::*;
 
     // Spot check deserialization of encoding
     #[test]
@@ -553,7 +554,7 @@ mod tests {
         let mut ard = AffixRuleDef {
             atype: RuleType::Suffix,
             stripping_chars: None,
-            affix: "".into(),
+            affix: String::new(),
             condition: "[^aeiou]y".into(),
             morph_info: Vec::new(),
             condition_re: None,
@@ -562,27 +563,27 @@ mod tests {
         ard.compile_re();
 
         // General tests, including with pattern in the middle
-        assert_eq!(ard.check_condition("xxxy"), true);
-        assert_eq!(ard.check_condition("xxxay"), false);
-        assert_eq!(ard.check_condition("xxxyxx"), false);
+        assert!(ard.check_condition("xxxy"));
+        assert!(!ard.check_condition("xxxay"));
+        assert!(!ard.check_condition("xxxyxx"));
 
         // Test with prefix
         ard.condition = "y[^aeiou]".into();
         ard.atype = RuleType::Prefix;
         ard.compile_re();
-        assert_eq!(ard.check_condition("yxxx"), true);
-        assert_eq!(ard.check_condition("yaxxx"), false);
-        assert_eq!(ard.check_condition("xxxyxxx"), false);
+        assert!(ard.check_condition("yxxx"));
+        assert!(!ard.check_condition("yaxxx"));
+        assert!(!ard.check_condition("xxxyxxx"));
 
         // Test other real rules
         ard.condition = "[sxzh]".into();
         ard.atype = RuleType::Suffix;
         ard.compile_re();
-        assert_eq!(ard.check_condition("access"), true);
-        assert_eq!(ard.check_condition("abyss"), true);
-        assert_eq!(ard.check_condition("accomplishment"), false);
-        assert_eq!(ard.check_condition("mmms"), true);
-        assert_eq!(ard.check_condition("mmsmm"), false);
+        assert!(ard.check_condition("access"));
+        assert!(ard.check_condition("abyss"));
+        assert!(!ard.check_condition("accomplishment"));
+        assert!(ard.check_condition("mmms"));
+        assert!(!ard.check_condition("mmsmm"));
 
         // Check with default condition
         ard.condition = ".".into();

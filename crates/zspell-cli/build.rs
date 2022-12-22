@@ -1,10 +1,11 @@
+use std::env;
 use std::fs::File;
 use std::io::Error;
-use std::path::PathBuf;
-use std::{env, path::Path};
+use std::path::{Path, PathBuf};
 
 use clap::{Command, CommandFactory};
-use clap_complete::{generate_to, shells::Shell};
+use clap_complete::generate_to;
+use clap_complete::shells::Shell;
 
 include!("src/cli/mod.rs");
 
@@ -23,7 +24,7 @@ fn build_shell_completion(cmd: &mut Command, outdir: &PathBuf) -> Result<(), Err
             outdir,   // We need to specify where to write
         )?;
 
-        println!("cargo:warning=completion file written to {:?}", path);
+        println!("cargo:warning=completion file written to {path:?}");
     }
 
     Ok(())
@@ -38,7 +39,7 @@ fn build_man_pages(cmd: Command, outdir: &Path) -> Result<(), Error> {
 
     let manpage_out = outdir.join("zspell.1");
 
-    println!("cargo:warning=manpage written to {:?}", manpage_out);
+    println!("cargo:warning=manpage written to {manpage_out:?}");
 
     std::fs::write(manpage_out, buffer)?;
 

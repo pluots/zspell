@@ -75,6 +75,11 @@ jobs:
           command: build
           # We only want to build zspell-cli, not plain zspell or zspell-py (does not support cdylib)
           args: --package zspell-cli --release --verbose --target ${{ matrix.target }}
+      - name: Show output
+        run: |
+          ls target
+          ls "target/${{ matrix.target }}"
+          ls "target/${{ matrix.target }}/release"
         # Create .zip or .tar.gz file
       - name: Build archive
         shell: bash
@@ -94,20 +99,23 @@ jobs:
           echo "\nRef name stripped: \"$ref_name_stripped\""
 
           staging="zspell-$ref_name-${{ matrix.target }}"
-
           mkdir -p "$staging"/{completion,doc}
+
+          # Remove the "unreleased" section from our changelog
+          perl -0777 -i -pe "s/(<\!-- next-header -->.*## \[Unreleased\].*?\n)(?=## |<\!--)//gms" CHANGELOG.md
 
           cp {README.md,LICENSE} "$staging/"
           cp CHANGELOG.md "$staging/doc/"
           cp "$cargo_outdir"/zspell.1 "$staging/doc"
           cp "$cargo_outdir"/{_zspell,_zspell.ps1,zspell.bash,zspell.elv,zspell.fish} "$staging/completion"
 
+          # Build RNOTES.md, which we will use for our Github release (not shipped in zip)
           # Select the release notes from our latest version only
-          perl -0777 -ne "print /(## \[$ref_name_stripped\].*?\n)(?=\n*^## )/gms" CHANGELOG.md > RNOTES.md
-          echo '\n\n' >> "$staging/doc/RNOTES.md"
+          perl -0777 -ne "print /(## \[$ref_name_stripped\].*?\n)(?=\n*^(?:## |<\!--))/gms" CHANGELOG.md > RNOTES.md
           # Select the diff URL for this version only
-          perl -0777 -ne "print /\[$ref_name_stripped\]:.*?\n/gms" CHANGELOG.md >> RNOTES.md
-          echo "\nRelease notes:" && cat RNOTES.md
+          perl -0777 -ne "print /\n\[$ref_name_stripped\]:.*?\n/gms" CHANGELOG.md >> RNOTES.md
+
+          echo "Release notes:" && cat RNOTES.md
 
           if [ "${{ matrix.os }}" = "windows-latest" ]; then
             cp "target/${{ matrix.target }}/release/zspell.exe" "$staging/"

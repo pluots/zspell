@@ -7,7 +7,8 @@
 use std::cmp::min;
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Seek, Write};
-use std::{path::Path, time::Duration};
+use std::path::Path;
+use std::time::Duration;
 
 use anyhow::{bail, Context};
 use cfg_if::cfg_if;
@@ -47,7 +48,7 @@ struct DownloadInfo {
 /// Perform the function that Git does to calculate its hash
 ///
 /// Implementation taken from the git help page, located here
-/// https://git-scm.com/book/en/v2/Git-Internals-Git-Objects
+/// <https://git-scm.com/book/en/v2/Git-Internals-Git-Objects>
 fn calculate_git_hash(s: &str) -> [u8; 20] {
     let mut tmp = String::from("blob ");
     tmp.push_str(&s.len().to_string());
@@ -214,7 +215,7 @@ async fn download_file_with_bar(
     pb.set_style(ProgressStyle::default_bar()
         .template("{msg}\n{spinner:.green} [{elapsed_precise}] [{bar:.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})")?
         .progress_chars("#>-"));
-    pb.set_message(format!("Downloading {}", url));
+    pb.set_message(format!("Downloading {url}"));
 
     let mut finished_bytes: u64 = 0;
     let mut stream = res.bytes_stream();
@@ -316,11 +317,13 @@ async fn download_dict(
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use std::fs;
+    use std::path::PathBuf;
+
+    use tempfile::tempdir;
     use test_mocks::*;
 
-    use std::{fs, path::PathBuf};
-    use tempfile::tempdir;
+    use super::*;
 
     #[test]
     fn calculate_git_hash_ok() {
@@ -397,9 +400,12 @@ mod tests {
 
 #[cfg(test)]
 mod test_mocks {
-    use super::*;
-    use httpmock::{prelude::*, Mock};
     use std::fs;
+
+    use httpmock::prelude::*;
+    use httpmock::Mock;
+
+    use super::*;
 
     pub struct TestMocks<'a> {
         pub dict_listing: Mock<'a>,
