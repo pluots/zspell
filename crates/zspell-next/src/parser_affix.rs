@@ -2,21 +2,26 @@
 //!
 //! Contains various munchers for all possible affix keys
 
-mod helpers;
 mod types;
+mod types_impl;
 
 use std::fmt::Display;
 use std::str::FromStr;
 
 use lazy_static::lazy_static;
+use regex::Regex;
 use types::AffixNode;
 
-use crate::affix::types::{CompoundPattern, CompoundSyllable, Conversion, Encoding, Phonetic};
+use crate::affix::types::{
+    AffixRule, CompoundPattern, CompoundSyllable, Conversion, Encoding, MorphInfo, Phonetic,
+    RuleGroup,
+};
 
 /// Characters considered line enders
 ///
 /// We include `#` so comments will get cut off
-const LINE_TERMINATORS: [char; 3] = ['\r', '\n', '#'];
+const SEPARATORS: [char; 3] = ['\r', '\n', '#'];
+const LINE_TERMINATORS: [char; 2] = ['\r', '\n'];
 
 /// The result of parsing something
 ///
@@ -24,9 +29,14 @@ const LINE_TERMINATORS: [char; 3] = ['\r', '\n', '#'];
 /// - `Ok(Some(node, residual))`: matched with result stored to `node`,
 ///   `residual` contains the rest of the non-matched string
 /// - `Err(e)`: error while parsing
-type ParseResult<'a> = Result<Option<(AffixNode, &'a str)>, ParseError>;
+type ParseResult<'a> = Result<Option<(AffixNode, &'a str, u32)>, ParseError>;
 
-#[derive(Debug, PartialEq)]
+lazy_static! {
+    static ref RE_AFX_RULE_HEADER: Regex = Regex::new(r"^(?P<flag>\w+)\s(?P<xprod>\w+)\s(?P<num>\d+)$").unwrap();
+    static ref RE_AFX_RULE_BODY: Regex = Regex::new(r"^(?P<flag>\w+)\s+(?P<strip_chars>\w+)\s+(?P<affix>\S+)\s+(?P<condition>\S+)(?:$|\s+(?P<morph>.+)$)").unwrap();
+}
+
+#[derive(Clone, Debug, PartialEq)]
 struct ParseError {
     msg: String,
     line_offset: u32,
@@ -35,27 +45,27 @@ struct ParseError {
 
 impl ParseError {
     #[inline]
-    fn new_simple<S>(msg: S) -> Self
-    where
-        S: ToOwned<Owned = String>,
-    {
+    const fn new_simple(msg: String) -> Self {
         Self {
-            msg: msg.to_owned(),
+            msg,
             line_offset: 0,
             col_offset: 0,
         }
     }
 
     #[inline]
-    fn new<S>(msg: S, line: u32, col: u32) -> Self
-    where
-        S: ToOwned<Owned = String>,
-    {
+    const fn new(msg: String, line: u32, col: u32) -> Self {
         Self {
-            msg: msg.to_owned(),
+            msg,
             line_offset: line,
             col_offset: col,
         }
+    }
+
+    const fn add_offset_ret(mut self, line: u32, col: u32) -> Self {
+        self.line_offset += line;
+        self.col_offset += col;
+        self
     }
 }
 
@@ -87,8 +97,14 @@ fn line_splitter<'a>(s: &'a str, key: &str) -> Option<(&'a str, &'a str)> {
         return None;
     }
 
+    let to_find = if key == "#" {
+        LINE_TERMINATORS.as_slice()
+    } else {
+        SEPARATORS.as_slice()
+    };
+
     // Parse to newline
-    let (work, residual) = match s.find(LINE_TERMINATORS) {
+    let (work, residual) = match s.find(to_find) {
         Some(i) => (&s[key.len()..i], &s[i..]),
         None => (&s[key.len()..], ""),
     };
@@ -106,56 +122,9 @@ where
     F: FnOnce(&str) -> Result<AffixNode, ParseError>,
 {
     match line_splitter(s, key) {
-        Some((work, residual)) => f(s).map(|n| Some((n, residual))),
+        Some((work, residual)) => f(work).map(|n| Some((n, residual, 0))),
         None => Ok(None),
     }
-}
-
-/// Parse simple tables
-///
-/// ```text
-/// KEY 4
-/// KEY abcd
-/// KEY abcd
-/// KEY abcd
-/// KEY abcd
-/// ```
-fn table_parser<'a, F>(s: &'a str, key: &str, f: F) -> ParseResult<'a>
-where
-    F: FnOnce(Vec<String>) -> Result<AffixNode, ParseError>,
-{
-    let Some((work, mut residual)) = line_splitter(s, key) else {
-        return Ok(None);
-    };
-
-    let count: u16 = match work.parse() {
-        Ok(v) => v,
-        Err(e) => {
-            return Err(ParseError::new_simple(format!(
-                "error parsing table value: {e}"
-            )))
-        }
-    };
-
-    let mut ret = Vec::new();
-
-    for i in 0..count {
-        match line_splitter(residual, key) {
-            Some((content, resid)) => {
-                residual = resid;
-                ret.push(content.to_owned());
-            }
-            None => {
-                return Err(ParseError::new(
-                    format!("expected {count} values in table but got {i}"),
-                    u32::from(i + 1),
-                    0,
-                ))
-            }
-        }
-    }
-
-    f(ret).map(|n| Some((n, residual)))
 }
 
 /// Parse bool type flag values
@@ -223,11 +192,194 @@ where
     })
 }
 
+/// Parse simple tables
+///
+/// ```text
+/// KEY 4
+/// KEY abcd
+/// KEY abcd
+/// KEY abcd
+/// KEY abcd
+/// ```
+fn table_parser<'a, F>(s: &'a str, key: &str, f: F) -> ParseResult<'a>
+where
+    F: FnOnce(Vec<String>) -> Result<AffixNode, ParseError>,
+{
+    let Some((work, mut residual)) = line_splitter(s, key) else {
+        return Ok(None);
+    };
+
+    let count: u16 = match work.parse() {
+        Ok(v) => v,
+        Err(e) => {
+            return Err(ParseError::new_simple(format!(
+                "error parsing table value: {e}"
+            )))
+        }
+    };
+
+    residual = munch_newline(residual)?.ok_or_else(|| table_count_err(count, 0))?;
+    let mut nlines = 1;
+    let mut ret = Vec::new();
+
+    for i in 0..count {
+        match line_splitter(residual, key) {
+            Some((content, resid)) => {
+                residual = resid;
+                ret.push(content.to_owned());
+            }
+            None => return Err(table_count_err(count, i)),
+        }
+
+        if i < count - 1 {
+            residual = munch_newline(residual)?.ok_or_else(|| table_count_err(count, i))?;
+            nlines += 1;
+        }
+    }
+
+    f(ret).map(|n| Some((n, residual, nlines)))
+}
+
+fn affix_table_parser<'a, F>(s: &'a str, key: &str, f: F) -> ParseResult<'a>
+where
+    F: FnOnce(RuleGroup) -> AffixNode,
+{
+    let Some((work, mut residual)) = line_splitter(s, key) else {
+        return Ok(None);
+    };
+
+    let header_caps = RE_AFX_RULE_HEADER
+        .captures(work)
+        .ok_or(format!("cannot parse affix header pattern at '{residual}'"))?;
+    let count: u16 = header_caps.name("num").unwrap().as_str().parse().unwrap();
+    let flag = header_caps.name("flag").unwrap().as_str();
+    let xprod = header_caps.name("xprod").unwrap().as_str();
+    let can_combine = parse_xprod(xprod)?;
+
+    residual = munch_newline(residual)?.ok_or_else(|| table_count_err(count, 0))?;
+    let mut nlines = 1;
+    let mut rules: Vec<AffixRule> = Vec::new();
+
+    for i in 0..count {
+        match line_splitter(residual, key) {
+            Some((content, resid)) => {
+                residual = resid;
+                let line_groups = RE_AFX_RULE_BODY.captures(content).ok_or_else(|| {
+                    ParseError::new(
+                        format!("could not parse affix body pattern at '{content}'"),
+                        nlines,
+                        0,
+                    )
+                })?;
+
+                let line_flag = line_groups.name("flag").unwrap().as_str();
+                if line_flag != flag {
+                    return Err(ParseError::new(
+                        format!(
+                            "could not parse affix body pattern at '{content}': flags do not match"
+                        ),
+                        nlines,
+                        0,
+                    ));
+                }
+                let sc = line_groups.name("strip_chars").unwrap().as_str();
+                let stripping_chars = if sc == "0" { None } else { Some(sc.to_owned()) };
+                let cond = line_groups.name("condition").unwrap().as_str();
+                let condition = if cond == "." {
+                    None
+                } else {
+                    Some(cond.to_owned())
+                };
+                let morph_info = if let Some(m) = line_groups.name("morph") {
+                    Some(
+                        parse_morph_info(m.as_str())
+                            .map_err(|msg| ParseError::new(msg, nlines, 0))?,
+                    )
+                } else {
+                    None
+                };
+
+                rules.push(AffixRule {
+                    stripping_chars,
+                    affix: line_groups.name("affix").unwrap().as_str().to_owned(),
+                    condition,
+                    morph_info,
+                });
+            }
+            None => return Err(table_count_err(count, i)),
+        }
+
+        if i < count - 1 {
+            residual = munch_newline(residual)?.ok_or_else(|| table_count_err(count, i))?;
+            nlines += 1;
+        }
+    }
+
+    let ret = RuleGroup {
+        flag: flag.to_owned(),
+        kind: key.try_into().unwrap(),
+        can_combine,
+        rules,
+    };
+
+    Ok(Some((f(ret), residual, nlines)))
+}
+
+fn table_count_err(count: u16, i: u16) -> ParseError {
+    ParseError::new(
+        format!("expected {count} values in table but got {i}"),
+        u32::from(i + 1),
+        0,
+    )
+}
+
+/// Convert `X` or `Y` cross product identifiers
+fn parse_xprod(s: &str) -> Result<bool, ParseError> {
+    match s.to_lowercase().as_str() {
+        "y" => Ok(true),
+        "n" => Ok(false),
+        _ => Err(ParseError::new_simple(format!(
+            "value {s} is not a valid cross product indicator"
+        ))),
+    }
+}
+
+fn parse_morph_info(s: &str) -> Result<Vec<MorphInfo>, String> {
+    let mut ret = Vec::new();
+    for minfo in s.split_whitespace() {
+        ret.push(MorphInfo::try_from(minfo)?);
+    }
+
+    Ok(ret)
+}
+
 #[inline]
 fn convert_u32<T: TryInto<u32> + Display + Copy>(value: T) -> u32 {
     value
         .try_into()
         .unwrap_or_else(|_| panic!("value {value} overflows u32 max of {}", u32::MAX))
+}
+
+/// Find the next newline, and skip to the character after. Ignores comments,
+/// returns error if there is no whitespace
+fn munch_newline(s: &str) -> Result<Option<&str>, ParseError> {
+    let Some(i_term) = s.find('\n') else {
+        return Ok(None)
+    };
+    let ret = &s[i_term + 1..];
+    let mut validate = &s[..i_term];
+
+    if let Some(cmt_idx) = validate.find('#') {
+        validate = &validate[..cmt_idx];
+    }
+
+    validate
+        .find(|c: char| !c.is_whitespace())
+        .map_or(Ok(Some(ret)), |idz| {
+            Err(ParseError::new_simple(
+                "unexpected non-comment characters before line termination".to_owned(),
+            ))
+        })
 }
 
 /*
@@ -310,10 +462,10 @@ fn parse_nosuggest_flag(s: &str) -> ParseResult {
     char_parser(s, "NOSUGGEST", AffixNode::NoSuggestFlag)
 }
 fn parse_compound_suggestions_max(s: &str) -> ParseResult {
-    int_parser(s, "MAXCPDSUGS", AffixNode::CompoundSuggestionsMax)
+    int_parser(s, "MAXCPDSUGS", AffixNode::CompoundSugMax)
 }
 fn parse_ngram_suggestions_max(s: &str) -> ParseResult {
-    int_parser(s, "MAXNGRAMSUGS", AffixNode::NGramSuggestionsMax)
+    int_parser(s, "MAXNGRAMSUGS", AffixNode::NGramSugMax)
 }
 fn parse_ngram_diff_max(s: &str) -> ParseResult {
     int_parser(s, "MAXDIFF", AffixNode::NGramDiffMax)
@@ -325,7 +477,7 @@ fn parse_no_split_suggestions(s: &str) -> ParseResult {
     bool_parser(s, "NOSPLITSUGS", AffixNode::NoSplitSuggestions)
 }
 fn parse_keep_term_dots(s: &str) -> ParseResult {
-    bool_parser(s, "SUGSWITHDOTS", AffixNode::KeepTerminationDots)
+    bool_parser(s, "SUGSWITHDOTS", AffixNode::KeepTermDots)
 }
 fn parse_replacement(s: &str) -> ParseResult {
     table_parser(s, "REP", |v| {
@@ -407,7 +559,7 @@ fn parse_compound_rule(s: &str) -> ParseResult {
     })
 }
 fn parse_compound_min_length(s: &str) -> ParseResult {
-    int_parser(s, "COMPOUNDMIN", AffixNode::CompoundMinLength)
+    int_parser(s, "COMPOUNDMIN", AffixNode::CompoundMinLen)
 }
 fn parse_compound_flag(s: &str) -> ParseResult {
     char_parser(s, "COMPOUNDFLAG", AffixNode::CompoundFlag)
@@ -440,7 +592,7 @@ fn parse_compound_word_max(s: &str) -> ParseResult {
     int_parser(s, "COMPOUNDWORDMAX", AffixNode::CompoundWordMax)
 }
 fn parse_compound_forbid_duplication(s: &str) -> ParseResult {
-    bool_parser(s, "CHECKCOMPOUNDDUP", AffixNode::CompoundForbidDuplication)
+    bool_parser(s, "CHECKCOMPOUNDDUP", AffixNode::CompoundForbidDup)
 }
 fn parse_compound_forbid_repeat(s: &str) -> ParseResult {
     bool_parser(s, "CHECKCOMPOUNDREP", AffixNode::CompoundForbidRepeat)
@@ -461,9 +613,9 @@ fn parse_compound_forbid_patterns(s: &str) -> ParseResult {
             res.push(
                 CompoundPattern::try_from(item.as_str())
                     .map_err(|e| ParseError::new(e, convert_u32(i + 1), 0))?,
-            )
+            );
         }
-        Ok(AffixNode::CompoundForbidPatterns(res))
+        Ok(AffixNode::CompoundForbidPats(res))
     })
 }
 fn parse_compound_force_upper(s: &str) -> ParseResult {
@@ -485,10 +637,10 @@ fn parse_syllable_num(s: &str) -> ParseResult {
 */
 
 fn parse_prefix(s: &str) -> ParseResult {
-    todo!()
+    affix_table_parser(s, "PFX", AffixNode::Prefix)
 }
 fn parse_suffix(s: &str) -> ParseResult {
-    todo!()
+    affix_table_parser(s, "SFX", AffixNode::Suffix)
 }
 
 /*
@@ -496,16 +648,16 @@ fn parse_suffix(s: &str) -> ParseResult {
 */
 
 fn parse_circumfix_flag(s: &str) -> ParseResult {
-    char_parser(s, "CIRCUMFIX", AffixNode::AffixCircumfixFlag)
+    char_parser(s, "CIRCUMFIX", AffixNode::AfxCircumfixFlag)
 }
 fn parse_forbidden_word_flag(s: &str) -> ParseResult {
     char_parser(s, "FORBIDDENWORD", AffixNode::ForbiddenWordFlag)
 }
 fn parse_afx_full_strip(s: &str) -> ParseResult {
-    bool_parser(s, "FULLSTRIP", AffixNode::AffixFullStrip)
+    bool_parser(s, "FULLSTRIP", AffixNode::AfxFullStrip)
 }
 fn parse_afx_keep_case_flag(s: &str) -> ParseResult {
-    char_parser(s, "KEEPCASE", AffixNode::AffixKeepCaseFlag)
+    char_parser(s, "KEEPCASE", AffixNode::AfxKeepCaseFlag)
 }
 fn parse_afx_input_conversion(s: &str) -> ParseResult {
     table_parser(s, "ICONV", |v| {
@@ -516,7 +668,7 @@ fn parse_afx_input_conversion(s: &str) -> ParseResult {
                     .map_err(|e| ParseError::new(e, (i + 1).try_into().unwrap(), 0))?,
             );
         }
-        Ok(AffixNode::AffixInputConversion(res))
+        Ok(AffixNode::AfxInputConversion(res))
     })
 }
 fn parse_afx_output_conversion(s: &str) -> ParseResult {
@@ -528,26 +680,26 @@ fn parse_afx_output_conversion(s: &str) -> ParseResult {
                     .map_err(|e| ParseError::new(e, (i + 1).try_into().unwrap(), 0))?,
             );
         }
-        Ok(AffixNode::AffixOutputConversion(res))
+        Ok(AffixNode::AfxOutputConversion(res))
     })
 }
 fn parse_afx_lemma_present_flag(s: &str) -> ParseResult {
-    char_parser(s, "LEMMA_PRESENT", AffixNode::AffixLemmaPresentFlag)
+    char_parser(s, "LEMMA_PRESENT", AffixNode::AfxLemmaPresentFlag)
 }
 fn parse_afx_needed_flag(s: &str) -> ParseResult {
-    char_parser(s, "NEEDAFFIX", AffixNode::AffixNeededFlag)
+    char_parser(s, "NEEDAFFIX", AffixNode::AfxNeededFlag)
 }
 fn parse_afx_pseudoroot_flag(s: &str) -> ParseResult {
-    char_parser(s, "PSEUDOROOT", AffixNode::AffixPseudoRootFlag)
+    char_parser(s, "PSEUDOROOT", AffixNode::AfxPseudoRootFlag)
 }
 fn parse_afx_substandard_flag(s: &str) -> ParseResult {
-    char_parser(s, "SUBSTANDARD", AffixNode::AffixSubstandardFlag)
+    char_parser(s, "SUBSTANDARD", AffixNode::AfxSubstandardFlag)
 }
 fn parse_afx_word_chars(s: &str) -> ParseResult {
-    string_parser(s, "WORDCHARS", AffixNode::AffixWordChars)
+    string_parser(s, "WORDCHARS", AffixNode::AfxWordChars)
 }
 fn parse_afx_check_sharps(s: &str) -> ParseResult {
-    bool_parser(s, "CHECKSHARPS", AffixNode::AffixCheckSharps)
+    bool_parser(s, "CHECKSHARPS", AffixNode::AfxCheckSharps)
 }
 fn parse_name(s: &str) -> ParseResult {
     string_parser(s, "NAME", AffixNode::Name)
@@ -622,6 +774,41 @@ const ALL_PARSERS: [for<'a> fn(&'a str) -> ParseResult; 61] = [
     parse_home,
     parse_version,
 ];
+
+/// Main parser entrypoint
+fn parse_affix(s: &str) -> Result<Vec<AffixNode>, ParseError> {
+    let mut working = s;
+    let mut ret: Vec<AffixNode> = Vec::new();
+    let mut nlines: u32 = 1;
+
+    'outer: loop {
+        if working.is_empty() {
+            break;
+        }
+        'inner: for (ix, parse_fn) in ALL_PARSERS.iter().enumerate() {
+            let tmp = parse_fn(working).map_err(|e| e.add_offset_ret(nlines, 0))?;
+            if let Some((node, residual, nl)) = tmp {
+                nlines += nl;
+                ret.push(node);
+                let tmp = munch_newline(residual).map_err(|e| e.add_offset_ret(nlines, 0))?;
+                if let Some(resid) = tmp {
+                    nlines += 1;
+                    working = resid;
+                    continue 'outer;
+                }
+                // End of string, done parsing
+                break 'outer;
+            }
+        }
+
+        if working.starts_with('\n') {
+            nlines += 1;
+        }
+        working = &working[1..];
+    }
+
+    Ok(ret)
+}
 
 #[cfg(test)]
 mod tests;

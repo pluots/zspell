@@ -7,7 +7,7 @@ use crate::affix::types::{
 };
 
 #[non_exhaustive]
-#[derive(Debug, PartialEq)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum AffixNode {
     /*
         General ptions
@@ -37,9 +37,9 @@ pub enum AffixNode {
     /// `NOSUGGEST`
     NoSuggestFlag(char),
     /// `MAXCPDSUGS`
-    CompoundSuggestionsMax(u16),
+    CompoundSugMax(u16),
     /// `MAXNGRAMSUGS`
-    NGramSuggestionsMax(u16),
+    NGramSugMax(u16),
     /// `MAXDIFF`
     NGramDiffMax(u8),
     /// `ONLYMAXDIFF`
@@ -47,7 +47,7 @@ pub enum AffixNode {
     /// `NOSPLITSUGS`
     NoSplitSuggestions,
     /// `SUGSWITHDOTS`
-    KeepTerminationDots,
+    KeepTermDots,
     /// `REP`
     Replacement(Vec<Conversion>),
     /// `MAP`
@@ -66,7 +66,7 @@ pub enum AffixNode {
     /// `COMPOUNDRULE`
     CompoundRule(Vec<String>),
     /// `COMPOUNDMIN`
-    CompoundMinLength(u16),
+    CompoundMinLen(u16),
     /// `COMPOUNDFLAG`
     CompoundFlag(char),
     /// `COMPOUNDBEGIN`
@@ -88,7 +88,7 @@ pub enum AffixNode {
     /// `COMPOUNDWORDMAX`
     CompoundWordMax(u16),
     /// `CHECKCOMPOUNDDUP`
-    CompoundForbidDuplication,
+    CompoundForbidDup,
     /// `CHECKCOMPOUNDREP`
     CompoundForbidRepeat,
     /// `CHECKCOMPOUNDCASE`
@@ -98,7 +98,7 @@ pub enum AffixNode {
     /// `SIMPLIFIEDTRIPLE`
     CompoundSimplifyTriple,
     /// `CHECKCOMPOUNDPATTERN`
-    CompoundForbidPatterns(Vec<CompoundPattern>),
+    CompoundForbidPats(Vec<CompoundPattern>),
     /// `FORCEUCASE`
     CompoundForceUpper(char),
     /// `COMPOUNDSYLLABLE`
@@ -110,37 +110,37 @@ pub enum AffixNode {
         Affix Options
     */
     /// `PFX`
-    Prefix(Vec<RuleGroup>),
+    Prefix(RuleGroup),
     /// `SFX`
-    Suffix(Vec<RuleGroup>),
+    Suffix(RuleGroup),
 
     /*
         Other options
     */
     /// `CIRCUMFIX`
-    AffixCircumfixFlag(char),
+    AfxCircumfixFlag(char),
     /// `FORBIDDENWORD`
     ForbiddenWordFlag(char),
     /// `FULLSTRIP`
-    AffixFullStrip,
+    AfxFullStrip,
     /// `KEEPCASE`
-    AffixKeepCaseFlag(char),
+    AfxKeepCaseFlag(char),
     /// `ICONV`
-    AffixInputConversion(Vec<Conversion>),
+    AfxInputConversion(Vec<Conversion>),
     /// `OCONV`
-    AffixOutputConversion(Vec<Conversion>),
+    AfxOutputConversion(Vec<Conversion>),
     /// `LEMMA_PRESENT` this flag is deprecated
-    AffixLemmaPresentFlag(char),
+    AfxLemmaPresentFlag(char),
     /// `NEEDAFFIX`
-    AffixNeededFlag(char),
+    AfxNeededFlag(char),
     /// `PSEUDOROOT` this flag is deprecated
-    AffixPseudoRootFlag(char),
+    AfxPseudoRootFlag(char),
     /// `SUBSTANDARD`
-    AffixSubstandardFlag(char),
+    AfxSubstandardFlag(char),
     /// `WORDCHARS`
-    AffixWordChars(String),
+    AfxWordChars(String),
     /// `CHECKSHARPS`
-    AffixCheckSharps,
+    AfxCheckSharps,
     /// `#` line
     Comment,
     /// `NAME`

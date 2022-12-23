@@ -3,7 +3,10 @@
 use lazy_static::lazy_static;
 use regex::{Captures, Regex};
 
-use super::types::{CompoundPattern, CompoundSyllable, Conversion, Encoding, Flag, Phonetic};
+use super::types::{
+    CompoundPattern, CompoundSyllable, Conversion, Encoding, Flag, MorphInfo, PartOfSpeech,
+    Phonetic, RuleType,
+};
 
 lazy_static! {
     static ref RE_COMPOUND_PATTERN: Regex = Regex::new(r"^(?P<endchars>\w+)(?:/(?P<endflags>\w+))?\s+(?P<beginchars>\w+)(?:/(?P<beginflag>\w+))?(?P<replacement>\s\w+)?$").unwrap();
@@ -23,7 +26,7 @@ impl TryFrom<&str> for Encoding {
             "koi8-u" => Ok(Self::Koi8U),
             "cp1251" => Ok(Self::Cp1251),
             "iscii-devanagari" => Ok(Self::IsciiDevanagari),
-            _ => Err(format!("unrecognized encoding {value}")),
+            _ => Err(format!("unrecognized encoding '{value}'")),
         }
     }
 }
@@ -54,7 +57,7 @@ impl TryFrom<&str> for Flag {
             "utf-8" => Ok(Self::Utf8),
             "long" => Ok(Self::Long),
             "num" => Ok(Self::Number),
-            _ => Err(format!("unrecognized flag {value}")),
+            _ => Err(format!("unrecognized flag '{value}'")),
         }
     }
 }
@@ -129,10 +132,73 @@ impl TryFrom<&str> for CompoundSyllable {
         let to_parse = split[0];
         let count: u16 = to_parse
             .parse()
-            .map_err(|e| format!("unable to parse integer at {to_parse}: {e}"))?;
+            .map_err(|e| format!("unable to parse integer at '{to_parse}': {e}"))?;
         Ok(Self {
             count,
             vowels: split[1].to_owned(),
         })
+    }
+}
+
+impl TryFrom<&str> for MorphInfo {
+    type Error = String;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        let (tag, val) = value
+            .split_once(':')
+            .ok_or(format!("missing ':' delimiter in morph info at '{value}'"))?;
+        let ret = match tag {
+            "st" => Self::Stem(val.to_owned()),
+            "ph" => Self::Phonetic(val.to_owned()),
+            "al" => Self::Allomorph(val.to_owned()),
+            "po" => Self::Part(val.try_into()?),
+            "ds" => Self::DerivSfx(val.to_owned()),
+            "is" => Self::InflecSfx(val.to_owned()),
+            "ts" => Self::TerminalSfx(val.to_owned()),
+            "dp" => Self::DerivPfx(val.to_owned()),
+            "ip" => Self::InflecPfx(val.to_owned()),
+            "tp" => Self::TermPfx(val.to_owned()),
+            "sp" => Self::SurfacePfx(val.to_owned()),
+            "pa" => Self::CompPart(val.to_owned()),
+            _ => {
+                return Err(format!(
+                    "tag '{tag}' does not match any morphographic types"
+                ))
+            }
+        };
+        Ok(ret)
+    }
+}
+
+impl TryFrom<&str> for PartOfSpeech {
+    type Error = String;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        let ret = match value.to_lowercase().as_str() {
+            "noun" => Self::Noun,
+            "verb" => Self::Verb,
+            "adjective" => Self::Adjective,
+            "determiner" => Self::Determiner,
+            "adverb" => Self::Adverb,
+            "pronoun" => Self::Pronoun,
+            "preposition" => Self::Preposition,
+            "conjunction" => Self::Conjunction,
+            "interjection" => Self::Interjection,
+            _ => return Err(format!("value '{value}' is not a known part of speech")),
+        };
+        Ok(ret)
+    }
+}
+
+impl TryFrom<&str> for RuleType {
+    type Error = String;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        let ret = match value.to_lowercase().as_str() {
+            "pfx" => Self::Prefix,
+            "sfx" => Self::Suffix,
+            _ => return Err(format!("unrecognized RuleType value '{value}'")),
+        };
+        Ok(ret)
     }
 }

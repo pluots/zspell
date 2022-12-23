@@ -70,31 +70,29 @@ pub enum RuleType {
 pub struct RuleGroup {
     /// Character identifier for this specific affix, usually any uppercase
     /// letter
-    key: String,
+    pub(crate) flag: String,
     /// Prefix or suffix
-    atype: RuleType,
+    pub(crate) kind: RuleType,
     /// Whether or not this can be combined with the opposite affix
-    can_combine: bool,
+    pub(crate) can_combine: bool,
     /// Actual rules for replacing
-    rules: Vec<AffixRule>,
+    pub(crate) rules: Vec<AffixRule>,
 }
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct AffixRule {
     /// Characters to remove from the beginning or end
-    stripping_chars: Option<String>,
+    pub(crate) stripping_chars: Option<String>,
     /// Affix to be added
-    affix: String,
+    pub(crate) affix: String,
     /// Regex-based rule for when this rule is true
-    condition: String,
+    pub(crate) condition: Option<String>,
     /// Morphological information
-    morph_info: Vec<MorphInfo>,
-    /// Shortcut regex checks if this is true
-    condition_always_true: bool,
+    pub(crate) morph_info: Option<Vec<MorphInfo>>,
 }
 
 #[derive(Debug, PartialEq, Eq)]
-enum PartOfSpeech {
+pub enum PartOfSpeech {
     Noun,
     Verb,
     Adjective,
@@ -108,7 +106,7 @@ enum PartOfSpeech {
 
 #[non_exhaustive]
 #[derive(Debug, PartialEq, Eq)]
-enum MorphInfo {
+pub enum MorphInfo {
     /// `st:` stem word
     Stem(String),
     /// `ph:` better phonetic transliteration if available
@@ -137,15 +135,15 @@ enum MorphInfo {
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct Phonetic {
-    pub(super) pattern: String,
-    pub(super) replace: String,
+    pub(crate) pattern: String,
+    pub(crate) replace: String,
 }
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct CompoundPattern {
-    pub(super) endchars: String,
-    pub(super) endflag: Option<String>,
-    pub(super) beginchars: String,
-    pub(super) beginflag: Option<String>,
-    pub(super) replacement: Option<String>,
+    pub(crate) endchars: String,
+    pub(crate) endflag: Option<String>,
+    pub(crate) beginchars: String,
+    pub(crate) beginflag: Option<String>,
+    pub(crate) replacement: Option<String>,
 }
