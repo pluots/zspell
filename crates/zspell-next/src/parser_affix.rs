@@ -2,7 +2,7 @@
 //!
 //! Contains various munchers for all possible affix keys
 
-mod types;
+pub(crate) mod types;
 mod types_impl;
 
 use std::fmt::Display;
@@ -781,10 +781,7 @@ fn parse_affix(s: &str) -> Result<Vec<AffixNode>, ParseError> {
     let mut ret: Vec<AffixNode> = Vec::new();
     let mut nlines: u32 = 1;
 
-    'outer: loop {
-        if working.is_empty() {
-            break;
-        }
+    'outer: while !working.is_empty() {
         'inner: for (ix, parse_fn) in ALL_PARSERS.iter().enumerate() {
             let tmp = parse_fn(working).map_err(|e| e.add_offset_ret(nlines, 0))?;
             if let Some((node, residual, nl)) = tmp {

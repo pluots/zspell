@@ -49,7 +49,7 @@ pub struct Conversion {
     pub(crate) bidirectional: bool,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Default)]
 pub struct CompoundSyllable {
     pub(super) count: u16,
     pub(super) vowels: String,

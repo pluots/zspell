@@ -202,3 +202,15 @@ impl TryFrom<&str> for RuleType {
         Ok(ret)
     }
 }
+
+impl Default for Encoding {
+    fn default() -> Self {
+        Self::Utf8
+    }
+}
+
+impl Default for Flag {
+    fn default() -> Self {
+        Self::Utf8
+    }
+}
