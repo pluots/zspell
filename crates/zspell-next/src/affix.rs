@@ -6,9 +6,11 @@ pub(crate) mod types_impl;
 use self::types::{
     CompoundPattern, CompoundSyllable, Conversion, Encoding, Flag, Phonetic, RuleGroup,
 };
+use crate::error::Error;
+use crate::parser_affix::parse_affix;
 use crate::parser_affix::types::AffixNode;
 
-#[derive(Default, Debug)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Config {
     /*
         General Options
@@ -52,9 +54,6 @@ pub struct Config {
     /// Flag used to indicate words that should not be suggested
     nosuggest_flag: Option<char>,
 
-    /// Maximum compound word suggestions
-    compound_sug_max: u16,
-
     /// Note rare (i.e. commonly misspelled) words with this flag
     warn_rare_flag: Option<char>,
 
@@ -87,49 +86,8 @@ pub struct Config {
 
     /*
         Compounding-related items
-
-        Still quite a few missing from this section
     */
-    /// Something like `-` to indicate whether both sides should be checked
-    /// Prefer COMPOUNDRULE instead
-    break_separators: Vec<String>,
-
-    /// Regex-like rules for compound words
-    compound_rules: Vec<String>,
-
-    /// Minimum length of words used in a compound
-    compound_min_length: u16,
-
-    /// Words with this flag may be in compounds
-    compound_flag: Option<char>,
-
-    /// Words with this flag may start a compound
-    compound_begin_flag: Option<char>,
-
-    /// Words with this flag may end a compound
-    compound_end_flag: Option<char>,
-
-    /// Words with this flag may be in the middle of a compound
-    compound_middle_flag: Option<char>,
-
-    /// Words with this flag can't be on their own, only in compounds
-    compound_only_flag: Option<char>,
-
-    /// Allow these words inside compounds
-    compound_permit_flag: Option<char>,
-    compound_forbid_flag: Option<char>,
-    compound_more_suffixes: bool,
-    compound_root: Option<char>,
-    compound_word_max: u16,
-    compound_forbid_dup: bool,
-    compound_forbid_repeat: bool,
-    compound_check_case: bool,
-    compound_check_triple: bool,
-    compound_simplify_triple: bool,
-    compound_forbid_pats: Vec<CompoundPattern>,
-    compound_force_upper_flag: Option<char>,
-    compound_syllable: CompoundSyllable,
-    syllable_num: String,
+    compound_config: Box<CompoundConfig>,
 
     /*
         Affix Options
@@ -155,8 +113,147 @@ pub struct Config {
     version: String,
 }
 
+/// Separated structure for compound rules
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct CompoundConfig {
+    /// Something like `-` to indicate whether both sides should be checked
+    /// Prefer COMPOUNDRULE instead
+    break_separators: Vec<String>,
+
+    /// Maximum compound word suggestions
+    sug_max: u16,
+
+    /// Regex-like rules for compound words
+    rules: Vec<String>,
+
+    /// Minimum length of words used in a compound
+    min_length: u16,
+
+    /// Words with this flag may be in compounds
+    flag: Option<char>,
+
+    /// Words with this flag may start a compound
+    begin_flag: Option<char>,
+
+    /// Words with this flag may end a compound
+    end_flag: Option<char>,
+
+    /// Words with this flag may be in the middle of a compound
+    middle_flag: Option<char>,
+
+    /// Words with this flag can't be on their own, only in compounds
+    only_flag: Option<char>,
+
+    /// Allow these words inside compounds
+    permit_flag: Option<char>,
+    forbid_flag: Option<char>,
+    more_suffixes: bool,
+    root: Option<char>,
+    word_max: u16,
+    forbid_dup: bool,
+    forbid_repeat: bool,
+    check_case: bool,
+    check_triple: bool,
+    simplify_triple: bool,
+    forbid_pats: Vec<CompoundPattern>,
+    force_upper_flag: Option<char>,
+    syllable: CompoundSyllable,
+    syllable_num: String,
+}
+
+impl Default for Config {
+    #[allow(clippy::default_trait_access)]
+    #[inline]
+    fn default() -> Self {
+        Self {
+            encoding: Default::default(),
+            flagtype: Default::default(),
+            complex_prefixes: Default::default(),
+            lang: Default::default(),
+            ignore_chars: Default::default(),
+            affix_alias: Default::default(),
+            morph_alias: Default::default(),
+            neighbor_keys: vec![
+                "qwertyuiop".to_owned(),
+                "asdfghjkl".to_owned(),
+                "zxcvbnm".to_owned(),
+            ],
+            replacements: Default::default(),
+            try_characters: "esianrtolcdugmphbyfvkwzESIANRTOLCDUGMPHBYFVKWZ'".to_owned(),
+            nosuggest_flag: Some('!'),
+            warn_rare_flag: Default::default(),
+            no_split_suggestions: Default::default(),
+            keep_term_dots: Default::default(),
+            forbid_warn_words: Default::default(),
+            maps: Default::default(),
+            phonetics: Default::default(),
+            ngram_sug_max: 2,
+            ngram_diff_max: 5,
+            ngram_limit_to_diff_max: Default::default(),
+            compound_config: Default::default(),
+            affix_rules: Default::default(),
+            afx_circumflex_flag: Default::default(),
+            forbidden_word_flag: Default::default(),
+            afx_full_strip: Default::default(),
+            afx_keep_case_flag: Default::default(),
+            input_conversions: Default::default(),
+            output_conversions: Default::default(),
+            afx_needed_flag: Default::default(),
+            afx_substandard_flag: Default::default(),
+            afx_word_chars: Default::default(),
+            afx_check_sharps: Default::default(),
+            name: Default::default(),
+            home_page: Default::default(),
+            version: Default::default(),
+        }
+    }
+}
+
+impl Default for CompoundConfig {
+    #[allow(clippy::default_trait_access)]
+    fn default() -> Self {
+        Self {
+            break_separators: Default::default(),
+            sug_max: 3,
+            rules: Default::default(),
+            min_length: 3,
+            flag: Default::default(),
+            begin_flag: Default::default(),
+            end_flag: Default::default(),
+            middle_flag: Default::default(),
+            only_flag: Default::default(),
+            permit_flag: Default::default(),
+            forbid_flag: Default::default(),
+            more_suffixes: Default::default(),
+            root: Default::default(),
+            word_max: Default::default(),
+            forbid_dup: Default::default(),
+            forbid_repeat: Default::default(),
+            check_case: Default::default(),
+            check_triple: Default::default(),
+            simplify_triple: Default::default(),
+            forbid_pats: Default::default(),
+            force_upper_flag: Default::default(),
+            syllable: Default::default(),
+            syllable_num: Default::default(),
+        }
+    }
+}
+
 impl Config {
-    fn from_parsed(v: Vec<AffixNode>) -> Self {
+    /// Create a `Config` object from a string version of an affix file
+    ///
+    /// # Errors
+    ///
+    /// Returns an error if there is a problem parsing, or if the file is
+    /// invalid
+    #[inline]
+    pub fn load_from_str(s: &str) -> Result<Self, Error> {
+        Self::from_parsed(parse_affix(s)?)
+    }
+
+    #[allow(clippy::unnecessary_wraps)]
+    fn from_parsed(v: Vec<AffixNode>) -> Result<Self, Error> {
         let mut res = Self::default();
         let mut warnings: Vec<String> = Vec::new();
 
@@ -173,7 +270,7 @@ impl Config {
                 AffixNode::NeighborKeys(v) => res.neighbor_keys = v,
                 AffixNode::TryCharacters(v) => res.try_characters = v,
                 AffixNode::NoSuggestFlag(v) => res.nosuggest_flag = Some(v),
-                AffixNode::CompoundSugMax(v) => res.compound_sug_max = v,
+                AffixNode::CompoundSugMax(v) => res.compound_config.sug_max = v,
                 AffixNode::NGramSugMax(v) => res.ngram_sug_max = v,
                 AffixNode::NGramDiffMax(v) => res.ngram_diff_max = v,
                 AffixNode::NGramLimitToDiffMax => res.ngram_limit_to_diff_max = true,
@@ -184,28 +281,28 @@ impl Config {
                 AffixNode::Phonetic(v) => res.phonetics = v,
                 AffixNode::WarnRareFlag(v) => res.warn_rare_flag = Some(v),
                 AffixNode::ForbidWarnWords => todo!(),
-                AffixNode::BreakSeparator(v) => res.break_separators = v,
-                AffixNode::CompoundRule(v) => res.compound_rules = v,
-                AffixNode::CompoundMinLen(v) => res.compound_min_length = v,
-                AffixNode::CompoundFlag(v) => res.compound_flag = Some(v),
-                AffixNode::CompoundBeginFlag(v) => res.compound_begin_flag = Some(v),
-                AffixNode::CompoundEndFlag(v) => res.compound_end_flag = Some(v),
-                AffixNode::CompoundMiddleFlag(v) => res.compound_middle_flag = Some(v),
-                AffixNode::CompoundOnlyFlag(v) => res.compound_only_flag = Some(v),
-                AffixNode::CompoundPermitFlag(v) => res.compound_permit_flag = Some(v),
-                AffixNode::CompoundForbidFlag(v) => res.compound_forbid_flag = Some(v),
-                AffixNode::CompoundMoreSuffixes => res.compound_more_suffixes = true,
-                AffixNode::CompoundRoot(v) => res.compound_root = Some(v),
-                AffixNode::CompoundWordMax(v) => res.compound_word_max = v,
-                AffixNode::CompoundForbidDup => res.compound_forbid_dup = true,
-                AffixNode::CompoundForbidRepeat => res.compound_forbid_repeat = true,
-                AffixNode::CompoundCheckCase => res.compound_check_case = true,
-                AffixNode::CompoundCheckTriple => res.compound_check_triple = true,
-                AffixNode::CompoundSimplifyTriple => res.compound_simplify_triple = true,
-                AffixNode::CompoundForbidPats(v) => res.compound_forbid_pats = v,
-                AffixNode::CompoundForceUpper(v) => res.compound_force_upper_flag = Some(v),
-                AffixNode::CompoundSyllable(v) => res.compound_syllable = v,
-                AffixNode::SyllableNum(v) => res.syllable_num = v,
+                AffixNode::BreakSeparator(v) => res.compound_config.break_separators = v,
+                AffixNode::CompoundRule(v) => res.compound_config.rules = v,
+                AffixNode::CompoundMinLen(v) => res.compound_config.min_length = v,
+                AffixNode::CompoundFlag(v) => res.compound_config.flag = Some(v),
+                AffixNode::CompoundBeginFlag(v) => res.compound_config.begin_flag = Some(v),
+                AffixNode::CompoundEndFlag(v) => res.compound_config.end_flag = Some(v),
+                AffixNode::CompoundMiddleFlag(v) => res.compound_config.middle_flag = Some(v),
+                AffixNode::CompoundOnlyFlag(v) => res.compound_config.only_flag = Some(v),
+                AffixNode::CompoundPermitFlag(v) => res.compound_config.permit_flag = Some(v),
+                AffixNode::CompoundForbidFlag(v) => res.compound_config.forbid_flag = Some(v),
+                AffixNode::CompoundMoreSuffixes => res.compound_config.more_suffixes = true,
+                AffixNode::CompoundRoot(v) => res.compound_config.root = Some(v),
+                AffixNode::CompoundWordMax(v) => res.compound_config.word_max = v,
+                AffixNode::CompoundForbidDup => res.compound_config.forbid_dup = true,
+                AffixNode::CompoundForbidRepeat => res.compound_config.forbid_repeat = true,
+                AffixNode::CompoundCheckCase => res.compound_config.check_case = true,
+                AffixNode::CompoundCheckTriple => res.compound_config.check_triple = true,
+                AffixNode::CompoundSimplifyTriple => res.compound_config.simplify_triple = true,
+                AffixNode::CompoundForbidPats(v) => res.compound_config.forbid_pats = v,
+                AffixNode::CompoundForceUpper(v) => res.compound_config.force_upper_flag = Some(v),
+                AffixNode::CompoundSyllable(v) => res.compound_config.syllable = v,
+                AffixNode::SyllableNum(v) => res.compound_config.syllable_num = v,
                 AffixNode::Prefix(v) => res.affix_rules.push(v),
                 AffixNode::Suffix(v) => res.affix_rules.push(v),
                 AffixNode::AfxCircumfixFlag(v) => res.afx_circumflex_flag = Some(v),
@@ -215,11 +312,11 @@ impl Config {
                 AffixNode::AfxInputConversion(v) => res.input_conversions = v,
                 AffixNode::AfxOutputConversion(v) => res.output_conversions = v,
                 AffixNode::AfxLemmaPresentFlag(v) => {
-                    warnings.push(format!("flag {name_str} is deprecated"))
+                    warnings.push(format!("flag {name_str} is deprecated"));
                 }
                 AffixNode::AfxNeededFlag(v) => res.afx_needed_flag = v,
                 AffixNode::AfxPseudoRootFlag(v) => {
-                    warnings.push(format!("flag {name_str} is deprecated"))
+                    warnings.push(format!("flag {name_str} is deprecated"));
                 }
                 AffixNode::AfxSubstandardFlag(v) => res.afx_substandard_flag = v,
                 AffixNode::AfxWordChars(v) => res.afx_word_chars = v,
@@ -231,6 +328,6 @@ impl Config {
             }
         }
 
-        res
+        Ok(res)
     }
 }

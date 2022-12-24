@@ -6,6 +6,7 @@ pub(crate) mod types;
 mod types_impl;
 
 use std::fmt::Display;
+use std::num::ParseIntError;
 use std::str::FromStr;
 
 use lazy_static::lazy_static;
@@ -16,6 +17,8 @@ use crate::affix::types::{
     AffixRule, CompoundPattern, CompoundSyllable, Conversion, Encoding, MorphInfo, Phonetic,
     RuleGroup,
 };
+use crate::error::{ParseError, ParseErrorType};
+use crate::helpers::convertu32;
 
 /// Characters considered line enders
 ///
@@ -34,50 +37,6 @@ type ParseResult<'a> = Result<Option<(AffixNode, &'a str, u32)>, ParseError>;
 lazy_static! {
     static ref RE_AFX_RULE_HEADER: Regex = Regex::new(r"^(?P<flag>\w+)\s(?P<xprod>\w+)\s(?P<num>\d+)$").unwrap();
     static ref RE_AFX_RULE_BODY: Regex = Regex::new(r"^(?P<flag>\w+)\s+(?P<strip_chars>\w+)\s+(?P<affix>\S+)\s+(?P<condition>\S+)(?:$|\s+(?P<morph>.+)$)").unwrap();
-}
-
-#[derive(Clone, Debug, PartialEq)]
-struct ParseError {
-    msg: String,
-    line_offset: u32,
-    col_offset: u32,
-}
-
-impl ParseError {
-    #[inline]
-    const fn new_simple(msg: String) -> Self {
-        Self {
-            msg,
-            line_offset: 0,
-            col_offset: 0,
-        }
-    }
-
-    #[inline]
-    const fn new(msg: String, line: u32, col: u32) -> Self {
-        Self {
-            msg,
-            line_offset: line,
-            col_offset: col,
-        }
-    }
-
-    const fn add_offset_ret(mut self, line: u32, col: u32) -> Self {
-        self.line_offset += line;
-        self.col_offset += col;
-        self
-    }
-}
-
-impl From<String> for ParseError {
-    fn from(value: String) -> Self {
-        Self::new_simple(value)
-    }
-}
-impl From<&str> for ParseError {
-    fn from(value: &str) -> Self {
-        Self::new_simple(value.to_owned())
-    }
 }
 
 /*
@@ -136,9 +95,7 @@ fn bool_parser<'a>(s: &'a str, key: &str, afx: AffixNode) -> ParseResult<'a> {
         if s.is_empty() {
             Ok(afx)
         } else {
-            Err(ParseError::new_simple(format!(
-                "{key} is a boolean flag; nothing else expected on the line but got '{s}'"
-            )))
+            Err(ParseError::new_nospan(ParseErrorType::new_bool(s, key)))
         }
     })
 }
@@ -168,9 +125,7 @@ where
         if count == 1 {
             Ok(f(s.chars().next().unwrap()))
         } else {
-            Err(ParseError::new_simple(format!(
-                "expected a single character flag but got {count} chars"
-            )))
+            Err(ParseError::new_nospan(ParseErrorType::new_char(count, s)))
         }
     })
 }
@@ -179,16 +134,15 @@ where
 ///
 /// Accepts a string to search, a key to search for, and a function (enum
 /// variant) that has a parsable type
-fn int_parser<'a, F, T, E>(s: &'a str, key: &str, f: F) -> ParseResult<'a>
+fn int_parser<'a, F, T>(s: &'a str, key: &str, f: F) -> ParseResult<'a>
 where
     F: FnOnce(T) -> AffixNode,
-    T: FromStr<Err = E>,
-    E: Display,
+    T: FromStr<Err = ParseIntError>,
 {
     line_key_parser(s, key, |s| {
         s.parse::<T>()
             .map(f)
-            .map_err(|e| ParseError::new_simple(format!("failed to parse integer: {e}")))
+            .map_err(|e| ParseError::new_nospan(ParseErrorType::new_int(s, e)))
     })
 }
 
@@ -209,14 +163,9 @@ where
         return Ok(None);
     };
 
-    let count: u16 = match work.parse() {
-        Ok(v) => v,
-        Err(e) => {
-            return Err(ParseError::new_simple(format!(
-                "error parsing table value: {e}"
-            )))
-        }
-    };
+    let count: u32 = work
+        .parse()
+        .map_err(|e| ParseError::new_nospan(ParseErrorType::new_int(work, e)))?;
 
     residual = munch_newline(residual)?.ok_or_else(|| table_count_err(count, 0))?;
     let mut nlines = 1;
@@ -250,8 +199,8 @@ where
 
     let header_caps = RE_AFX_RULE_HEADER
         .captures(work)
-        .ok_or(format!("cannot parse affix header pattern at '{residual}'"))?;
-    let count: u16 = header_caps.name("num").unwrap().as_str().parse().unwrap();
+        .ok_or_else(|| ParseError::new_nospan(ParseErrorType::AffixBody(residual.to_owned())))?;
+    let count: u32 = header_caps.name("num").unwrap().as_str().parse().unwrap();
     let flag = header_caps.name("flag").unwrap().as_str();
     let xprod = header_caps.name("xprod").unwrap().as_str();
     let can_combine = parse_xprod(xprod)?;
@@ -265,19 +214,16 @@ where
             Some((content, resid)) => {
                 residual = resid;
                 let line_groups = RE_AFX_RULE_BODY.captures(content).ok_or_else(|| {
-                    ParseError::new(
-                        format!("could not parse affix body pattern at '{content}'"),
-                        nlines,
-                        0,
-                    )
+                    ParseError::new(ParseErrorType::AffixBody(content.to_owned()), nlines, 0)
                 })?;
 
                 let line_flag = line_groups.name("flag").unwrap().as_str();
                 if line_flag != flag {
                     return Err(ParseError::new(
-                        format!(
-                            "could not parse affix body pattern at '{content}': flags do not match"
-                        ),
+                        ParseErrorType::AffixFlagMismatch {
+                            s: content.to_owned(),
+                            flag: flag.to_owned(),
+                        },
                         nlines,
                         0,
                     ));
@@ -291,10 +237,7 @@ where
                     Some(cond.to_owned())
                 };
                 let morph_info = if let Some(m) = line_groups.name("morph") {
-                    Some(
-                        parse_morph_info(m.as_str())
-                            .map_err(|msg| ParseError::new(msg, nlines, 0))?,
-                    )
+                    Some(parse_morph_info(m.as_str(), nlines)?)
                 } else {
                     None
                 };
@@ -325,10 +268,13 @@ where
     Ok(Some((f(ret), residual, nlines)))
 }
 
-fn table_count_err(count: u16, i: u16) -> ParseError {
+fn table_count_err(count: u32, i: u32) -> ParseError {
     ParseError::new(
-        format!("expected {count} values in table but got {i}"),
-        u32::from(i + 1),
+        ParseErrorType::TableCount {
+            expected: count,
+            received: i,
+        },
+        i + 1,
         0,
     )
 }
@@ -338,26 +284,19 @@ fn parse_xprod(s: &str) -> Result<bool, ParseError> {
     match s.to_lowercase().as_str() {
         "y" => Ok(true),
         "n" => Ok(false),
-        _ => Err(ParseError::new_simple(format!(
-            "value {s} is not a valid cross product indicator"
+        _ => Err(ParseError::new_nospan(ParseErrorType::AffixCrossProduct(
+            s.to_owned(),
         ))),
     }
 }
 
-fn parse_morph_info(s: &str) -> Result<Vec<MorphInfo>, String> {
+fn parse_morph_info(s: &str, nlines: u32) -> Result<Vec<MorphInfo>, ParseError> {
     let mut ret = Vec::new();
     for minfo in s.split_whitespace() {
-        ret.push(MorphInfo::try_from(minfo)?);
+        ret.push(MorphInfo::try_from(minfo).map_err(|e| ParseError::new(e, nlines, 0))?);
     }
 
     Ok(ret)
-}
-
-#[inline]
-fn convert_u32<T: TryInto<u32> + Display + Copy>(value: T) -> u32 {
-    value
-        .try_into()
-        .unwrap_or_else(|_| panic!("value {value} overflows u32 max of {}", u32::MAX))
 }
 
 /// Find the next newline, and skip to the character after. Ignores comments,
@@ -376,9 +315,7 @@ fn munch_newline(s: &str) -> Result<Option<&str>, ParseError> {
     validate
         .find(|c: char| !c.is_whitespace())
         .map_or(Ok(Some(ret)), |idz| {
-            Err(ParseError::new_simple(
-                "unexpected non-comment characters before line termination".to_owned(),
-            ))
+            Err(ParseErrorType::NonWhitespace(validate.chars().nth(idz).unwrap()).into())
         })
 }
 
@@ -394,14 +331,14 @@ fn parse_encoding(s: &str) -> ParseResult {
     line_key_parser(s, "SET", |s| {
         Encoding::try_from(s)
             .map(AffixNode::Encoding)
-            .map_err(ParseError::new_simple)
+            .map_err(|e| ParseErrorType::Encoding(e).into())
     })
 }
 fn parse_flag(s: &str) -> ParseResult {
     line_key_parser(s, "FLAG", |s| {
         Encoding::try_from(s)
             .map(AffixNode::Encoding)
-            .map_err(ParseError::new_simple)
+            .map_err(|e| ParseErrorType::Flag(e).into())
     })
 }
 fn parse_complex_prefixes(s: &str) -> ParseResult {
@@ -420,8 +357,8 @@ fn parse_affix_alias(s: &str) -> ParseResult {
         for (i, item) in v.iter().enumerate() {
             if item.contains(char::is_whitespace) {
                 return Err(ParseError::new(
-                    format!("cannot contain whitespace but '{item}' does"),
-                    convert_u32(i + 1),
+                    ParseErrorType::ContainsWhitespace(item.clone()),
+                    convertu32(i + 1),
                     0,
                 ));
             }
@@ -434,8 +371,8 @@ fn parse_morph_alias(s: &str) -> ParseResult {
         for (i, item) in v.iter().enumerate() {
             if item.contains(char::is_whitespace) {
                 return Err(ParseError::new(
-                    format!("cannot contain whitespace but '{item}' does"),
-                    convert_u32(i + 1),
+                    ParseErrorType::ContainsWhitespace(item.clone()),
+                    convertu32(i + 1),
                     0,
                 ));
             }
@@ -485,7 +422,7 @@ fn parse_replacement(s: &str) -> ParseResult {
         for (i, content) in v.iter().enumerate() {
             res.push(
                 Conversion::from_str(content, false)
-                    .map_err(|e| ParseError::new(e, convert_u32(i + 1), 0))?,
+                    .map_err(|e| ParseError::new(e, convertu32(i + 1), 0))?,
             );
         }
         Ok(AffixNode::Replacement(res))
@@ -498,8 +435,11 @@ fn parse_mapping(s: &str) -> ParseResult {
             let mut chars = item.chars();
             res.push(chars.next().zip(chars.next()).ok_or_else(|| {
                 ParseError::new(
-                    format!("expected two chars but got '{item}'"),
-                    convert_u32(i + 1),
+                    ParseErrorType::CharCount {
+                        s: item.clone(),
+                        expected: 2,
+                    },
+                    convertu32(i + 1),
                     0,
                 )
             })?);
@@ -513,7 +453,13 @@ fn parse_phonetic(s: &str) -> ParseResult {
         for (i, item) in v.iter().enumerate() {
             match Phonetic::try_from(item.as_str()) {
                 Ok(p) => res.push(p),
-                Err(e) => return Err(ParseError::new(e, convert_u32(i + 1), 0)),
+                Err(e) => {
+                    return Err(ParseError::new(
+                        ParseErrorType::Phonetic(e),
+                        convertu32(i + 1),
+                        0,
+                    ))
+                }
             }
         }
         Ok(AffixNode::Phonetic(res))
@@ -535,8 +481,8 @@ fn parse_break_separator(s: &str) -> ParseResult {
         for (i, item) in v.iter().enumerate() {
             if item.contains(char::is_whitespace) {
                 return Err(ParseError::new(
-                    format!("cannot contain whitespace but '{item}' does"),
-                    convert_u32(i + 1),
+                    ParseErrorType::ContainsWhitespace(item.clone()),
+                    convertu32(i + 1),
                     0,
                 ));
             }
@@ -549,8 +495,8 @@ fn parse_compound_rule(s: &str) -> ParseResult {
         for (i, item) in v.iter().enumerate() {
             if item.contains(char::is_whitespace) {
                 return Err(ParseError::new(
-                    format!("cannot contain whitespace but '{item}' does"),
-                    convert_u32(i + 1),
+                    ParseErrorType::ContainsWhitespace(item.clone()),
+                    convertu32(i + 1),
                     0,
                 ));
             }
@@ -610,10 +556,9 @@ fn parse_compound_forbid_patterns(s: &str) -> ParseResult {
     table_parser(s, "CHECKCOMPOUNDPATTERN", |v| {
         let mut res = Vec::new();
         for (i, item) in v.iter().enumerate() {
-            res.push(
-                CompoundPattern::try_from(item.as_str())
-                    .map_err(|e| ParseError::new(e, convert_u32(i + 1), 0))?,
-            );
+            res.push(CompoundPattern::try_from(item.as_str()).map_err(|e| {
+                ParseError::new(ParseErrorType::CompoundPattern(e), convertu32(i + 1), 0)
+            })?);
         }
         Ok(AffixNode::CompoundForbidPats(res))
     })
@@ -624,7 +569,7 @@ fn parse_compound_force_upper(s: &str) -> ParseResult {
 fn parse_compound_syllable(s: &str) -> ParseResult {
     line_key_parser(s, "COMPOUNDSYLLABLE", |s| {
         Ok(AffixNode::CompoundSyllable(
-            CompoundSyllable::try_from(s).map_err(ParseError::new_simple)?,
+            CompoundSyllable::try_from(s).map_err(ParseErrorType::CompoundSyllable)?,
         ))
     })
 }
@@ -776,7 +721,7 @@ const ALL_PARSERS: [for<'a> fn(&'a str) -> ParseResult; 61] = [
 ];
 
 /// Main parser entrypoint
-fn parse_affix(s: &str) -> Result<Vec<AffixNode>, ParseError> {
+pub(crate) fn parse_affix(s: &str) -> Result<Vec<AffixNode>, ParseError> {
     let mut working = s;
     let mut ret: Vec<AffixNode> = Vec::new();
     let mut nlines: u32 = 1;

@@ -31,10 +31,12 @@
 mod affix;
 mod check;
 mod dict;
+pub mod error;
+pub(crate) mod helpers;
 mod meta;
 mod parser_affix;
-mod parser_dict;
 mod suggestions;
 mod system;
 
 pub use affix::Config;
+pub use error::Error;

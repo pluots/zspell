@@ -7,6 +7,7 @@ use super::types::{
     CompoundPattern, CompoundSyllable, Conversion, Encoding, Flag, MorphInfo, PartOfSpeech,
     Phonetic, RuleType,
 };
+use crate::error::ParseErrorType;
 
 lazy_static! {
     static ref RE_COMPOUND_PATTERN: Regex = Regex::new(r"^(?P<endchars>\w+)(?:/(?P<endflags>\w+))?\s+(?P<beginchars>\w+)(?:/(?P<beginflag>\w+))?(?P<replacement>\s\w+)?$").unwrap();
@@ -91,10 +92,13 @@ impl TryFrom<&str> for Phonetic {
 
 impl Conversion {
     /// Create a `Conversion` from a string. Splits on whitespace
-    pub fn from_str(value: &str, bidirectional: bool) -> Result<Self, String> {
+    pub fn from_str(value: &str, bidirectional: bool) -> Result<Self, ParseErrorType> {
         let mut split: Vec<_> = value.split_whitespace().collect();
         if split.len() != 2 {
-            return Err(format!("expected 2 items but got {}", split.len()));
+            return Err(ParseErrorType::Conversion {
+                s: value.to_owned(),
+                count: split.len(),
+            });
         }
         Ok(Self {
             input: split[0].to_owned(),
@@ -141,12 +145,12 @@ impl TryFrom<&str> for CompoundSyllable {
 }
 
 impl TryFrom<&str> for MorphInfo {
-    type Error = String;
+    type Error = ParseErrorType;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         let (tag, val) = value
             .split_once(':')
-            .ok_or(format!("missing ':' delimiter in morph info at '{value}'"))?;
+            .ok_or(ParseErrorType::MorphInfoDelim(value.to_owned()))?;
         let ret = match tag {
             "st" => Self::Stem(val.to_owned()),
             "ph" => Self::Phonetic(val.to_owned()),
@@ -160,18 +164,14 @@ impl TryFrom<&str> for MorphInfo {
             "tp" => Self::TermPfx(val.to_owned()),
             "sp" => Self::SurfacePfx(val.to_owned()),
             "pa" => Self::CompPart(val.to_owned()),
-            _ => {
-                return Err(format!(
-                    "tag '{tag}' does not match any morphographic types"
-                ))
-            }
+            _ => return Err(ParseErrorType::MorphInvalidTag(tag.to_owned())),
         };
         Ok(ret)
     }
 }
 
 impl TryFrom<&str> for PartOfSpeech {
-    type Error = String;
+    type Error = ParseErrorType;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         let ret = match value.to_lowercase().as_str() {
@@ -184,7 +184,7 @@ impl TryFrom<&str> for PartOfSpeech {
             "preposition" => Self::Preposition,
             "conjunction" => Self::Conjunction,
             "interjection" => Self::Interjection,
-            _ => return Err(format!("value '{value}' is not a known part of speech")),
+            _ => return Err(ParseErrorType::PartOfSpeech(value.to_owned())),
         };
         Ok(ret)
     }

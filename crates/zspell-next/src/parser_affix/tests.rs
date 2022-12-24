@@ -4,6 +4,8 @@ use pretty_assertions::assert_eq;
 
 use super::*;
 use crate::affix::types::{PartOfSpeech, RuleType};
+use crate::error::Span;
+
 #[test]
 fn test_line_splitter_none() {
     let s = "no key here # abcd";
@@ -46,7 +48,7 @@ fn test_line_key_parser_some() {
 #[test]
 fn test_line_key_parser_err() {
     let s = "KEY key here\nnext line";
-    let e = ParseError::new_simple("abc".to_owned());
+    let e: ParseError = ParseErrorType::Flag("abc".to_owned()).into();
     assert_eq!(line_key_parser(s, "KEY", |_| Err(e.clone())), Err(e));
 }
 
@@ -56,7 +58,7 @@ fn test_line_key_parser() {
         if s == "apple" {
             Ok(AffixNode::Language("apple".to_owned()))
         } else {
-            Err(ParseError::new_simple("failure".to_owned()))
+            Err(ParseErrorType::Flag("failure".to_owned()).into())
         }
     }
 
@@ -78,7 +80,7 @@ fn test_line_key_parser() {
     );
     assert_eq!(
         line_key_parser(txt3, "LANG", get_lang),
-        Err(ParseError::new_simple("failure".to_owned()))
+        Err(ParseErrorType::Flag("failure".to_owned()).into())
     );
 }
 
@@ -166,14 +168,8 @@ fn test_table_parser_ok() {
 fn test_afx_table_parser_err() {
     // check line offset count
     let s = "PFX A N 2\nPFX A a b x .\nPFX A 0 c a";
-    assert!(matches!(
-        parse_prefix(s),
-        Err(ParseError {
-            msg: _,
-            line_offset: 1,
-            col_offset: 0
-        })
-    ));
+    let res = parse_prefix(s);
+    assert_eq!(res.unwrap_err().span(), &Span::new(1, 0))
 }
 
 const SAMPLE_AFX_OK: &str = r#"

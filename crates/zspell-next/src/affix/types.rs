@@ -2,7 +2,7 @@
 
 /// A possible encoding type
 #[non_exhaustive]
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Encoding {
     /// UTF-8 encoding
     Utf8,
@@ -26,7 +26,7 @@ pub enum Encoding {
 
 /// A representation of the flag type (the part after `/` in the `.dic` file)
 #[non_exhaustive]
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub enum Flag {
     /// ASCII flags (default)
     Ascii,
@@ -42,14 +42,14 @@ pub enum Flag {
 ///
 /// This is usually represented in an affix file via `REP`, `ICONV`, and
 /// `OCONV`.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Conversion {
     pub(crate) input: String,
     pub(crate) output: String,
     pub(crate) bidirectional: bool,
 }
 
-#[derive(Debug, PartialEq, Eq, Default)]
+#[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct CompoundSyllable {
     pub(super) count: u16,
     pub(super) vowels: String,
@@ -66,7 +66,7 @@ pub enum RuleType {
 /// This struct represents a prefix or suffix option that may be applied to any
 /// base word. It contains multiple possible rule definitions that describe how
 /// to apply the rule.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RuleGroup {
     /// Character identifier for this specific affix, usually any uppercase
     /// letter
@@ -79,7 +79,7 @@ pub struct RuleGroup {
     pub(crate) rules: Vec<AffixRule>,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AffixRule {
     /// Characters to remove from the beginning or end
     pub(crate) stripping_chars: Option<String>,
@@ -91,7 +91,7 @@ pub struct AffixRule {
     pub(crate) morph_info: Option<Vec<MorphInfo>>,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum PartOfSpeech {
     Noun,
     Verb,
@@ -105,7 +105,7 @@ pub enum PartOfSpeech {
 }
 
 #[non_exhaustive]
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum MorphInfo {
     /// `st:` stem word
     Stem(String),
@@ -133,13 +133,13 @@ pub enum MorphInfo {
     CompPart(String),
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Phonetic {
     pub(crate) pattern: String,
     pub(crate) replace: String,
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct CompoundPattern {
     pub(crate) endchars: String,
     pub(crate) endflag: Option<String>,
