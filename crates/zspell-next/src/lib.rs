@@ -7,25 +7,20 @@
 //! Please note that the spellchecker is currently in alpha, and really not
 //! ready for any mainstream use. Contributions are more than welcome at
 //! <https://github.com/pluots/zspell>.
-#![warn(
-    clippy::pedantic,
-    clippy::cargo,
-    clippy::nursery,
-    clippy::str_to_string,
-    clippy::missing_inline_in_public_items,
-    // clippy::restriction,
-    // clippy::exhaustive_enums,
-    // clippy::pattern_type_mismatch,
-)]
-// Pedantic config
-#![allow(
-    clippy::match_same_arms,
-    clippy::struct_excessive_bools,
-    clippy::missing_panics_doc,
-    clippy::must_use_candidate,
-    clippy::use_self, // disabled because strum doesn't enforce it
-    clippy::redundant_pub_crate
-)]
+#![warn(clippy::pedantic)]
+#![warn(clippy::cargo)]
+#![warn(clippy::nursery)]
+#![warn(clippy::str_to_string)]
+#![warn(clippy::missing_inline_in_public_items)]
+#![allow(clippy::use_self)] // disabled because strum doesn't enforce it
+#![allow(clippy::match_same_arms)]
+#![allow(clippy::struct_excessive_bools)]
+#![allow(clippy::missing_panics_doc)]
+#![allow(clippy::must_use_candidate)]
+#![allow(clippy::redundant_pub_crate)]
+#![allow(clippy::module_name_repetitions)]
+#![allow(clippy::missing_const_for_fn)]
+#![allow(clippy::derive_partial_eq_without_eq)]
 #![allow(unused)]
 
 mod affix;

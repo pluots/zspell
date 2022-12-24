@@ -3,6 +3,7 @@
 use lazy_static::lazy_static;
 use regex::Regex;
 
+use super::Dictionary;
 use crate::affix::types::MorphInfo;
 use crate::error::{Error, ParseError, ParseErrorType};
 use crate::helpers::convertu32;
@@ -24,19 +25,25 @@ lazy_static! {
     .unwrap();
 }
 
-struct DictEntry {
-    stem: String,
-    flags: Vec<String>,
-    morph: Option<MorphInfo>,
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub(crate) struct DictEntry {
+    pub stem: String,
+    pub flags: Vec<String>,
+    pub morph: Vec<MorphInfo>,
 }
 
 impl DictEntry {
-    fn parse_str(value: &str, line_num: u32) -> Result<Self, ParseError> {
+    pub(crate) fn new(stem: String, flags: Vec<String>, morph: Vec<MorphInfo>) -> Self {
+        Self { stem, flags, morph }
+    }
+
+    /// Create a `DictEntry` from a line in a `.dic` file
+    pub(crate) fn parse_str(value: &str, line_num: u32) -> Result<Self, ParseError> {
         let Some(caps) = RE_DICT_LINE.captures(value) else {
-            return Err(ParseError::new(
-                ParseErrorType::DictEntry(value.to_owned()),
+            return Err(ParseError::new_nocol(
+                ParseErrorType::DictEntry,
+                value,
                 line_num,
-                0,
             ));
         };
 
@@ -51,14 +58,20 @@ impl DictEntry {
                     .collect::<Vec<String>>()
             })
             .unwrap_or_default();
-        // let morph = caps.name("morph").map(|m| MorphInfo::try_from(m.as_str())).transpose();
-        let morph = None;
+
+        let mut morph = Vec::new();
+        if let Some(split) = caps.name("morph").map(|m| m.as_str().split_whitespace()) {
+            for m in split {
+                morph.push(MorphInfo::try_from(m).map_err(|e| ParseError::new_nospan(e, m))?);
+            }
+        };
 
         Ok(Self { stem, flags, morph })
     }
 }
 
-fn parse_dict(s: &str) -> Result<Vec<DictEntry>, ParseError> {
+#[allow(clippy::single_match_else, clippy::option_if_let_else)]
+pub(crate) fn parse_dict(s: &str) -> Result<Vec<DictEntry>, ParseError> {
     let mut lines = s.lines();
     let Some(first) = lines.next() else {
         return Ok(Vec::new())
@@ -73,12 +86,12 @@ fn parse_dict(s: &str) -> Result<Vec<DictEntry>, ParseError> {
         }
     };
 
-    for (i, line) in s.lines().map(|l| l.trim()).enumerate() {
+    for (i, line) in s.lines().map(str::trim).enumerate() {
         if line.starts_with('#') {
             continue;
         }
 
-        ret.push(DictEntry::parse_str(line, convertu32(i + start as usize))?);
+        ret.push(DictEntry::parse_str(line, convertu32(i + start))?);
     }
     Ok(ret)
 }

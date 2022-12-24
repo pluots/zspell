@@ -1,20 +1,150 @@
 //! Extension of the `types` module containing the messy impl blocks
 
+use std::hash::Hash;
+
 use lazy_static::lazy_static;
 use regex::{Captures, Regex};
 
 use super::types::{
-    CompoundPattern, CompoundSyllable, Conversion, Encoding, Flag, MorphInfo, PartOfSpeech,
-    Phonetic, RuleType,
+    AffixRule, CompoundPattern, CompoundSyllable, Conversion, Encoding, FlagType, MorphInfo,
+    PartOfSpeech, Phonetic, RuleGroup, RuleType,
 };
 use crate::error::ParseErrorType;
+use crate::Error;
 
 lazy_static! {
-    static ref RE_COMPOUND_PATTERN: Regex = Regex::new(r"^(?P<endchars>\w+)(?:/(?P<endflags>\w+))?\s+(?P<beginchars>\w+)(?:/(?P<beginflag>\w+))?(?P<replacement>\s\w+)?$").unwrap();
+    static ref RE_COMPOUND_PATTERN: Regex = Regex::new(
+        r"(?x)
+        ^(?P<endchars>\w+)
+        (?:/(?P<endflags>\w+))?\s+
+        (?P<beginchars>\w+)
+        (?:/(?P<beginflag>\w+))?
+        (?P<replacement>\s\w+)?$"
+    )
+    .unwrap();
+}
+
+impl Conversion {
+    /// Create a `Conversion` from a string. Splits on whitespace
+    pub fn from_str(value: &str, bidirectional: bool) -> Result<Self, ParseErrorType> {
+        let mut split: Vec<_> = value.split_whitespace().collect();
+        if split.len() != 2 {
+            return Err(ParseErrorType::ConversionSplit(split.len()));
+        }
+        Ok(Self {
+            input: split[0].to_owned(),
+            output: split[1].to_owned(),
+            bidirectional,
+        })
+    }
+}
+
+impl RuleGroup {
+    /// Apply a pattern from this rule group to a root string. Returns `None` if
+    /// there are no matches.
+    ///
+    /// Does not pay attention to prf/sfx combinations, that must be done
+    /// earlier.
+    #[inline]
+    pub fn apply_pattern(&self, stem: &str) -> Option<String> {
+        self.rules
+            .iter()
+            .find_map(|rule| rule.apply_pattern(stem, self.kind))
+    }
+}
+
+impl AffixRule {
+    pub fn new(
+        kind: RuleType,
+        affix: &str,
+        strip: Option<&str>,
+        condition: Option<&str>,
+        morph_info: Vec<MorphInfo>,
+    ) -> Result<Self, Error> {
+        let cond_re = match condition {
+            Some(c) => Self::compile_re_pattern(c, kind)?,
+            None => None,
+        };
+
+        Ok(Self {
+            strip: strip.map(ToOwned::to_owned),
+            affix: affix.to_owned(),
+            condition: cond_re,
+            morph_info,
+        })
+    }
+
+    /// Compile a regex pattern in the context of an affix. Returns None if
+    /// the universal pattern "." is provided
+    pub(crate) fn compile_re_pattern(
+        condition: &str,
+        kind: RuleType,
+    ) -> Result<Option<Regex>, regex::Error> {
+        if condition == "." {
+            return Ok(None);
+        }
+        let re_pattern = match kind {
+            RuleType::Prefix => format!("^{condition}.*$"),
+            RuleType::Suffix => format!("^.*{condition}$"),
+        };
+        Regex::new(re_pattern.as_str()).map(Some)
+    }
+
+    /// Helper for testing
+    pub(crate) fn set_re_pattern(
+        &mut self,
+        condition: &str,
+        kind: RuleType,
+    ) -> Result<(), regex::Error> {
+        self.condition = Self::compile_re_pattern(condition, kind)?;
+        Ok(())
+    }
+
+    /// Check whether a condition is applicable, compile if not
+    #[allow(clippy::option_if_let_else)]
+    pub(crate) fn check_condition(&self, s: &str) -> bool {
+        match &self.condition {
+            Some(re) => re.is_match(s),
+            None => true,
+        }
+    }
+
+    // Verify the match condition and apply this rule
+    pub fn apply_pattern(&self, s: &str, kind: RuleType) -> Option<String> {
+        // No return if condition doesn't match
+        if !self.check_condition(s) {
+            return None;
+        }
+
+        let mut working = s;
+
+        match kind {
+            RuleType::Prefix => {
+                // If stripping chars exist, strip them from the prefix
+                if let Some(sc) = &self.strip {
+                    working = working.strip_prefix(sc.as_str()).unwrap_or(working);
+                }
+
+                let mut w_s = self.affix.clone();
+                w_s.push_str(working);
+                Some(w_s)
+            }
+            RuleType::Suffix => {
+                // Same logic as above
+                if let Some(sc) = &self.strip {
+                    working = working.strip_suffix(sc.as_str()).unwrap_or(working);
+                }
+
+                let mut w_s = working.to_owned();
+                w_s.push_str(&self.affix);
+                Some(w_s)
+            }
+        }
+    }
 }
 
 impl TryFrom<&str> for Encoding {
-    type Error = String;
+    type Error = ParseErrorType;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         match value.to_ascii_lowercase().as_str() {
@@ -27,7 +157,7 @@ impl TryFrom<&str> for Encoding {
             "koi8-u" => Ok(Self::Koi8U),
             "cp1251" => Ok(Self::Cp1251),
             "iscii-devanagari" => Ok(Self::IsciiDevanagari),
-            _ => Err(format!("unrecognized encoding '{value}'")),
+            _ => Err(ParseErrorType::Encoding),
         }
     }
 }
@@ -49,39 +179,39 @@ impl From<Encoding> for &str {
     }
 }
 
-impl TryFrom<&str> for Flag {
-    type Error = String;
+impl TryFrom<&str> for FlagType {
+    type Error = ParseErrorType;
 
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
+    fn try_from(value: &str) -> Result<Self, ParseErrorType> {
         match value.to_ascii_lowercase().as_str() {
             "ascii" => Ok(Self::Ascii),
             "utf-8" => Ok(Self::Utf8),
             "long" => Ok(Self::Long),
             "num" => Ok(Self::Number),
-            _ => Err(format!("unrecognized flag '{value}'")),
+            _ => Err(ParseErrorType::FlagType),
         }
     }
 }
 
-impl From<Flag> for &str {
+impl From<FlagType> for &str {
     #[inline]
-    fn from(val: Flag) -> Self {
+    fn from(val: FlagType) -> Self {
         match val {
-            Flag::Ascii => "ASCII",
-            Flag::Utf8 => "UTF-8",
-            Flag::Long => "long",
-            Flag::Number => "num",
+            FlagType::Ascii => "ASCII",
+            FlagType::Utf8 => "UTF-8",
+            FlagType::Long => "long",
+            FlagType::Number => "num",
         }
     }
 }
 
 impl TryFrom<&str> for Phonetic {
-    type Error = String;
+    type Error = ParseErrorType;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         let mut split: Vec<_> = value.split_whitespace().collect();
         if split.len() != 2 {
-            return Err(format!("expected 2 items but got {}", split.len()));
+            return Err(ParseErrorType::Phonetic(split.len()));
         }
         Ok(Self {
             pattern: split[0].to_owned(),
@@ -90,31 +220,13 @@ impl TryFrom<&str> for Phonetic {
     }
 }
 
-impl Conversion {
-    /// Create a `Conversion` from a string. Splits on whitespace
-    pub fn from_str(value: &str, bidirectional: bool) -> Result<Self, ParseErrorType> {
-        let mut split: Vec<_> = value.split_whitespace().collect();
-        if split.len() != 2 {
-            return Err(ParseErrorType::Conversion {
-                s: value.to_owned(),
-                count: split.len(),
-            });
-        }
-        Ok(Self {
-            input: split[0].to_owned(),
-            output: split[1].to_owned(),
-            bidirectional,
-        })
-    }
-}
-
 impl TryFrom<&str> for CompoundPattern {
-    type Error = String;
+    type Error = ParseErrorType;
 
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
+    fn try_from(value: &str) -> Result<Self, ParseErrorType> {
         let caps = RE_COMPOUND_PATTERN
             .captures(value)
-            .ok_or(format!("cannot parse compound pattern at '{value}'"))?;
+            .ok_or(ParseErrorType::CompoundPattern)?;
         Ok(Self {
             endchars: caps.name("endchars").unwrap().as_str().to_owned(),
             endflag: caps.name("endflag").map(|m| m.as_str().to_owned()),
@@ -126,17 +238,18 @@ impl TryFrom<&str> for CompoundPattern {
 }
 
 impl TryFrom<&str> for CompoundSyllable {
-    type Error = String;
+    type Error = ParseErrorType;
 
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
+    /// Format: `COMPOUNDSYLLABLE count vowels`
+    fn try_from(value: &str) -> Result<Self, ParseErrorType> {
         let mut split: Vec<_> = value.split_whitespace().collect();
         if split.len() != 2 {
-            return Err(format!("expected 2 items but got {}", split.len()));
+            return Err(ParseErrorType::CompoundSyllableCount(split.len()));
         }
         let to_parse = split[0];
         let count: u16 = to_parse
             .parse()
-            .map_err(|e| format!("unable to parse integer at '{to_parse}': {e}"))?;
+            .map_err(ParseErrorType::CompoundSyllableParse)?;
         Ok(Self {
             count,
             vowels: split[1].to_owned(),
@@ -150,7 +263,7 @@ impl TryFrom<&str> for MorphInfo {
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         let (tag, val) = value
             .split_once(':')
-            .ok_or(ParseErrorType::MorphInfoDelim(value.to_owned()))?;
+            .ok_or_else(|| ParseErrorType::MorphInfoDelim(value.to_owned()))?;
         let ret = match tag {
             "st" => Self::Stem(val.to_owned()),
             "ph" => Self::Phonetic(val.to_owned()),
@@ -209,8 +322,31 @@ impl Default for Encoding {
     }
 }
 
-impl Default for Flag {
+impl Default for FlagType {
     fn default() -> Self {
         Self::Utf8
+    }
+}
+
+impl PartialEq for AffixRule {
+    /// Override default to just check regex string
+    fn eq(&self, other: &Self) -> bool {
+        self.strip == other.strip
+            && self.affix == other.affix
+            && self.morph_info == other.morph_info
+            && self.condition.as_ref().map(Regex::as_str)
+                == other.condition.as_ref().map(Regex::as_str)
+    }
+}
+
+impl Eq for AffixRule {}
+
+impl Hash for AffixRule {
+    /// Hash convert the regex to a string for hashing
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+        self.strip.hash(state);
+        self.affix.hash(state);
+        self.condition.as_ref().map(Regex::as_str).hash(state);
+        self.morph_info.hash(state);
     }
 }

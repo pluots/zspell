@@ -48,19 +48,20 @@ fn test_line_key_parser_some() {
 #[test]
 fn test_line_key_parser_err() {
     let s = "KEY key here\nnext line";
-    let e: ParseError = ParseErrorType::Flag("abc".to_owned()).into();
+    let e = ParseError::new_nospan(ParseErrorType::Boolean, "");
     assert_eq!(line_key_parser(s, "KEY", |_| Err(e.clone())), Err(e));
 }
 
 #[test]
 fn test_line_key_parser() {
-    fn get_lang(s: &str) -> Result<AffixNode, ParseError> {
+    let err = ParseError::new_nospan(ParseErrorType::Boolean, "");
+    let get_lang = |s: &str| {
         if s == "apple" {
             Ok(AffixNode::Language("apple".to_owned()))
         } else {
-            Err(ParseErrorType::Flag("failure".to_owned()).into())
+            Err(err.clone())
         }
-    }
+    };
 
     let txt1 = "LANG apple";
     let txt2 = "LANG apple\nLANG banana";
@@ -78,10 +79,7 @@ fn test_line_key_parser() {
             0
         )))
     );
-    assert_eq!(
-        line_key_parser(txt3, "LANG", get_lang),
-        Err(ParseErrorType::Flag("failure".to_owned()).into())
-    );
+    assert_eq!(line_key_parser(txt3, "LANG", get_lang), Err(err));
 }
 
 #[test]
@@ -169,7 +167,7 @@ fn test_afx_table_parser_err() {
     // check line offset count
     let s = "PFX A N 2\nPFX A a b x .\nPFX A 0 c a";
     let res = parse_prefix(s);
-    assert_eq!(res.unwrap_err().span(), &Span::new(1, 0))
+    assert_eq!(res.unwrap_err().span().unwrap(), &Span::new(1, 0))
 }
 
 const SAMPLE_AFX_OK: &str = r#"
@@ -189,7 +187,7 @@ PFX A   0     br   a
 
 SFX B Y 2
 SFX B   0     ar   .
-SFX B   0     br   a^
+SFX B   0     br   [^a]
 
 REP 2
 REP a b
@@ -227,20 +225,20 @@ fn test_full_parse() {
             can_combine: false,
             rules: vec![
                 AffixRule {
-                    stripping_chars: None,
+                    strip: None,
                     affix: "ar".to_owned(),
                     condition: None,
-                    morph_info: Some(vec![
+                    morph_info: vec![
                         MorphInfo::Part(PartOfSpeech::Verb),
                         MorphInfo::Stem("foot".to_owned()),
                         MorphInfo::InflecSfx("ay".to_owned()),
-                    ]),
+                    ],
                 },
                 AffixRule {
-                    stripping_chars: None,
+                    strip: None,
                     affix: "br".to_owned(),
-                    condition: Some("a".to_owned()),
-                    morph_info: None,
+                    condition: Some(Regex::new("^a.*$").unwrap()),
+                    morph_info: Vec::new(),
                 },
             ],
         }),
@@ -250,16 +248,16 @@ fn test_full_parse() {
             can_combine: true,
             rules: vec![
                 AffixRule {
-                    stripping_chars: None,
+                    strip: None,
                     affix: "ar".to_owned(),
                     condition: None,
-                    morph_info: None,
+                    morph_info: Vec::new(),
                 },
                 AffixRule {
-                    stripping_chars: None,
+                    strip: None,
                     affix: "br".to_owned(),
-                    condition: Some("a^".to_owned()),
-                    morph_info: None,
+                    condition: Some(Regex::new("^.*[^a]$").unwrap()),
+                    morph_info: Vec::new(),
                 },
             ],
         }),

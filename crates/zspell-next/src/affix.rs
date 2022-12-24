@@ -4,8 +4,10 @@ pub(crate) mod types;
 pub(crate) mod types_impl;
 
 use self::types::{
-    CompoundPattern, CompoundSyllable, Conversion, Encoding, Flag, Phonetic, RuleGroup,
+    CompoundPattern, CompoundSyllable, Conversion, Encoding, FlagType, Phonetic, RuleGroup,
+    RuleType,
 };
+use crate::dict::types::Meta;
 use crate::error::Error;
 use crate::parser_affix::parse_affix;
 use crate::parser_affix::types::AffixNode;
@@ -21,7 +23,7 @@ pub struct Config {
     encoding: Encoding,
 
     /// The type of flag in the `.dic` file
-    flagtype: Flag,
+    flagtype: FlagType,
 
     /// Twofold prefix skipping for e.g. right-to-left languages
     complex_prefixes: bool,
@@ -330,4 +332,51 @@ impl Config {
 
         Ok(res)
     }
+
+    /// Create a vector of words from a single root word by applying rules in
+    /// this affix.
+    ///
+    /// May contain duplicates
+    fn create_affixed_words(&self, stem: &str, flags: &[String]) -> Vec<(String, Vec<Meta>)> {
+        let mut ret = vec![stem.to_owned()];
+        let mut prefixed_words: Vec<String> = Vec::new();
+
+        // Loop through rules where the identifiers apply
+        // Then apply them
+        self.affix_rules
+            .iter()
+            // Select rules whose identifier is in the desired keys
+            .filter(|rule| flags.contains(&rule.flag))
+            .for_each(|rule| {
+                if let Some(newword) = rule.apply_pattern(stem) {
+                    if rule.can_combine && rule.kind == RuleType::Prefix {
+                        prefixed_words.push(newword.clone());
+                    }
+                    ret.push(newword);
+                }
+            });
+
+        // Redo the same thing for rules that allow chaining
+        self.affix_rules
+            .iter()
+            // Select rules whose identifier is in the desired keys, and who
+            // allow pfx+sfx combinations
+            .filter(|rule| {
+                rule.can_combine && flags.contains(&rule.flag) && rule.kind == RuleType::Suffix
+            })
+            .for_each(|rule| {
+                for pfxword in &prefixed_words {
+                    if let Some(newword) = rule.apply_pattern(pfxword) {
+                        ret.push(newword);
+                    }
+                }
+            });
+
+        dbg!(ret);
+
+        todo!()
+    }
 }
+
+#[cfg(test)]
+mod tests;

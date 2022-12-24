@@ -2,7 +2,7 @@
 
 members = [
     "crates/zspell",
-    "crates/zspell-py",
+    # "crates/zspell-py",
     "crates/zspell-cli",
     "crates/zspell-next"
 ]

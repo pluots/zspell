@@ -1,5 +1,7 @@
 //! Type representations for affix file contents
 
+use regex::Regex;
+
 /// A possible encoding type
 #[non_exhaustive]
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -27,7 +29,7 @@ pub enum Encoding {
 /// A representation of the flag type (the part after `/` in the `.dic` file)
 #[non_exhaustive]
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub enum Flag {
+pub enum FlagType {
     /// ASCII flags (default)
     Ascii,
     /// UTF8 flags
@@ -55,12 +57,6 @@ pub struct CompoundSyllable {
     pub(super) vowels: String,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
-pub enum RuleType {
-    Prefix,
-    Suffix,
-}
-
 /// A simple prefix or suffix rule
 ///
 /// This struct represents a prefix or suffix option that may be applied to any
@@ -79,16 +75,23 @@ pub struct RuleGroup {
     pub(crate) rules: Vec<AffixRule>,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+pub enum RuleType {
+    Prefix,
+    Suffix,
+}
+
+#[derive(Clone, Debug)]
 pub struct AffixRule {
-    /// Characters to remove from the beginning or end
-    pub(crate) stripping_chars: Option<String>,
     /// Affix to be added
     pub(crate) affix: String,
-    /// Regex-based rule for when this rule is true
-    pub(crate) condition: Option<String>,
+    /// Characters to remove from the beginning or end
+    pub(crate) strip: Option<String>,
+    /// Regex-based rule for when this rule is true. `None` indicates `.`, i.e.,
+    /// always true
+    pub(crate) condition: Option<Regex>,
     /// Morphological information
-    pub(crate) morph_info: Option<Vec<MorphInfo>>,
+    pub(crate) morph_info: Vec<MorphInfo>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]

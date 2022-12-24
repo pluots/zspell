@@ -3,7 +3,7 @@
 #![allow(unused)]
 
 use crate::affix::types::{
-    CompoundPattern, CompoundSyllable, Conversion, Encoding, Flag, Phonetic, RuleGroup,
+    CompoundPattern, CompoundSyllable, Conversion, Encoding, FlagType, Phonetic, RuleGroup,
 };
 
 #[non_exhaustive]
@@ -15,7 +15,7 @@ pub enum AffixNode {
     /// `SET`
     Encoding(Encoding),
     /// `FLAG`
-    FlagType(Flag),
+    FlagType(FlagType),
     /// `COMPLEXPREFIXES` twofold prefix stripping
     ComplexPrefixes,
     /// `LANG`
