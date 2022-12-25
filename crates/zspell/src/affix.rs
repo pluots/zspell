@@ -1,209 +1,364 @@
-//! Dictionary configuration options framework
-//!
-//! This module contains everything related to the configuration of a
-//! [`crate::Dictionary`], which can then be used for checking words.
-//!
-//! Usually this configuration is loaded via an affix file (typically ending in
-//! `.aff`), but it can also be created programatically if desired.
-//!
-//! This module should be considered unstable as its usage is finalized.
+//! Representation of an affix file
 
-mod serde;
-mod types;
+pub(crate) mod types;
+pub(crate) mod types_impl;
 
-use serde::t_data_unwrap;
-pub use serde::{load_affix_from_str, ProcessedToken, ProcessedTokenData};
-pub use types::{Conversion, EncodingType, Rule, RuleType, TokenType};
-use unicode_segmentation::UnicodeSegmentation;
+use self::types::{
+    CompoundPattern, CompoundSyllable, Conversion, Encoding, FlagType, MorphInfo, Phonetic,
+    RuleGroup, RuleType,
+};
+use crate::dict::types::Meta;
+use crate::error::Error;
+use crate::parser_affix::parse_affix;
+use crate::parser_affix::types::AffixNode;
 
-use crate::errors::AffixError;
-use crate::graph_vec;
-
-/// Dictionary configuration object that holds affix file data
-///
-/// This holds the entire contents of the affix file as an AST representation
-/// and is intended to be used throughout program lifetime. If you are
-/// uninterested in modifying an existing dictionary structure, you are likely
-/// interested in just using [`crate::Dictionary`] and its methods.
-///
-/// # Internal working
-///
-/// Generally within this class, a "string" is represented as a `Vec<String>` or
-/// `Vec<&str>`, i.e. a vector of string graphemes. This is because many languages
-/// may require accurate unicode segmentation to work properly. It is not yet
-/// understood whether this is the best practice, so this may change in the
-/// future.
-///
-/// Any type that can be modified must be owned (e.g. String, Vec), others may
-/// be borrowed.
-#[non_exhaustive]
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Config {
+    /*
+        General Options
+    */
     /// Charset to use, reference to an [`EncodingType`] Currently this is
     /// unused; only UTF-8 is supported. However, the affix file must still have
     /// an accurate definition.
-    pub encoding: EncodingType,
+    encoding: Encoding,
+
+    /// The type of flag in the `.dic` file
+    flagtype: FlagType,
 
     /// Twofold prefix skipping for e.g. right-to-left languages
-    pub complex_prefixes: bool,
+    complex_prefixes: bool,
 
     /// Language code, currently unused. Consider this unstable as it may change
     /// to be an object reference.
-    pub lang: String,
+    lang: String,
 
     /// List of characters to ignore
-    pub ignore_chars: Vec<String>,
+    ignore_chars: Vec<char>,
 
     /// List of usable flag vectors. Defaults to all things after "/"" in a dict.
-    pub afx_flag_vector: Vec<String>,
+    affix_alias: Vec<String>,
 
-    // ## Suggestion-related items
+    /// List of usable flag vectors
+    morph_alias: Vec<String>,
+
+    /*
+        Suggestion options
+    */
     /// List of e.g. "qwerty", "asdfg" that define neighbors
-    pub keys: Vec<Vec<String>>,
-
-    /// Suggest words that differe by 1 try character
-    pub try_characters: Vec<String>,
-
-    /// Flag used to indicate words that should not be suggested
-    pub nosuggest_flag: String,
-
-    /// Maximum compound word suggestions
-    pub compound_suggestions_max: u16,
-
-    /// Max number of ngram suggestions
-    pub ngram_suggestions_max: u16,
-
-    /// N-gram similarity limit
-    pub ngram_diff_max: u16,
-
-    /// Remove all suggestions except the diff max
-    pub ngram_limit_to_diff_max: bool,
-
-    /// Don't suggest anything with spaces
-    pub no_split_suggestions: bool,
-
-    /// If a dot comes with the spellcheck, return one with a suggestion word
-    pub keep_termination_dots: bool,
-
-    /// Note rare (i.e. commonly misspelled) words with this flag
-    pub warn_rare_flag: String,
-
-    /// Whether to never suggest words with the warn flag (above)
-    pub forbid_warn_words: bool,
-
-    // pub replacements: Vec<&'a ReplaceRule<'a>>,
-    // maps: Vec<>, // MAP
-    // phones: Vec<>
-
-    // ## Compounding-related items
-
-    // break_points: Vec<>
-    // compound_rules: Vec<>
-    /// Minimum length of words used in a compound
-    pub compound_min_length: u16,
-
-    /// Words with this flag may be in compounds
-    pub compound_flag: Option<String>,
-
-    /// Words with this flag may start a compound
-    pub compound_begin_flag: Option<String>,
-
-    /// Words with this flag may end a compound
-    pub compound_end_flag: Option<String>,
-
-    /// Words with this flag may be in the middle of a compound
-    pub compound_middle_flag: Option<String>,
-
-    /// Words with this flag can't be on their own, only in compounds
-    pub compound_only_flag: Option<String>,
-    // There are lots of compound flags that haven't yet been implemented
-
-    // ## Affix-related items
-    pub input_conversions: Vec<Conversion>,
-
-    pub output_conversions: Vec<Conversion>,
-
-    // Rules for setting prefixes and suffixes
-    pub affix_rules: Vec<Rule>,
+    neighbor_keys: Vec<String>,
 
     // Rules for suggestion replacements to try
-    pub replacements: Vec<Conversion>,
+    replacements: Vec<Conversion>,
+
+    /// Suggest words that differe by 1 try character
+    try_characters: String,
+
+    /// Flag used to indicate words that should not be suggested
+    nosuggest_flag: Option<char>,
+
+    /// Note rare (i.e. commonly misspelled) words with this flag
+    warn_rare_flag: Option<char>,
+
+    /// Don't suggest anything with spaces
+    no_split_suggestions: bool,
+
+    /// If a dot comes with the spellcheck, return one with a suggestion word
+    keep_term_dots: bool,
+
+    /// Whether to never suggest words with the warn flag (above)
+    forbid_warn_words: bool,
+
+    /// Replace commonly misused letters, e.g. `u`/`ü`
+    maps: Vec<(char, char)>,
+
+    /// Phonetic replacements for similar words
+    phonetics: Vec<Phonetic>,
+
+    /*
+        ngram configuration
+    */
+    /// Max number of ngram suggestions
+    ngram_sug_max: u16,
+
+    /// N-gram similarity limit
+    ngram_diff_max: u8,
+
+    /// Remove all suggestions except the diff max
+    ngram_limit_to_diff_max: bool,
+
+    /*
+        Compounding-related items
+    */
+    compound_config: Box<CompoundConfig>,
+
+    /*
+        Affix Options
+    */
+    // Rules for setting prefixes and suffixes
+    affix_rules: Vec<RuleGroup>,
+
+    /*
+        Other options
+    */
+    afx_circumflex_flag: Option<char>,
+    forbidden_word_flag: Option<char>,
+    afx_full_strip: bool,
+    afx_keep_case_flag: char,
+    input_conversions: Vec<Conversion>,
+    output_conversions: Vec<Conversion>,
+    afx_needed_flag: char,
+    afx_substandard_flag: char,
+    afx_word_chars: String,
+    afx_check_sharps: bool,
+    name: String,
+    home_page: String,
+    version: String,
+}
+
+/// Separated structure for compound rules
+#[derive(Clone, Debug, PartialEq, Eq)]
+struct CompoundConfig {
+    /// Something like `-` to indicate whether both sides should be checked
+    /// Prefer COMPOUNDRULE instead
+    break_separators: Vec<String>,
+
+    /// Maximum compound word suggestions
+    sug_max: u16,
+
+    /// Regex-like rules for compound words
+    rules: Vec<String>,
+
+    /// Minimum length of words used in a compound
+    min_length: u16,
+
+    /// Words with this flag may be in compounds
+    flag: Option<char>,
+
+    /// Words with this flag may start a compound
+    begin_flag: Option<char>,
+
+    /// Words with this flag may end a compound
+    end_flag: Option<char>,
+
+    /// Words with this flag may be in the middle of a compound
+    middle_flag: Option<char>,
+
+    /// Words with this flag can't be on their own, only in compounds
+    only_flag: Option<char>,
+
+    /// Allow these words inside compounds
+    permit_flag: Option<char>,
+    forbid_flag: Option<char>,
+    more_suffixes: bool,
+    root: Option<char>,
+    word_max: u16,
+    forbid_dup: bool,
+    forbid_repeat: bool,
+    check_case: bool,
+    check_triple: bool,
+    simplify_triple: bool,
+    forbid_pats: Vec<CompoundPattern>,
+    force_upper_flag: Option<char>,
+    syllable: CompoundSyllable,
+    syllable_num: String,
+}
+
+impl Default for Config {
+    #[allow(clippy::default_trait_access)]
+    #[inline]
+    fn default() -> Self {
+        Self {
+            encoding: Default::default(),
+            flagtype: Default::default(),
+            complex_prefixes: Default::default(),
+            lang: Default::default(),
+            ignore_chars: Default::default(),
+            affix_alias: Default::default(),
+            morph_alias: Default::default(),
+            neighbor_keys: vec![
+                "qwertyuiop".to_owned(),
+                "asdfghjkl".to_owned(),
+                "zxcvbnm".to_owned(),
+            ],
+            replacements: Default::default(),
+            try_characters: "esianrtolcdugmphbyfvkwzESIANRTOLCDUGMPHBYFVKWZ'".to_owned(),
+            nosuggest_flag: Some('!'),
+            warn_rare_flag: Default::default(),
+            no_split_suggestions: Default::default(),
+            keep_term_dots: Default::default(),
+            forbid_warn_words: Default::default(),
+            maps: Default::default(),
+            phonetics: Default::default(),
+            ngram_sug_max: 2,
+            ngram_diff_max: 5,
+            ngram_limit_to_diff_max: Default::default(),
+            compound_config: Default::default(),
+            affix_rules: Default::default(),
+            afx_circumflex_flag: Default::default(),
+            forbidden_word_flag: Default::default(),
+            afx_full_strip: Default::default(),
+            afx_keep_case_flag: Default::default(),
+            input_conversions: Default::default(),
+            output_conversions: Default::default(),
+            afx_needed_flag: Default::default(),
+            afx_substandard_flag: Default::default(),
+            afx_word_chars: Default::default(),
+            afx_check_sharps: Default::default(),
+            name: Default::default(),
+            home_page: Default::default(),
+            version: Default::default(),
+        }
+    }
+}
+
+impl Default for CompoundConfig {
+    #[allow(clippy::default_trait_access)]
+    fn default() -> Self {
+        Self {
+            break_separators: Default::default(),
+            sug_max: 3,
+            rules: Default::default(),
+            min_length: 3,
+            flag: Default::default(),
+            begin_flag: Default::default(),
+            end_flag: Default::default(),
+            middle_flag: Default::default(),
+            only_flag: Default::default(),
+            permit_flag: Default::default(),
+            forbid_flag: Default::default(),
+            more_suffixes: Default::default(),
+            root: Default::default(),
+            word_max: Default::default(),
+            forbid_dup: Default::default(),
+            forbid_repeat: Default::default(),
+            check_case: Default::default(),
+            check_triple: Default::default(),
+            simplify_triple: Default::default(),
+            forbid_pats: Default::default(),
+            force_upper_flag: Default::default(),
+            syllable: Default::default(),
+            syllable_num: Default::default(),
+        }
+    }
 }
 
 impl Config {
-    /// Create an empty affix object
-    #[inline]
-    pub const fn new() -> Self {
-        Self {
-            encoding: EncodingType::Utf8,
-            complex_prefixes: false,
-            lang: String::new(),
-            ignore_chars: Vec::new(),
-            afx_flag_vector: Vec::new(),
-            keys: Vec::new(),
-            try_characters: Vec::new(),
-            nosuggest_flag: String::new(),
-            compound_suggestions_max: 2,
-            ngram_suggestions_max: 2,
-            ngram_diff_max: 5,
-            ngram_limit_to_diff_max: false,
-            no_split_suggestions: false,
-            keep_termination_dots: false,
-            warn_rare_flag: String::new(),
-            forbid_warn_words: false,
-            compound_min_length: 3,
-            compound_flag: None,
-            compound_begin_flag: None,
-            compound_end_flag: None,
-            compound_middle_flag: None,
-            compound_only_flag: None,
-            input_conversions: Vec::new(),
-            output_conversions: Vec::new(),
-            affix_rules: Vec::new(),
-            replacements: Vec::new(),
-        }
-    }
-
-    /// Load this affix from a string, e.g. one read from an affix file
+    /// Create a `Config` object from a string version of an affix file
     ///
     /// # Errors
     ///
-    /// Error if loading is unsuccessful
+    /// Returns an error if there is a problem parsing, or if the file is
+    /// invalid
     #[inline]
-    pub fn load_from_str(&mut self, s: &str) -> Result<(), AffixError> {
-        load_affix_from_str(self, s)
+    pub fn load_from_str(s: &str) -> Result<Self, Error> {
+        Self::from_parsed(parse_affix(s)?)
+    }
+
+    #[allow(clippy::unnecessary_wraps)]
+    fn from_parsed(v: Vec<AffixNode>) -> Result<Self, Error> {
+        let mut res = Self::default();
+        let mut warnings: Vec<String> = Vec::new();
+
+        for node in v {
+            let name_str = node.name_str();
+            match node {
+                AffixNode::Encoding(v) => res.encoding = v,
+                AffixNode::FlagType(v) => res.flagtype = v,
+                AffixNode::ComplexPrefixes => res.complex_prefixes = true,
+                AffixNode::Language(v) => res.lang = v,
+                AffixNode::IgnoreChars(v) => res.ignore_chars = v,
+                AffixNode::AffixAlias(v) => res.affix_alias = v,
+                AffixNode::MorphAlias(v) => res.morph_alias = v,
+                AffixNode::NeighborKeys(v) => res.neighbor_keys = v,
+                AffixNode::TryCharacters(v) => res.try_characters = v,
+                AffixNode::NoSuggestFlag(v) => res.nosuggest_flag = Some(v),
+                AffixNode::CompoundSugMax(v) => res.compound_config.sug_max = v,
+                AffixNode::NGramSugMax(v) => res.ngram_sug_max = v,
+                AffixNode::NGramDiffMax(v) => res.ngram_diff_max = v,
+                AffixNode::NGramLimitToDiffMax => res.ngram_limit_to_diff_max = true,
+                AffixNode::NoSplitSuggestions => res.no_split_suggestions = true,
+                AffixNode::KeepTermDots => res.keep_term_dots = true,
+                AffixNode::Replacement(v) => res.replacements = v,
+                AffixNode::Mapping(v) => res.maps = v,
+                AffixNode::Phonetic(v) => res.phonetics = v,
+                AffixNode::WarnRareFlag(v) => res.warn_rare_flag = Some(v),
+                AffixNode::ForbidWarnWords => todo!(),
+                AffixNode::BreakSeparator(v) => res.compound_config.break_separators = v,
+                AffixNode::CompoundRule(v) => res.compound_config.rules = v,
+                AffixNode::CompoundMinLen(v) => res.compound_config.min_length = v,
+                AffixNode::CompoundFlag(v) => res.compound_config.flag = Some(v),
+                AffixNode::CompoundBeginFlag(v) => res.compound_config.begin_flag = Some(v),
+                AffixNode::CompoundEndFlag(v) => res.compound_config.end_flag = Some(v),
+                AffixNode::CompoundMiddleFlag(v) => res.compound_config.middle_flag = Some(v),
+                AffixNode::CompoundOnlyFlag(v) => res.compound_config.only_flag = Some(v),
+                AffixNode::CompoundPermitFlag(v) => res.compound_config.permit_flag = Some(v),
+                AffixNode::CompoundForbidFlag(v) => res.compound_config.forbid_flag = Some(v),
+                AffixNode::CompoundMoreSuffixes => res.compound_config.more_suffixes = true,
+                AffixNode::CompoundRoot(v) => res.compound_config.root = Some(v),
+                AffixNode::CompoundWordMax(v) => res.compound_config.word_max = v,
+                AffixNode::CompoundForbidDup => res.compound_config.forbid_dup = true,
+                AffixNode::CompoundForbidRepeat => res.compound_config.forbid_repeat = true,
+                AffixNode::CompoundCheckCase => res.compound_config.check_case = true,
+                AffixNode::CompoundCheckTriple => res.compound_config.check_triple = true,
+                AffixNode::CompoundSimplifyTriple => res.compound_config.simplify_triple = true,
+                AffixNode::CompoundForbidPats(v) => res.compound_config.forbid_pats = v,
+                AffixNode::CompoundForceUpper(v) => res.compound_config.force_upper_flag = Some(v),
+                AffixNode::CompoundSyllable(v) => res.compound_config.syllable = v,
+                AffixNode::SyllableNum(v) => res.compound_config.syllable_num = v,
+                AffixNode::Prefix(v) => res.affix_rules.push(v),
+                AffixNode::Suffix(v) => res.affix_rules.push(v),
+                AffixNode::AfxCircumfixFlag(v) => res.afx_circumflex_flag = Some(v),
+                AffixNode::ForbiddenWordFlag(v) => res.forbidden_word_flag = Some(v),
+                AffixNode::AfxFullStrip => res.afx_full_strip = true,
+                AffixNode::AfxKeepCaseFlag(v) => res.afx_keep_case_flag = v,
+                AffixNode::AfxInputConversion(v) => res.input_conversions = v,
+                AffixNode::AfxOutputConversion(v) => res.output_conversions = v,
+                AffixNode::AfxLemmaPresentFlag(v) => {
+                    warnings.push(format!("flag {name_str} is deprecated"));
+                }
+                AffixNode::AfxNeededFlag(v) => res.afx_needed_flag = v,
+                AffixNode::AfxPseudoRootFlag(v) => {
+                    warnings.push(format!("flag {name_str} is deprecated"));
+                }
+                AffixNode::AfxSubstandardFlag(v) => res.afx_substandard_flag = v,
+                AffixNode::AfxWordChars(v) => res.afx_word_chars = v,
+                AffixNode::AfxCheckSharps => res.afx_check_sharps = true,
+                AffixNode::Comment => todo!(),
+                AffixNode::Name(v) => res.name = v,
+                AffixNode::HomePage(v) => res.home_page = v,
+                AffixNode::Version(v) => res.version = v,
+            }
+        }
+
+        Ok(res)
     }
 
     /// Create a vector of words from a single root word by applying rules in
-    /// this affix
+    /// this affix.
     ///
     /// May contain duplicates
-    ///
-    /// # Parameters
-    ///
-    /// - `rootword`: The word to have prefixes/suffixes applied to
-    /// - `keys`: Prefix and suffix keys to apply
-    #[inline]
-    pub fn create_affixed_words(&self, rootword: &str, keys: &str) -> Vec<String> {
-        let mut ret = vec![rootword.to_owned()];
-        // We will build our prefixed words here.
+    fn create_affixed_words<'a>(
+        &self,
+        stem: &str,
+        flags: &[String],
+        morph: Option<&'a MorphInfo>,
+    ) -> Vec<(String, Vec<Meta<'a>>)> {
+        let default_meta = Meta::new_dict(stem, morph);
+        let mut ret = vec![(stem.to_owned(), vec![default_meta])];
+        // BENCH: new vs. with capacity
         let mut prefixed_words: Vec<String> = Vec::new();
 
-        // List of what keys may apply to an affix
-        let keys_vec: Vec<String> = graph_vec!(keys.to_uppercase());
-
-        // Loop through rules where the identifiers apply
-        // Then apply them
+        // Loop through rules where the identifiers apply & apply them
         self.affix_rules
             .iter()
             // Select rules whose identifier is in the desired keys
-            .filter(|rule| keys_vec.contains(&rule.key))
-            .for_each(|rule| {
-                if let Some(newword) = rule.apply(rootword) {
-                    if rule.combine_pfx_sfx && rule.atype == RuleType::Prefix {
+            .filter(|group| flags.contains(&group.flag))
+            .for_each(|group| {
+                if let Some((newword, rule)) = group.apply_pattern_meta(stem) {
+                    if group.can_combine && group.kind == RuleType::Prefix {
                         prefixed_words.push(newword.clone());
                     }
-                    ret.push(newword);
+                    ret.push((newword, vec![Meta::new_afx(stem, rule)]));
                 }
             });
 
@@ -212,14 +367,12 @@ impl Config {
             .iter()
             // Select rules whose identifier is in the desired keys, and who
             // allow pfx+sfx combinations
-            .filter(|rule| {
-                rule.combine_pfx_sfx
-                    && keys_vec.contains(&rule.key)
-                    && rule.atype == RuleType::Suffix
+            .filter(|group| {
+                group.can_combine && flags.contains(&group.flag) && group.kind == RuleType::Suffix
             })
-            .for_each(|rule| {
+            .for_each(|group| {
                 for pfxword in &prefixed_words {
-                    if let Some(newword) = rule.apply(pfxword) {
+                    if let Some(newword) = group.apply_pattern(pfxword) {
                         ret.push(newword);
                     }
                 }
@@ -229,20 +382,5 @@ impl Config {
     }
 }
 
-impl Default for Config {
-    /// Common defaults for affix configuration with a QWERTY keyboard
-    #[inline]
-    fn default() -> Self {
-        let mut ax = Self::new();
-
-        ax.keys = vec![
-            graph_vec!("qwertyuiop"),
-            graph_vec!("asdfghjkl"),
-            graph_vec!("zxcvbnm"),
-        ];
-        ax.try_characters = graph_vec!("esianrtolcdugmphbyfvkwzESIANRTOLCDUGMPHBYFVKWZ'");
-        ax.nosuggest_flag = String::from("!");
-
-        ax
-    }
-}
+#[cfg(test)]
+mod tests;

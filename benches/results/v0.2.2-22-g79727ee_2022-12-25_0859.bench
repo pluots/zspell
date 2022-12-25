@@ -1,0 +1,156 @@
+v0.2.2-22-g79727ee_2022-12-25_0859.bench
+
+Benchmark from 2022-12-25_0859 on commit v0.2.2-22-g79727ee
+rustc 1.68.0-nightly (b569c9dc5 2022-12-21)
+
+CPU Information:
+Intel(R) Core(TM) i5-5257U CPU @ 2.70GHz
+
+Running: 'cargo bench'
+
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 17 tests
+test affix::serde::tests::test_create_processed_tokens ... ignored
+test affix::serde::tests::test_create_raw_token ... ignored
+test affix::serde::tests::test_get_table_item_count ... ignored
+test affix::serde::tests::test_strip_comments ... ignored
+test affix::types::tests::test_affix_rule_apply_words ... ignored
+test affix::types::tests::test_encoding_deser ... ignored
+test affix::types::tests::test_encoding_ser ... ignored
+test affix::types::tests::test_rule_apply ... ignored
+test affix::types::tests::test_rule_def_condition ... ignored
+test affix::types::tests::test_token_deser ... ignored
+test affix::types::tests::test_token_props ... ignored
+test affix::types::tests::test_token_ser ... ignored
+test system::tests::test_expand_dir_wildcards ... ignored
+test system::tests::test_find_dict_from_path ... ignored
+test system::tests::test_find_dict_from_path_err ... ignored
+test system::tests::test_matching_dirs ... ignored
+test system::tests::test_raw_paths ... ignored
+
+test result: ok. 0 passed; 0 failed; 17 ignored; 0 measured; 0 filtered out; finished in 0.02s
+
+
+running 3 tests
+test download::tests::calculate_git_hash_ok ... ignored
+test download::tests::download_dict_ok ... ignored
+test download::tests::retreive_urls_ok ... ignored
+
+test result: ok. 0 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 22 tests
+test affix::tests::test_afx_words ... ignored
+test affix::tests::test_apply_pattern ... ignored
+test affix::tests::test_check_condition ... ignored
+test affix::tests::test_rule_group_apply_pattern ... ignored
+test dict::tests::test_dict_entry_ok ... ignored
+test parser_affix::tests::test_afx_table_parser_err ... ignored
+test parser_affix::tests::test_bool_parser_err ... ignored
+test parser_affix::tests::test_bool_parser_ok ... ignored
+test parser_affix::tests::test_file_parse ... ignored
+test parser_affix::tests::test_full_parse ... ignored
+test parser_affix::tests::test_line_key_parser ... ignored
+test parser_affix::tests::test_line_key_parser_err ... ignored
+test parser_affix::tests::test_line_key_parser_none ... ignored
+test parser_affix::tests::test_line_key_parser_some ... ignored
+test parser_affix::tests::test_line_splitter_none ... ignored
+test parser_affix::tests::test_line_splitter_some ... ignored
+test parser_affix::tests::test_munch_newline_cmt ... ignored
+test parser_affix::tests::test_munch_newline_err ... ignored
+test parser_affix::tests::test_munch_newline_none ... ignored
+test parser_affix::tests::test_munch_newline_some ... ignored
+test parser_affix::tests::test_parse_neighbor_keys ... ignored
+test parser_affix::tests::test_table_parser_ok ... ignored
+
+test result: ok. 0 passed; 0 failed; 22 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+Vec Contains            time:   [538.78 µs 564.01 µs 597.60 µs]
+                        change: [+0.5859% +11.489% +23.519%] (p = 0.04 < 0.05)
+                        Change within noise threshold.
+Found 4 outliers among 100 measurements (4.00%)
+  2 (2.00%) high mild
+  2 (2.00%) high severe
+
+Vec Not Contains        time:   [1.6340 ms 1.6426 ms 1.6527 ms]
+                        change: [-16.436% -12.623% -8.7515%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 19 outliers among 100 measurements (19.00%)
+  13 (13.00%) high mild
+  6 (6.00%) high severe
+
+Vec Collect             time:   [18.284 µs 18.335 µs 18.412 µs]
+                        change: [-62.156% -50.717% -35.935%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 17 outliers among 100 measurements (17.00%)
+  7 (7.00%) high mild
+  10 (10.00%) high severe
+
+BTree Contains          time:   [1.9699 µs 1.9744 µs 1.9804 µs]
+                        change: [-25.170% -18.873% -12.499%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 7 outliers among 100 measurements (7.00%)
+  1 (1.00%) high mild
+  6 (6.00%) high severe
+
+BTree Not Contains      time:   [2.7401 µs 3.1098 µs 3.6197 µs]
+                        change: [-43.980% -32.829% -18.530%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 12 outliers among 100 measurements (12.00%)
+  3 (3.00%) high mild
+  9 (9.00%) high severe
+
+BTree Collect           time:   [347.46 µs 378.72 µs 416.83 µs]
+                        change: [-12.859% +2.1044% +18.278%] (p = 0.80 > 0.05)
+                        No change in performance detected.
+Found 6 outliers among 100 measurements (6.00%)
+  3 (3.00%) high mild
+  3 (3.00%) high severe
+
+Hash Contains           time:   [508.42 ns 523.45 ns 542.66 ns]
+                        change: [-10.001% -5.7936% -2.0495%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 15 outliers among 100 measurements (15.00%)
+  2 (2.00%) high mild
+  13 (13.00%) high severe
+
+Hash Not Contains       time:   [382.81 ns 395.37 ns 411.55 ns]
+                        change: [-37.282% -29.563% -21.200%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 15 outliers among 100 measurements (15.00%)
+  4 (4.00%) high mild
+  11 (11.00%) high severe
+
+Hash Collect            time:   [156.17 µs 193.27 µs 242.82 µs]
+                        change: [+13.289% +30.108% +51.964%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 9 outliers among 100 measurements (9.00%)
+  1 (1.00%) high mild
+  8 (8.00%) high severe
+
+Hashbrown Contains      time:   [274.40 ns 282.45 ns 293.41 ns]
+                        change: [+4.1071% +11.992% +22.306%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 12 outliers among 100 measurements (12.00%)
+  3 (3.00%) high mild
+  9 (9.00%) high severe
+
+Hashbrown Not Contains  time:   [150.84 ns 151.01 ns 151.20 ns]
+                        change: [-42.065% -32.116% -21.510%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 7 outliers among 100 measurements (7.00%)
+  1 (1.00%) high mild
+  6 (6.00%) high severe
+
+Hashbrown Collect       time:   [113.65 µs 117.37 µs 122.03 µs]
+                        change: [-5.6320% +0.0295% +5.1944%] (p = 1.00 > 0.05)
+                        No change in performance detected.
+Found 22 outliers among 100 measurements (22.00%)
+  8 (8.00%) high mild
+  14 (14.00%) high severe

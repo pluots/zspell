@@ -1,4 +1,5 @@
 //! Affix tests
+use util::TestCollection;
 
 use super::*;
 use crate::affix::types::AffixRule;
@@ -74,6 +75,33 @@ fn test_rule_group_apply_pattern() {
     assert_eq!(group.apply_pattern("blurry").unwrap(), "blurriness");
     assert_eq!(group.apply_pattern("coy").unwrap(), "coyness");
     assert_eq!(group.apply_pattern("acute").unwrap(), "acuteness");
+}
+
+#[test]
+fn affix_create_words() {
+    let mut afx = Config::new();
+
+    let content = TestCollection::load("../../1_pfxsfx.test").afx_str;
+
+    afx.load_from_str(content.as_str()).unwrap();
+
+    assert_eq!(
+        afx.create_affixed_words("xxx", "A"),
+        vec!["xxx".to_string(), "aaxxx".to_string()]
+    );
+    assert_eq!(
+        afx.create_affixed_words("xxx", "B"),
+        vec!["xxx".to_string(), "xxxcc".to_string()]
+    );
+    assert_eq!(
+        afx.create_affixed_words("xxx", "AB"),
+        vec![
+            "xxx".to_string(),
+            "aaxxx".to_string(),
+            "xxxcc".to_string(),
+            "aaxxxcc".to_string()
+        ]
+    );
 }
 
 #[test]

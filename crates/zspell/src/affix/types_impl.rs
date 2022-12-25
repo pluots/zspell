@@ -51,6 +51,12 @@ impl RuleGroup {
             .iter()
             .find_map(|rule| rule.apply_pattern(stem, self.kind))
     }
+
+    pub(crate) fn apply_pattern_meta(&self, stem: &str) -> Option<(String, &AffixRule)> {
+        self.rules
+            .iter()
+            .find_map(|rule| rule.apply_pattern(stem, self.kind).map(|s| (s, rule)))
+    }
 }
 
 impl AffixRule {

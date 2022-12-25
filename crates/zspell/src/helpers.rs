@@ -1,16 +1,4 @@
-/// Create a vector of unicode graphemes
-/// Each &str within this array is a single unicode character, which
-/// is composed of one to four 8-bit integers ("chars")
-#[macro_export]
-macro_rules! graph_vec {
-    ($ex:expr) => {
-        $ex.graphemes(true)
-            .collect::<Vec<&str>>()
-            .iter()
-            .map(|s| s.to_string())
-            .collect()
-    };
-}
+use core::fmt::Display;
 
 #[macro_export]
 macro_rules! unwrap_or_ret {
@@ -20,4 +8,11 @@ macro_rules! unwrap_or_ret {
             None => return $ret,
         }
     };
+}
+
+#[inline]
+pub fn convertu32<T: TryInto<u32> + Display + Copy>(value: T) -> u32 {
+    value
+        .try_into()
+        .unwrap_or_else(|_| panic!("value {value} overflows u32 max of {}", u32::MAX))
 }
