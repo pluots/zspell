@@ -14,7 +14,7 @@ use crate::Config;
 // FIXME: make sure we use type safety to enforce we only check properly built
 // dictionaries
 
-type WordList<'a> = HashMap<String, Vec<&'a Meta>>;
+type WordList<'a> = HashMap<String, Vec<&'a Meta<'a>>>;
 
 /// Main dictionary object used for spellchecking and suggestions
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -27,7 +27,7 @@ pub struct Dictionary<'a> {
     /// Words forbidden by the personal dictionary, i.e. do not accept as correct
     wordlist_forbidden: WordList<'a>,
     /// Information about how the wordlists were built
-    meta: HashSet<Meta>,
+    meta: HashSet<Meta<'a>>,
     /// Affix configuration file
     config: Box<Config>,
 }
@@ -39,7 +39,7 @@ pub struct DictBuilder<'a> {
     personal_src: Option<&'a str>,
 }
 
-impl Dictionary<'_> {
+impl<'a> Dictionary<'a> {
     fn load_from_str(&mut self, s: &str) -> Result<(), Error> {
         let entries = parse_dict(s)?;
         // use baseline 3 words per line entry
@@ -53,6 +53,14 @@ impl Dictionary<'_> {
 
     fn load_personal_from_str(&mut self, s: &str) -> Result<(), Error> {
         todo!()
+    }
+
+    pub fn check(&self, s: &str) -> bool {
+        todo!()
+    }
+
+    pub fn wordlist(&self) -> &WordList {
+        &self.wordlist
     }
 }
 

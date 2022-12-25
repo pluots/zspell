@@ -187,7 +187,7 @@ impl Dictionary {
     /// ```
     /// use std::fs;
     ///
-    /// use zspell::Dictionary;
+    /// use zspell_old::Dictionary;
     ///
     /// let mut dic = Dictionary::new();
     ///

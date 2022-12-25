@@ -4,8 +4,8 @@ pub(crate) mod types;
 pub(crate) mod types_impl;
 
 use self::types::{
-    CompoundPattern, CompoundSyllable, Conversion, Encoding, FlagType, MorphInfo, Phonetic,
-    RuleGroup, RuleType,
+    AffixRule, CompoundPattern, CompoundSyllable, Conversion, Encoding, FlagType, MorphInfo,
+    Phonetic, RuleGroup, RuleType,
 };
 use crate::dict::types::Meta;
 use crate::error::Error;
@@ -336,47 +336,55 @@ impl Config {
     /// Create a vector of words from a single root word by applying rules in
     /// this affix.
     ///
-    /// May contain duplicates
-    fn create_affixed_words<'a>(
+    /// May contain duplicates, does not contain the original word
+    ///
+    /// Return type is vector of `(new_word, rule, second_rule)` where
+    /// `second_rule` is available if both a prefix and a suffix were applied
+    fn create_affixed_words<'a, S: AsRef<str>>(
         &self,
         stem: &str,
-        flags: &[String],
-        morph: Option<&'a MorphInfo>,
-    ) -> Vec<(String, Vec<Meta<'a>>)> {
-        let default_meta = Meta::new_dict(stem, morph);
-        let mut ret = vec![(stem.to_owned(), vec![default_meta])];
-        // BENCH: new vs. with capacity
-        let mut prefixed_words: Vec<String> = Vec::new();
+        flags: &[S],
+    ) -> Vec<(String, &AffixRule, Option<&AffixRule>)> {
+        // BENCH: new vs. with capacity (with cap flags.len()?)
+        let mut ret: Vec<(String, &AffixRule, Option<&AffixRule>)> = Vec::new();
+        // Store words with prefixes that can also have suffixes
+        let mut prefixed_words: Vec<(String, &AffixRule)> = Vec::new();
+        let mut suffix_rules: Vec<&AffixRule> = Vec::new();
 
-        // Loop through rules where the identifiers apply & apply them
+        // Loop through rules where the flag matches and there are new words to
+        // create.
         self.affix_rules
             .iter()
-            // Select rules whose identifier is in the desired keys
-            .filter(|group| flags.contains(&group.flag))
+            // Use a fake `contains` because of `as_ref` (asm is about the same)
+            .filter(|group| flags.iter().map(|s| s.as_ref()).any(|s| s == &group.flag))
             .for_each(|group| {
                 if let Some((newword, rule)) = group.apply_pattern_meta(stem) {
-                    if group.can_combine && group.kind == RuleType::Prefix {
-                        prefixed_words.push(newword.clone());
+                    if group.can_combine {
+                        // For rules that can combine: if a prefix, store the
+                        // word. If a suffix, store the rule. We'll go through
+                        // and cross match these
+                        if group.kind == RuleType::Prefix {
+                            prefixed_words.push((newword.clone(), rule));
+                        } else {
+                            suffix_rules.push(rule);
+                        }
                     }
-                    ret.push((newword, vec![Meta::new_afx(stem, rule)]));
+                    // If we made a new word, add it
+                    ret.push((newword, rule, None));
                 }
             });
 
-        // Redo the same thing for rules that allow chaining
-        self.affix_rules
-            .iter()
-            // Select rules whose identifier is in the desired keys, and who
-            // allow pfx+sfx combinations
-            .filter(|group| {
-                group.can_combine && flags.contains(&group.flag) && group.kind == RuleType::Suffix
+        // Loop our prefixed words that allow suffixes
+        let double_matches = prefixed_words.iter().flat_map(|(word, pfxrule)| {
+            // Collect suffix rules that match
+            suffix_rules.iter().filter_map(|sfxrule| {
+                sfxrule
+                    .apply_pattern(word, RuleType::Suffix)
+                    .map(|newword| (newword, *pfxrule, Some(*sfxrule)))
             })
-            .for_each(|group| {
-                for pfxword in &prefixed_words {
-                    if let Some(newword) = group.apply_pattern(pfxword) {
-                        ret.push(newword);
-                    }
-                }
-            });
+        });
+
+        ret.extend(double_matches);
 
         ret
     }

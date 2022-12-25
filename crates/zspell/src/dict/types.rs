@@ -16,15 +16,15 @@ pub struct Meta<'a> {
     source: MetaInfo<'a>,
 }
 
-impl Meta<'_> {
-    pub(crate) fn new_dict(stem: &str, morph: Option<&MorphInfo>) -> Self {
+impl<'a> Meta<'a> {
+    pub(crate) fn new_dict(stem: &str, morph: Option<&'a MorphInfo>) -> Self {
         Self {
             stem: stem.to_owned(),
             source: MetaInfo::Dict(morph),
         }
     }
 
-    pub(crate) fn new_afx(stem: &str, rule: &AffixRule) -> Self {
+    pub(crate) fn new_afx(stem: &str, rule: &'a AffixRule) -> Self {
         Self {
             stem: stem.to_owned(),
             source: MetaInfo::Affix(rule),

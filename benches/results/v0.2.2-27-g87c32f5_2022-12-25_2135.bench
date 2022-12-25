@@ -1,0 +1,174 @@
+v0.2.2-27-g87c32f5_2022-12-25_2135.bench
+
+Benchmark from 2022-12-25_2135 on commit v0.2.2-27-g87c32f5
+rustc 1.68.0-nightly (b569c9dc5 2022-12-21)
+
+CPU Information:
+Intel(R) Core(TM) i5-5257U CPU @ 2.70GHz
+
+Running: 'cargo bench --bench datastructure'
+
+
+Vec contains true       time:   [569.22 µs 583.36 µs 600.88 µs]
+                        change: [+13.517% +17.843% +22.890%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 2 outliers among 100 measurements (2.00%)
+  2 (2.00%) high severe
+
+Vec contains false      time:   [1.7272 ms 1.7367 ms 1.7486 ms]
+                        change: [-2.3433% -0.7517% +0.5590%] (p = 0.35 > 0.05)
+                        No change in performance detected.
+Found 6 outliers among 100 measurements (6.00%)
+  2 (2.00%) high mild
+  4 (4.00%) high severe
+
+BTree contains true     time:   [2.0813 µs 2.0988 µs 2.1284 µs]
+                        change: [-33.216% -18.618% -5.3123%] (p = 0.02 < 0.05)
+                        Performance has improved.
+Found 5 outliers among 100 measurements (5.00%)
+  5 (5.00%) high severe
+
+BTree contains false    time:   [2.4196 µs 2.4301 µs 2.4494 µs]
+                        change: [-2.6558% -2.0096% -1.1657%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 12 outliers among 100 measurements (12.00%)
+  2 (2.00%) high mild
+  10 (10.00%) high severe
+
+HashSet contains true   time:   [478.58 ns 479.76 ns 481.22 ns]
+                        change: [-1.7564% -1.4741% -1.2080%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 12 outliers among 100 measurements (12.00%)
+  3 (3.00%) high mild
+  9 (9.00%) high severe
+
+HashSet contains false  time:   [393.25 ns 434.25 ns 490.96 ns]
+                        change: [-0.3539% +3.7872% +10.037%] (p = 0.19 > 0.05)
+                        No change in performance detected.
+Found 18 outliers among 100 measurements (18.00%)
+  2 (2.00%) high mild
+  16 (16.00%) high severe
+
+HashBrownSet contains true
+                        time:   [329.93 ns 358.98 ns 394.22 ns]
+                        change: [+11.832% +15.944% +20.455%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 4 outliers among 100 measurements (4.00%)
+  1 (1.00%) high mild
+  3 (3.00%) high severe
+
+HashBrownSet contains false
+                        time:   [209.08 ns 233.62 ns 266.77 ns]
+                        change: [+59.011% +105.51% +168.79%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 16 outliers among 100 measurements (16.00%)
+  8 (8.00%) high mild
+  8 (8.00%) high severe
+
+VecMap contains true    time:   [1.3709 ms 1.5246 ms 1.6924 ms]
+                        change: [+63.260% +80.742% +100.35%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 7 outliers among 100 measurements (7.00%)
+  6 (6.00%) high mild
+  1 (1.00%) high severe
+
+VecMap contains false   time:   [3.7792 ms 4.1292 ms 4.5332 ms]
+                        change: [+46.003% +60.872% +75.969%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 4 outliers among 100 measurements (4.00%)
+  2 (2.00%) high mild
+  2 (2.00%) high severe
+
+VecMap get true         time:   [834.35 µs 884.64 µs 937.83 µs]
+                        change: [+15.380% +22.165% +29.051%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 7 outliers among 100 measurements (7.00%)
+  5 (5.00%) high mild
+  2 (2.00%) high severe
+
+VecMap get false        time:   [4.9732 ms 5.5763 ms 6.2481 ms]
+                        change: [+91.748% +117.22% +146.27%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 4 outliers among 100 measurements (4.00%)
+  3 (3.00%) high mild
+  1 (1.00%) high severe
+
+BTreeMap contains true  time:   [2.1304 µs 2.1587 µs 2.1911 µs]
+                        change: [+3.8901% +6.2983% +9.0957%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 7 outliers among 100 measurements (7.00%)
+  5 (5.00%) high mild
+  2 (2.00%) high severe
+
+BTreeMap contains false time:   [3.3337 µs 4.1256 µs 4.9965 µs]
+                        change: [+18.633% +34.493% +54.500%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 17 outliers among 100 measurements (17.00%)
+  2 (2.00%) high mild
+  15 (15.00%) high severe
+
+BTreeMap get true       time:   [2.2010 µs 2.2381 µs 2.2866 µs]
+                        change: [-13.097% -7.2918% -1.8966%] (p = 0.01 < 0.05)
+                        Performance has improved.
+Found 4 outliers among 100 measurements (4.00%)
+  3 (3.00%) high mild
+  1 (1.00%) high severe
+
+BTreeMap get false      time:   [2.6190 µs 2.6996 µs 2.7880 µs]
+                        change: [-31.970% -14.791% +1.5950%] (p = 0.19 > 0.05)
+                        No change in performance detected.
+Found 5 outliers among 100 measurements (5.00%)
+  5 (5.00%) high mild
+
+HashMap contains true   time:   [521.98 ns 532.74 ns 544.49 ns]
+                        change: [-4.4057% +1.0033% +6.5691%] (p = 0.73 > 0.05)
+                        No change in performance detected.
+Found 6 outliers among 100 measurements (6.00%)
+  3 (3.00%) high mild
+  3 (3.00%) high severe
+
+HashMap contains false  time:   [439.96 ns 506.63 ns 592.46 ns]
+                        change: [-14.677% -3.6708% +7.9234%] (p = 0.56 > 0.05)
+                        No change in performance detected.
+Found 13 outliers among 100 measurements (13.00%)
+  5 (5.00%) high mild
+  8 (8.00%) high severe
+
+HashMap get true        time:   [515.70 ns 522.12 ns 529.77 ns]
+                        change: [+8.3012% +13.486% +19.008%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 14 outliers among 100 measurements (14.00%)
+  6 (6.00%) high mild
+  8 (8.00%) high severe
+
+HashMap get false       time:   [418.13 ns 441.50 ns 478.80 ns]
+                        change: [-33.490% -21.735% -9.8900%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 12 outliers among 100 measurements (12.00%)
+  7 (7.00%) high mild
+  5 (5.00%) high severe
+
+HashBrownMap contains true
+                        time:   [287.48 ns 288.11 ns 288.81 ns]
+                        change: [-27.185% -21.547% -15.816%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 17 outliers among 100 measurements (17.00%)
+  4 (4.00%) high mild
+  13 (13.00%) high severe
+
+HashBrownMap contains false
+                        time:   [190.02 ns 233.14 ns 291.77 ns]
+                        change: [+15.667% +28.449% +44.790%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 8 outliers among 100 measurements (8.00%)
+  3 (3.00%) high mild
+  5 (5.00%) high severe
+
+HashBrownMap get true   time:   [302.78 ns 336.35 ns 388.80 ns]
+Found 8 outliers among 100 measurements (8.00%)
+  5 (5.00%) high mild
+  3 (3.00%) high severe
+
+HashBrownMap get false  time:   [172.41 ns 175.16 ns 178.23 ns]
+Found 1 outliers among 100 measurements (1.00%)
+  1 (1.00%) high mild

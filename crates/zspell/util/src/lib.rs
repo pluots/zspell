@@ -1,4 +1,6 @@
 //! Utilities intended to help with test collection
+#![allow(unused)]
+
 use std::fs;
 
 use zspell::Dictionary;
@@ -122,7 +124,7 @@ impl TestCollection {
         match &self.check_valid {
             Some(v) => {
                 for item in v {
-                    let res = dic.check(item).expect("Dictionary error");
+                    let res = dic.check(item);
                     assert!(res, "{item} failed check (expected true)");
                 }
                 println!("Validated {} items as true", v.len());
@@ -132,7 +134,7 @@ impl TestCollection {
         match &self.check_invalid {
             Some(v) => {
                 for item in v {
-                    let res = dic.check(item).expect("Dictionary error");
+                    let res = dic.check(item);
                     assert!(!res, "{item} failed check (expected false)")
                 }
                 println!("Validated {} items as false", v.len());
@@ -143,50 +145,51 @@ impl TestCollection {
 
     /// Validate all our word lists are equal
     fn check_wordlists(&self, dic: &Dictionary) {
-        let mut wordlist_v: Vec<_> = dic
-            .iter_wordlist_items()
-            .expect("Error getting wordlist")
-            .map(|s| s.to_owned())
-            .collect();
-        wordlist_v.sort_unstable();
+        todo!()
+        // let mut wordlist_v: Vec<_> = dic
+        //     .iter_wordlist_items()
+        //     .expect("Error getting wordlist")
+        //     .map(|s| s.to_owned())
+        //     .collect();
+        // wordlist_v.sort_unstable();
 
-        let mut wordlist_ns_v: Vec<_> = dic
-            .iter_wordlist_items()
-            .expect("Error getting nosuggest wordlist")
-            .map(|s| s.to_owned())
-            .collect();
-        wordlist_ns_v.sort_unstable();
+        // let mut wordlist_ns_v: Vec<_> = dic
+        //     .iter_wordlist_items()
+        //     .expect("Error getting nosuggest wordlist")
+        //     .map(|s| s.to_owned())
+        //     .collect();
+        // wordlist_ns_v.sort_unstable();
 
-        let mut wordlist_f_v: Vec<_> = dic
-            .iter_wordlist_items()
-            .expect("Error getting forbidden wordlist")
-            .map(|s| s.to_owned())
-            .collect();
-        wordlist_f_v.sort_unstable();
+        // let mut wordlist_f_v: Vec<_> = dic
+        //     .iter_wordlist_items()
+        //     .expect("Error getting forbidden wordlist")
+        //     .map(|s| s.to_owned())
+        //     .collect();
+        // wordlist_f_v.sort_unstable();
 
-        match &self.wordlist {
-            Some(v) => {
-                assert_eq!(*v, wordlist_v);
-                println!("Validated wordlist against {} items", v.len());
-            }
-            None => println!("Skipped wordlist testing"),
-        };
+        // match &self.wordlist {
+        //     Some(v) => {
+        //         assert_eq!(*v, wordlist_v);
+        //         println!("Validated wordlist against {} items", v.len());
+        //     }
+        //     None => println!("Skipped wordlist testing"),
+        // };
 
-        match &self.wordlist_nosuggest {
-            Some(v) => {
-                assert_eq!(*v, wordlist_ns_v);
-                println!("Validated wordlist_nosuggest against {} items", v.len());
-            }
-            None => println!("Skipped wordlist_nosuggest testing"),
-        };
+        // match &self.wordlist_nosuggest {
+        //     Some(v) => {
+        //         assert_eq!(*v, wordlist_ns_v);
+        //         println!("Validated wordlist_nosuggest against {} items", v.len());
+        //     }
+        //     None => println!("Skipped wordlist_nosuggest testing"),
+        // };
 
-        match &self.wordlist_forbidden {
-            Some(v) => {
-                assert_eq!(*v, wordlist_f_v);
-                println!("Validated wordlist_forbidden against {} items", v.len());
-            }
-            None => println!("Skipped wordlist_forbidden testing"),
-        };
+        // match &self.wordlist_forbidden {
+        //     Some(v) => {
+        //         assert_eq!(*v, wordlist_f_v);
+        //         println!("Validated wordlist_forbidden against {} items", v.len());
+        //     }
+        //     None => println!("Skipped wordlist_forbidden testing"),
+        // };
     }
 
     fn check_suggestions(&self, _dic: &Dictionary) {
@@ -194,19 +197,20 @@ impl TestCollection {
     }
 
     pub fn validate(&self) {
-        let mut dic = Dictionary::new();
+        todo!()
+        // let mut dic = Dictionary::new();
 
-        // Validate we can load the dictionary
-        dic.config
-            .load_from_str(self.afx_str.as_str())
-            .expect("config loading failure");
-        dic.load_dict_from_str(self.dic_str.as_str())
-            .expect("loading failure");
-        dic.compile().expect("compiling failure");
+        // // Validate we can load the dictionary
+        // dic.config
+        //     .load_from_str(self.afx_str.as_str())
+        //     .expect("config loading failure");
+        // dic.load_dict_from_str(self.dic_str.as_str())
+        //     .expect("loading failure");
+        // dic.compile().expect("compiling failure");
 
-        // Now check everything we can
-        self.run_check_valid_invalid(&dic);
-        self.check_wordlists(&dic);
-        self.check_suggestions(&dic);
+        // // Now check everything we can
+        // self.run_check_valid_invalid(&dic);
+        // self.check_wordlists(&dic);
+        // self.check_suggestions(&dic);
     }
 }

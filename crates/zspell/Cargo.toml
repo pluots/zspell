@@ -57,6 +57,10 @@ harness = false
 name = "dict_integration"
 harness = false
 
+[[bench]]
+name = "slice_contains"
+harness = false
+
 [package.metadata.release]
 shared-version = true
 

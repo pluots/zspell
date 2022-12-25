@@ -33,4 +33,5 @@ mod suggestions;
 mod system;
 
 pub use affix::Config;
+pub use dict::{DictBuilder, Dictionary};
 pub use error::Error;

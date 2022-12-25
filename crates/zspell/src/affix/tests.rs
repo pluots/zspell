@@ -79,43 +79,26 @@ fn test_rule_group_apply_pattern() {
 
 #[test]
 fn affix_create_words() {
-    let mut afx = Config::new();
+    // Does not yet check the rules component
+    fn map_tuples<'a>(
+        tup: &'a Vec<(String, &'a AffixRule, Option<&'a AffixRule>)>,
+    ) -> Vec<&'a str> {
+        tup.iter().map(|t| t.0.as_str()).collect()
+    }
 
-    let content = TestCollection::load("../../1_pfxsfx.test").afx_str;
-
-    afx.load_from_str(content.as_str()).unwrap();
+    let content = TestCollection::load("1_pfxsfx.test").afx_str;
+    let afx = Config::load_from_str(content.as_str()).unwrap();
 
     assert_eq!(
-        afx.create_affixed_words("xxx", "A"),
-        vec!["xxx".to_string(), "aaxxx".to_string()]
+        map_tuples(&afx.create_affixed_words("xxx", &["A"])),
+        vec!["aaxxx"]
     );
     assert_eq!(
-        afx.create_affixed_words("xxx", "B"),
-        vec!["xxx".to_string(), "xxxcc".to_string()]
+        map_tuples(&afx.create_affixed_words("xxx", &["B"])),
+        vec!["xxxcc"]
     );
     assert_eq!(
-        afx.create_affixed_words("xxx", "AB"),
-        vec![
-            "xxx".to_string(),
-            "aaxxx".to_string(),
-            "xxxcc".to_string(),
-            "aaxxxcc".to_string()
-        ]
+        map_tuples(&afx.create_affixed_words("xxx", &["A", "B"])),
+        vec!["aaxxx", "xxxcc", "aaxxxcc",]
     );
-}
-
-#[test]
-fn test_afx_words() {
-    let txt = r#"
-PFX A N 2
-PFX A   0     st     e
-PFX A   0     iest   [^aeiou]y
-
-SFX B Y 2
-SFX B   0     r     e
-SFX B   0     ier   [^aeiou]y
-    "#;
-
-    let cfg = Config::load_from_str(txt).unwrap();
-    dbg!(cfg.create_affixed_words("xxxst", &["A".to_owned()]));
 }
