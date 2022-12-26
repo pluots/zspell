@@ -4,7 +4,7 @@
 //! affix configuration options, and [`Dictionary`], which contains the
 //! configuration and the implementation to perform spell checking.
 //!
-//! Please note that the spellchecker is currently in alpha, and really not
+//! Please note that the spellchecker is currently in alpha, and really not yet
 //! ready for any mainstream use. Contributions are more than welcome at
 //! <https://github.com/pluots/zspell>.
 #![warn(clippy::pedantic)]
@@ -12,6 +12,7 @@
 #![warn(clippy::nursery)]
 #![warn(clippy::str_to_string)]
 #![warn(clippy::missing_inline_in_public_items)]
+#![warn(clippy::disallowed_types)]
 #![allow(clippy::use_self)] // disabled because strum doesn't enforce it
 #![allow(clippy::match_same_arms)]
 #![allow(clippy::struct_excessive_bools)]
@@ -32,6 +33,7 @@ mod parser_affix;
 mod suggestions;
 mod system;
 
-pub use affix::Config;
+pub(crate) use affix::Config;
 pub use dict::{DictBuilder, Dictionary};
+#[doc(inline)]
 pub use error::Error;

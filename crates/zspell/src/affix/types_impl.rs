@@ -9,7 +9,7 @@ use super::types::{
     AffixRule, CompoundPattern, CompoundSyllable, Conversion, Encoding, FlagType, MorphInfo,
     PartOfSpeech, Phonetic, RuleGroup, RuleType,
 };
-use crate::error::ParseErrorType;
+use crate::error::{ParseError, ParseErrorType};
 use crate::Error;
 
 lazy_static! {
@@ -148,6 +148,18 @@ impl AffixRule {
         }
     }
 }
+
+impl MorphInfo {
+    pub(crate) fn many_from_str(s: &str) -> Result<Vec<Self>, ParseError> {
+        let mut res = Vec::new();
+        for morph in s.split_whitespace() {
+            res.push(MorphInfo::try_from(morph).map_err(|e| ParseError::new_nospan(e, morph))?);
+        }
+        Ok(res)
+    }
+}
+
+/* Trait implementations */
 
 impl TryFrom<&str> for Encoding {
     type Error = ParseErrorType;

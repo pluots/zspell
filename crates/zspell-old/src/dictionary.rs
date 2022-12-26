@@ -69,7 +69,7 @@ impl Dictionary {
     ///
     /// Returns an error if the load was unsuccessful
     #[inline]
-    pub fn load_dict_from_str(&mut self, s: &str) -> Result<(), DictError> {
+    pub fn load_dict_from_str(&mut self, s: &str) {
         self.compiled = false;
 
         let mut lines = s.lines();
@@ -77,7 +77,7 @@ impl Dictionary {
         // First line "should" be a rough length of the list, need to extract it
         let Some(firstline) = lines.next() else {
             self.raw_wordlist = Vec::new();
-            return Ok(());
+            return;
         };
 
         // Don't sweat it if we can't extract a number, just add it
@@ -92,8 +92,6 @@ impl Dictionary {
         // Add all our items then shrink capacity as needed
         self.raw_wordlist.extend(lines.map(ToOwned::to_owned));
         self.raw_wordlist.shrink_to_fit();
-
-        Ok(())
     }
 
     /// Load this dictionary's personal word list from a string

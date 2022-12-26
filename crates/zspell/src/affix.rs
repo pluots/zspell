@@ -7,17 +7,18 @@ use self::types::{
     AffixRule, CompoundPattern, CompoundSyllable, Conversion, Encoding, FlagType, MorphInfo,
     Phonetic, RuleGroup, RuleType,
 };
-use crate::dict::types::Meta;
-use crate::error::Error;
+use crate::dict::parser::DictEntry;
+use crate::error::{BuildError, Error};
 use crate::parser_affix::parse_affix;
 use crate::parser_affix::types::AffixNode;
 
+/// A representation of an affix file
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Config {
     /*
         General Options
     */
-    /// Charset to use, reference to an [`EncodingType`] Currently this is
+    /// Charset to use, reference to an [`Encoding`] Currently this is
     /// unused; only UTF-8 is supported. However, the affix file must still have
     /// an accurate definition.
     encoding: Encoding,
@@ -323,7 +324,7 @@ impl Config {
                 AffixNode::AfxSubstandardFlag(v) => res.afx_substandard_flag = v,
                 AffixNode::AfxWordChars(v) => res.afx_word_chars = v,
                 AffixNode::AfxCheckSharps => res.afx_check_sharps = true,
-                AffixNode::Comment => todo!(),
+                AffixNode::Comment => (),
                 AffixNode::Name(v) => res.name = v,
                 AffixNode::HomePage(v) => res.home_page = v,
                 AffixNode::Version(v) => res.version = v,
@@ -333,20 +334,43 @@ impl Config {
         Ok(res)
     }
 
+    /// Verify that all flags for a list of entries are valid
+    pub(crate) fn validate_entry_flags(&self, entries: &[DictEntry]) -> Result<(), Error> {
+        for entry in entries {
+            self.validate_flags(&entry.flags)?;
+        }
+        Ok(())
+    }
+
+    /// Ensure that a list of flags is valid for this affix
+    pub(crate) fn validate_flags<S: AsRef<str>>(&self, flags: &[S]) -> Result<(), Error> {
+        for flag in flags {
+            let flag_ref = flag.as_ref();
+            if !self.affix_rules.iter().any(|group| group.flag == flag_ref) {
+                return Err(BuildError::InvalidFlag(flag_ref.to_owned()).into());
+            }
+        }
+        Ok(())
+    }
+
     /// Create a vector of words from a single root word by applying rules in
-    /// this affix.
+    /// this affix. Does not check if the flag is valid.
     ///
     /// May contain duplicates, does not contain the original word
     ///
     /// Return type is vector of `(new_word, rule, second_rule)` where
     /// `second_rule` is available if both a prefix and a suffix were applied
-    fn create_affixed_words<'a, S: AsRef<str>>(
+    pub(crate) fn create_affixed_words<S: AsRef<str>>(
         &self,
         stem: &str,
         flags: &[S],
     ) -> Vec<(String, &AffixRule, Option<&AffixRule>)> {
         // BENCH: new vs. with capacity (with cap flags.len()?)
         let mut ret: Vec<(String, &AffixRule, Option<&AffixRule>)> = Vec::new();
+        if flags.is_empty() {
+            return ret;
+        }
+
         // Store words with prefixes that can also have suffixes
         let mut prefixed_words: Vec<(String, &AffixRule)> = Vec::new();
         let mut suffix_rules: Vec<&AffixRule> = Vec::new();
@@ -356,7 +380,7 @@ impl Config {
         self.affix_rules
             .iter()
             // Use a fake `contains` because of `as_ref` (asm is about the same)
-            .filter(|group| flags.iter().map(|s| s.as_ref()).any(|s| s == &group.flag))
+            .filter(|group| flags.iter().map(AsRef::as_ref).any(|s| s == group.flag))
             .for_each(|group| {
                 if let Some((newword, rule)) = group.apply_pattern_meta(stem) {
                     if group.can_combine {

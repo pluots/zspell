@@ -1,8 +1,11 @@
+//! Module containing Zspell error types
+
 use std::fmt::Display;
 use std::num::ParseIntError;
 
 use crate::helpers::convertu32;
 
+/// Zspell main error type
 #[non_exhaustive]
 #[derive(Clone, Debug, PartialEq)]
 pub enum Error {
@@ -13,6 +16,7 @@ pub enum Error {
     Regex(regex::Error),
 }
 
+/// An error that occured while parsing
 #[non_exhaustive]
 #[derive(Clone, Debug, PartialEq)]
 pub struct ParseError {
@@ -21,6 +25,7 @@ pub struct ParseError {
     ctx: String,
 }
 
+/// A representation of where a [`ParseError`] occured
 #[non_exhaustive]
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Span {
@@ -28,20 +33,24 @@ pub struct Span {
     end: LineCol,
 }
 
+/// A location within a file
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct LineCol {
     line: u32,
     col: u32,
 }
 
-/// Errors related to [`DictBuilder`]
+/// Errors that can occur when building a dictionary
 #[derive(Clone, Debug, PartialEq)]
 pub enum BuildError {
     /// Config specified twice
     CfgSpecTwice,
     CfgUnspecified,
+    /// A given flag is invalid
+    InvalidFlag(String),
 }
 
+/// A kind of error that would occur during parsing, with additional information
 #[derive(Clone, Debug, PartialEq)]
 pub enum ParseErrorType {
     /// A boolean flag
@@ -73,6 +82,8 @@ pub enum ParseErrorType {
     FlagType,
     CompoundSyllableCount(usize),
     CompoundSyllableParse(ParseIntError),
+    // An error parsing the personal dictionary
+    Personal,
     CompoundPattern,
     Phonetic(usize),
     PartOfSpeech(String),
@@ -162,44 +173,21 @@ impl ParseErrorType {
 
 /* trait impls */
 
+impl std::error::Error for Error {}
+impl std::error::Error for ParseError {}
+impl std::error::Error for ParseErrorType {}
+impl std::error::Error for BuildError {}
+
 impl Display for Error {
     #[inline]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        todo!()
+        match self {
+            Error::Parse(e) => write!(f, "parse error: {e}"),
+            Error::Build(e) => write!(f, "build error: {e}"),
+            Error::Regex(e) => write!(f, "regex error: {e}"),
+        }
     }
 }
-
-impl From<ParseError> for Error {
-    #[inline]
-    fn from(value: ParseError) -> Self {
-        Self::Parse(value)
-    }
-}
-
-impl From<regex::Error> for Error {
-    #[inline]
-    fn from(value: regex::Error) -> Self {
-        Self::Regex(value)
-    }
-}
-
-impl From<regex::Error> for ParseErrorType {
-    #[inline]
-    fn from(value: regex::Error) -> Self {
-        Self::Regex(value)
-    }
-}
-
-impl From<ParseIntError> for ParseErrorType {
-    #[inline]
-    fn from(value: ParseIntError) -> Self {
-        Self::Int(value)
-    }
-}
-
-// impl Eq for Error {}
-
-impl std::error::Error for Error {}
 
 impl Display for ParseErrorType {
     #[inline]
@@ -247,6 +235,7 @@ impl Display for ParseErrorType {
             ParseErrorType::CompoundSyllableParse(e) => write!(f, "unable to parse integer: {e}"),
             ParseErrorType::Regex(e) => e.fmt(f),
             ParseErrorType::AffixHeader => todo!(),
+            ParseErrorType::Personal => write!(f, "error parsing entry in personal dictionary"),
         };
         Ok(())
     }
@@ -260,5 +249,53 @@ impl Display for ParseError {
             None => write!(f, "error: {}", self.err),
         };
         Ok(())
+    }
+}
+
+impl Display for BuildError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            BuildError::CfgSpecTwice => write!(f, "configuration specified twice in builder"),
+            BuildError::CfgUnspecified => write!(f, "configuration unspecified twice in builder"),
+            BuildError::InvalidFlag(v) => write!(
+                f,
+                "got flag `{v}` that wasn't present in affix configuration"
+            ),
+        }
+    }
+}
+
+impl From<ParseError> for Error {
+    #[inline]
+    fn from(value: ParseError) -> Self {
+        Self::Parse(value)
+    }
+}
+
+impl From<BuildError> for Error {
+    #[inline]
+    fn from(value: BuildError) -> Self {
+        Self::Build(value)
+    }
+}
+
+impl From<regex::Error> for Error {
+    #[inline]
+    fn from(value: regex::Error) -> Self {
+        Self::Regex(value)
+    }
+}
+
+impl From<regex::Error> for ParseErrorType {
+    #[inline]
+    fn from(value: regex::Error) -> Self {
+        Self::Regex(value)
+    }
+}
+
+impl From<ParseIntError> for ParseErrorType {
+    #[inline]
+    fn from(value: ParseIntError) -> Self {
+        Self::Int(value)
     }
 }

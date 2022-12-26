@@ -23,8 +23,33 @@ lazy_static! {
     "
     )
     .unwrap();
+    static ref RE_PERSONAL_LINE: Regex = Regex::new(
+        r"(?x)
+        ^
+        (?P<forbid>\*)?
+        (?P<stem>\S+?)
+        (?:/
+            (?P<friend>\w+)
+        )?
+        (?:\s+
+            (?P<morph>[\s\w:]+?)
+        )?
+        (?:\s+\#.*)?$
+    "
+    )
+    .unwrap();
 }
 
+/// Represent a single line in a dictionary file
+///
+/// Format is as follows:
+///
+/// ```text
+/// word[/flags...] [morphinfo ...]
+/// band/ESGD po:noun
+/// laser/M
+/// ```
+/// Flags and morph info are optional
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub(crate) struct DictEntry {
     pub stem: String,
@@ -59,17 +84,95 @@ impl DictEntry {
             })
             .unwrap_or_default();
 
-        let mut morph = Vec::new();
-        if let Some(split) = caps.name("morph").map(|m| m.as_str().split_whitespace()) {
-            for m in split {
-                morph.push(MorphInfo::try_from(m).map_err(|e| ParseError::new_nospan(e, m))?);
-            }
+        let morph = if let Some(morphstr) = caps.name("morph") {
+            MorphInfo::many_from_str(morphstr.as_str())?
+        } else {
+            Vec::new()
         };
 
         Ok(Self { stem, flags, morph })
     }
 }
 
+/// Represent an entry from a personal dictionary
+///
+/// Format is as follows:
+///
+/// ```text
+/// [*]word[/friend] [morphinfo ...]
+/// enum/apple po:noun
+/// someword
+/// *ignoreword
+/// ```
+///
+/// The hunspell spec doesn't say anything about morph info, but why not allow
+/// it
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub(crate) struct PersonalEntry {
+    pub stem: String,
+    pub friend: Option<String>,
+    pub morph: Vec<MorphInfo>,
+    pub forbid: bool,
+}
+
+impl PersonalEntry {
+    pub(crate) fn new(
+        stem: &str,
+        friend: Option<&str>,
+        morph: Vec<MorphInfo>,
+        forbid: bool,
+    ) -> Self {
+        Self {
+            stem: stem.to_owned(),
+            friend: friend.map(ToOwned::to_owned),
+            morph,
+            forbid,
+        }
+    }
+
+    pub(crate) fn parse_str(value: &str, line_num: u32) -> Result<Self, ParseError> {
+        let Some(caps) = RE_PERSONAL_LINE.captures(value) else {
+            return Err(ParseError::new_nocol(
+                ParseErrorType::Personal,
+                value,
+                line_num,
+            ));
+        };
+
+        let forbid = caps.name("forbid").is_some();
+        let stem = caps.name("stem").unwrap().as_str().to_owned();
+        let friend = caps.name("friend").map(|m| m.as_str().to_owned());
+        let morph = if let Some(morphstr) = caps.name("morph") {
+            MorphInfo::many_from_str(morphstr.as_str())?
+        } else {
+            Vec::new()
+        };
+
+        Ok(Self {
+            stem,
+            friend,
+            morph,
+            forbid,
+        })
+    }
+}
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct PersonalMeta {
+    pub friend: Option<String>,
+    pub morph: Vec<MorphInfo>,
+}
+
+impl PersonalMeta {
+    pub(crate) fn new<S: AsRef<str>>(friend: Option<S>, morph: Vec<MorphInfo>) -> Self {
+        Self {
+            friend: friend.map(|s| s.as_ref().to_owned()),
+            morph,
+        }
+    }
+}
+
+/// Parse a dictionary file (usually `.dic`)
 #[allow(clippy::single_match_else, clippy::option_if_let_else)]
 pub(crate) fn parse_dict(s: &str) -> Result<Vec<DictEntry>, ParseError> {
     let mut lines = s.lines();
@@ -92,6 +195,20 @@ pub(crate) fn parse_dict(s: &str) -> Result<Vec<DictEntry>, ParseError> {
         }
 
         ret.push(DictEntry::parse_str(line, convertu32(i + start))?);
+    }
+    Ok(ret)
+}
+
+/// Parse a personal dictionary file
+pub(crate) fn parse_personal_dict(s: &str) -> Result<Vec<PersonalEntry>, ParseError> {
+    let mut ret = Vec::new();
+
+    for (i, line) in s.lines().map(str::trim).enumerate() {
+        if line.starts_with('#') || line.is_empty() {
+            continue;
+        }
+
+        ret.push(PersonalEntry::parse_str(line, convertu32(i))?);
     }
     Ok(ret)
 }
