@@ -3,10 +3,10 @@
 use lazy_static::lazy_static;
 use regex::Regex;
 
-use super::Dictionary;
-use crate::affix::types::MorphInfo;
-use crate::error::{Error, ParseError, ParseErrorType};
+use crate::affix::FlagType;
+use crate::error::{ParseError, ParseErrorType};
 use crate::helpers::convertu32;
+use crate::morph::MorphInfo;
 
 lazy_static! {
     static ref RE_DICT_LINE: Regex = Regex::new(
@@ -52,18 +52,28 @@ lazy_static! {
 /// Flags and morph info are optional
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub(crate) struct DictEntry {
-    pub stem: String,
-    pub flags: Vec<String>,
-    pub morph: Vec<MorphInfo>,
+    pub(super) stem: String,
+    pub(super) flags: Vec<u32>,
+    pub(super) morph: Vec<MorphInfo>,
 }
 
 impl DictEntry {
-    pub(crate) fn new(stem: String, flags: Vec<String>, morph: Vec<MorphInfo>) -> Self {
-        Self { stem, flags, morph }
+    /// Create a new DictEntry
+    #[cfg(test)]
+    pub(crate) fn new(stem: String, flags: &[u32], morph: Vec<MorphInfo>) -> Self {
+        Self {
+            stem,
+            flags: flags.to_owned(),
+            morph,
+        }
     }
 
-    /// Create a `DictEntry` from a line in a `.dic` file
-    pub(crate) fn parse_str(value: &str, line_num: u32) -> Result<Self, ParseError> {
+    /// Create a `DictEntry` from a single line in a `.dic` file
+    pub(crate) fn parse_str(
+        value: &str,
+        flag_type: FlagType,
+        line_num: u32,
+    ) -> Result<Self, ParseError> {
         let Some(caps) = RE_DICT_LINE.captures(value) else {
             return Err(ParseError::new_nocol(
                 ParseErrorType::DictEntry,
@@ -73,16 +83,12 @@ impl DictEntry {
         };
 
         let stem = caps.name("stem").unwrap().as_str().to_owned();
-        let flags = caps
-            .name("flags")
-            .map(|flags| {
-                flags
-                    .as_str()
-                    .chars()
-                    .map(|c| c.to_string())
-                    .collect::<Vec<String>>()
-            })
-            .unwrap_or_default();
+        let flags: Vec<u32> = match caps.name("flags") {
+            Some(flagstr) => flag_type
+                .parse_str(flagstr.as_str())
+                .map_err(|e| ParseError::new_nospan(e, flagstr.as_str()))?,
+            None => Vec::new(),
+        };
 
         let morph = if let Some(morphstr) = caps.name("morph") {
             MorphInfo::many_from_str(morphstr.as_str())?
@@ -91,6 +97,10 @@ impl DictEntry {
         };
 
         Ok(Self { stem, flags, morph })
+    }
+
+    pub fn stem(&self) -> &str {
+        &self.stem
     }
 }
 
@@ -159,8 +169,8 @@ impl PersonalEntry {
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct PersonalMeta {
-    pub friend: Option<String>,
-    pub morph: Vec<MorphInfo>,
+    friend: Option<String>,
+    morph: Vec<MorphInfo>,
 }
 
 impl PersonalMeta {
@@ -172,9 +182,9 @@ impl PersonalMeta {
     }
 }
 
-/// Parse a dictionary file (usually `.dic`)
+/// Parse a complete dictionary file (usually `.dic`)
 #[allow(clippy::single_match_else, clippy::option_if_let_else)]
-pub(crate) fn parse_dict(s: &str) -> Result<Vec<DictEntry>, ParseError> {
+pub(crate) fn parse_dict(s: &str, flag_type: FlagType) -> Result<Vec<DictEntry>, ParseError> {
     let mut lines = s.lines();
     let Some(first) = lines.next() else {
         return Ok(Vec::new())
@@ -194,7 +204,11 @@ pub(crate) fn parse_dict(s: &str) -> Result<Vec<DictEntry>, ParseError> {
             continue;
         }
 
-        ret.push(DictEntry::parse_str(line, convertu32(i + start))?);
+        ret.push(DictEntry::parse_str(
+            line,
+            flag_type,
+            convertu32(i + start),
+        )?);
     }
     Ok(ret)
 }

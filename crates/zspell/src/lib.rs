@@ -27,13 +27,14 @@
 mod affix;
 mod dict;
 pub mod error;
-pub(crate) mod helpers;
+mod helpers;
 mod meta;
+mod morph;
 mod parser_affix;
 mod suggestions;
 mod system;
 
-pub(crate) use affix::Config;
+pub(crate) use affix::ParsedConfig;
 pub use dict::{DictBuilder, Dictionary};
 #[doc(inline)]
 pub use error::Error;

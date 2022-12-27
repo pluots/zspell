@@ -3,6 +3,7 @@
 use std::fmt::Display;
 use std::num::ParseIntError;
 
+use crate::affix::FlagType;
 use crate::helpers::convertu32;
 
 /// Zspell main error type
@@ -47,7 +48,12 @@ pub enum BuildError {
     CfgSpecTwice,
     CfgUnspecified,
     /// A given flag is invalid
-    InvalidFlag(String),
+    UnknownFlag(String),
+    /// Got a flag that does not match the given type
+    FlagType {
+        value: String,
+        expected: FlagType,
+    },
 }
 
 /// A kind of error that would occur during parsing, with additional information
@@ -79,7 +85,12 @@ pub enum ParseErrorType {
     /// Expected a conversion with two items to split but got this many
     ConversionSplit(usize),
     Encoding,
+    /// Failure trying to parse `FLAG`
     FlagType,
+    FlagParse(FlagType),
+    /// Up to 4 ascii characters max, alphanumeric
+    InvalidFlag,
+
     CompoundSyllableCount(usize),
     CompoundSyllableParse(ParseIntError),
     // An error parsing the personal dictionary
@@ -111,7 +122,7 @@ impl ParseError {
     pub fn err(&self) -> &ParseErrorType {
         &self.err
     }
-    pub(crate) fn span(&self) -> Option<&Span> {
+    pub fn span(&self) -> Option<&Span> {
         self.span.as_ref()
     }
 
@@ -193,49 +204,51 @@ impl Display for ParseErrorType {
     #[inline]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ParseErrorType::Boolean => write!(f, "expected a boolean flag with no content"),
-            ParseErrorType::Char(a, b) => write!(f, "expected {a} characters but got {b}"),
-            ParseErrorType::Int(e) => write!(f, "failed to parse integer: {e}"),
+            ParseErrorType::Boolean => write!(f, "expected a boolean flag with no content")?,
+            ParseErrorType::Char(a, b) => write!(f, "expected {a} flags but got {b}")?,
+            ParseErrorType::Int(e) => write!(f, "failed to parse integer: {e}")?,
             ParseErrorType::TableCount {
                 expected,
                 actual: received,
-            } => {
-                write!(f, "expected {expected} values in table but got {received}")
-            }
-            ParseErrorType::AffixHeader => write!(f, "could not parse affix header"),
-            ParseErrorType::AffixBody => write!(f, "could not parse affix body"),
+            } => write!(f, "expected {expected} values in table but got {received}")?,
+            ParseErrorType::AffixHeader => write!(f, "could not parse affix header")?,
+            ParseErrorType::AffixBody => write!(f, "could not parse affix body")?,
             ParseErrorType::AffixFlagMismatch(flag) => write!(
                 f,
                 "invalid affix body: flag does not match expected '{flag}'"
-            ),
+            )?,
             ParseErrorType::AffixCrossProduct => {
-                write!(f, "value is not a valid cross product indicator")
+                write!(f, "value is not a valid cross product indicator")?
             }
             ParseErrorType::NonWhitespace(c) => write!(
                 f,
                 "unexpected non-comment characters before line termination starting at '{c}'"
-            ),
+            )?,
             ParseErrorType::MorphInfoDelim(s) => {
-                write!(f, "missing ':' delimiter in morph info at '{s}'")
+                write!(f, "missing ':' delimiter in morph info at '{s}'")?
             }
             ParseErrorType::MorphInvalidTag(s) => {
-                write!(f, "tag '{s}' does not match any morphographic types")
+                write!(f, "tag '{s}' does not match any morphographic types")?
             }
-            ParseErrorType::ContainsWhitespace => write!(f, "not allowed to contain whitespace"),
-            ParseErrorType::Encoding => write!(f, "unrecognized encoding"),
-            ParseErrorType::FlagType => write!(f, "unrecognized flag"),
-            ParseErrorType::CompoundPattern => write!(f, "invalid compound pattern"),
-            ParseErrorType::Phonetic(n) => write!(f, "expected 2 items but got {n}"),
-            ParseErrorType::DictEntry => write!(f, "invalid dictionary entry"),
+            ParseErrorType::ContainsWhitespace => write!(f, "not allowed to contain whitespace")?,
+            ParseErrorType::Encoding => write!(f, "unrecognized encoding")?,
+            ParseErrorType::FlagType => write!(f, "unrecognized flag")?,
+            ParseErrorType::CompoundPattern => write!(f, "invalid compound pattern")?,
+            ParseErrorType::Phonetic(n) => write!(f, "expected 2 items but got {n}")?,
+            ParseErrorType::DictEntry => write!(f, "invalid dictionary entry")?,
             ParseErrorType::PartOfSpeech(s) => {
-                write!(f, "value '{s}' is not a known part of speech")
+                write!(f, "value '{s}' is not a known part of speech")?
             }
             ParseErrorType::ConversionSplit(_) => todo!(),
-            ParseErrorType::CompoundSyllableCount(n) => write!(f, "expected 2 items but got {n}"),
-            ParseErrorType::CompoundSyllableParse(e) => write!(f, "unable to parse integer: {e}"),
-            ParseErrorType::Regex(e) => e.fmt(f),
+            ParseErrorType::CompoundSyllableCount(n) => write!(f, "expected 2 items but got {n}")?,
+            ParseErrorType::CompoundSyllableParse(e) => write!(f, "unable to parse integer: {e}")?,
+            ParseErrorType::Regex(e) => e.fmt(f)?,
             ParseErrorType::AffixHeader => todo!(),
-            ParseErrorType::Personal => write!(f, "error parsing entry in personal dictionary"),
+            ParseErrorType::Personal => write!(f, "error parsing entry in personal dictionary")?,
+            ParseErrorType::InvalidFlag => {
+                write!(f, "expected a single alphanumeric flag (4 bytes maximum)")?
+            }
+            ParseErrorType::FlagParse(v) => write!(f, "error parsing flag of type '{v}'")?,
         };
         Ok(())
     }
@@ -245,8 +258,8 @@ impl Display for ParseError {
     #[inline]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match &self.span {
-            Some(span) => write!(f, "parse error at line {}: {}", span.start.line, self.err),
-            None => write!(f, "error: {}", self.err),
+            Some(span) => write!(f, "parse error at line {}: {}", span.start.line, self.err)?,
+            None => write!(f, "error: {}", self.err)?,
         };
         Ok(())
     }
@@ -257,10 +270,13 @@ impl Display for BuildError {
         match self {
             BuildError::CfgSpecTwice => write!(f, "configuration specified twice in builder"),
             BuildError::CfgUnspecified => write!(f, "configuration unspecified twice in builder"),
-            BuildError::InvalidFlag(v) => write!(
+            BuildError::UnknownFlag(v) => write!(
                 f,
                 "got flag `{v}` that wasn't present in affix configuration"
             ),
+            BuildError::FlagType { value, expected } => {
+                write!(f, "value '{value}' is not valid for flag type {expected}")
+            }
         }
     }
 }

@@ -4,10 +4,13 @@ use pretty_assertions::assert_eq;
 
 use super::parser::{parse_personal_dict, DictEntry};
 use super::*;
-use crate::affix::types::MorphInfo;
+use crate::morph::MorphInfo;
 
 #[test]
 fn test_dict_entry_ok() {
+    let f1 = FlagType::Utf8;
+    let f2 = FlagType::Ascii;
+
     let s1 = "abcd";
     let s2 = "abcd # comment";
     let s3 = "abcd/ABC";
@@ -17,15 +20,15 @@ fn test_dict_entry_ok() {
     let s7 = "abcd ip:m1 tp:m2";
     let s8 = "abcd ip:m1 tp:m2 # comment";
 
-    let r1 = DictEntry::new("abcd".to_owned(), Vec::new(), Vec::new());
+    let r1 = DictEntry::new("abcd".to_owned(), &[], Vec::new());
     let r2 = DictEntry::new(
         "abcd".to_owned(),
-        vec!["A".to_owned(), "B".to_owned(), "C".to_owned()],
+        &['A' as u32, 'B' as u32, 'C' as u32],
         Vec::new(),
     );
     let r3 = DictEntry::new(
         "abcd".to_owned(),
-        vec!["A".to_owned(), "B".to_owned(), "C".to_owned()],
+        &['A' as u32, 'B' as u32, 'C' as u32],
         vec![
             MorphInfo::InflecPfx("m1".to_owned()),
             MorphInfo::TermPfx("m2".to_owned()),
@@ -33,21 +36,30 @@ fn test_dict_entry_ok() {
     );
     let r4 = DictEntry::new(
         "abcd".to_owned(),
-        Vec::new(),
+        &[],
         vec![
             MorphInfo::InflecPfx("m1".to_owned()),
             MorphInfo::TermPfx("m2".to_owned()),
         ],
     );
 
-    assert_eq!(DictEntry::parse_str(s1, 0), Ok(r1.clone()));
-    assert_eq!(DictEntry::parse_str(s2, 0), Ok(r1));
-    assert_eq!(DictEntry::parse_str(s3, 0), Ok(r2.clone()));
-    assert_eq!(DictEntry::parse_str(s4, 0), Ok(r2));
-    assert_eq!(DictEntry::parse_str(s5, 0), Ok(r3.clone()));
-    assert_eq!(DictEntry::parse_str(s6, 0), Ok(r3));
-    assert_eq!(DictEntry::parse_str(s7, 0), Ok(r4.clone()));
-    assert_eq!(DictEntry::parse_str(s8, 0), Ok(r4));
+    assert_eq!(DictEntry::parse_str(s1, f1, 0), Ok(r1.clone()));
+    assert_eq!(DictEntry::parse_str(s2, f1, 0), Ok(r1.clone()));
+    assert_eq!(DictEntry::parse_str(s3, f1, 0), Ok(r2.clone()));
+    assert_eq!(DictEntry::parse_str(s4, f1, 0), Ok(r2.clone()));
+    assert_eq!(DictEntry::parse_str(s5, f1, 0), Ok(r3.clone()));
+    assert_eq!(DictEntry::parse_str(s6, f1, 0), Ok(r3.clone()));
+    assert_eq!(DictEntry::parse_str(s7, f1, 0), Ok(r4.clone()));
+    assert_eq!(DictEntry::parse_str(s8, f1, 0), Ok(r4.clone()));
+
+    assert_eq!(DictEntry::parse_str(s1, f2, 0), Ok(r1.clone()));
+    assert_eq!(DictEntry::parse_str(s2, f2, 0), Ok(r1));
+    assert_eq!(DictEntry::parse_str(s3, f2, 0), Ok(r2.clone()));
+    assert_eq!(DictEntry::parse_str(s4, f2, 0), Ok(r2));
+    assert_eq!(DictEntry::parse_str(s5, f2, 0), Ok(r3.clone()));
+    assert_eq!(DictEntry::parse_str(s6, f2, 0), Ok(r3));
+    assert_eq!(DictEntry::parse_str(s7, f2, 0), Ok(r4.clone()));
+    assert_eq!(DictEntry::parse_str(s8, f2, 0), Ok(r4));
 }
 
 #[test]

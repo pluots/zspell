@@ -1,16 +1,22 @@
-pub(crate) mod parser;
-pub(crate) mod types;
+mod helpers;
+mod parser;
+mod rule;
+mod types;
 
 use std::rc::Rc;
 
-use hashbrown::hash_set::Iter as HashSetIter;
 use hashbrown::{HashMap, HashSet};
+pub(crate) use parser::DictEntry;
 use unicode_segmentation::UnicodeSegmentation;
 
-use self::parser::{parse_dict, parse_personal_dict, DictEntry, PersonalEntry, PersonalMeta};
-use self::types::{Extra, ExtraBorrowed, Source, SourceBorrowed};
+use self::helpers::create_affixed_words;
+use self::parser::{parse_dict, parse_personal_dict, PersonalEntry};
+use self::rule::AfxRule;
+use self::types::{Extra, Source, SourceBorrowed};
+use crate::affix::FlagType;
 use crate::error::{BuildError, Error};
-use crate::Config;
+use crate::morph::MorphInfo;
+use crate::ParsedConfig;
 
 /// Main dictionary object used for spellchecking and suggestions
 ///
@@ -37,13 +43,19 @@ pub struct Dictionary {
     sources: HashSet<Rc<Source>>,
     /// A list of all stem words
     stems: HashSet<Rc<String>>,
+    /// Affix rules
+    rules: HashSet<Rc<AfxRule>>,
+    /// Possible morphs
+    morphs: HashSet<Rc<MorphInfo>>,
+    flag_type: FlagType,
     /// Affix configuration file. This will also hold references where our `meta`
     /// object points
     // FIXME: we don't need to store the whole `Config` here. It would be better
     // to replace with information that is relevant
-    config: Box<Config>,
+    parsed_config: Box<ParsedConfig>,
 }
 
+/// Check API
 impl Dictionary {
     /// Create a new empty dictionary with default config
     fn new() -> Self {
@@ -53,7 +65,10 @@ impl Dictionary {
             wordlist_forbidden: WordList::new(),
             sources: HashSet::new(),
             stems: HashSet::new(),
-            config: Box::default(),
+            parsed_config: Box::default(),
+            rules: HashSet::new(),
+            morphs: HashSet::new(),
+            flag_type: FlagType::Utf8,
         }
     }
 
@@ -107,35 +122,70 @@ impl Dictionary {
                 || self.wordlist_nosuggest.0.contains_key(s)
                 || self.wordlist_nosuggest.0.contains_key(&lower))
     }
+}
 
-    pub(crate) fn wordlist(&self) -> &WordList {
-        &self.wordlist
+/// Internal config API
+impl Dictionary {
+    /// Update internal collections (`rules` and `morphs`) from the `config` object
+    fn load_config(&mut self) {
+        todo!()
     }
 
-    pub(crate) fn wordlist_forbidden(&self) -> &WordList {
-        &self.wordlist_forbidden
-    }
-
-    pub(crate) fn wordlist_nosuggest(&self) -> &WordList {
-        &self.wordlist_nosuggest
+    /// Create a vector of words from a single root word by applying rules in
+    /// this affix. Does not check if the flag is valid.
+    ///
+    /// May contain duplicates, does not contain the original word
+    ///
+    /// Return type is vector of `(new_word, rule, second_rule)` where
+    /// `second_rule` is available if both a prefix and a suffix were applied
+    // PERF: benchmark taking a vec reference instead of returning
+    fn create_affixed_words<'a>(
+        &'a mut self,
+        stem: &str,
+        flags: &[u32],
+    ) -> Vec<(String, &'a AfxRule, Option<&'a AfxRule>)> {
+        create_affixed_words(&self.rules, stem, flags)
     }
 
     /// Update the internal wordlist and forbidden wordlist from a dictionary
     /// file string
     fn parse_update_wordlist(&mut self, source: &str) -> Result<(), Error> {
-        let entries = parse_dict(source)?;
+        let entries = parse_dict(source, self.flag_type)?;
         self.update_wordlist(&entries)
     }
 
     /// Update internal wordlists from dictionary entries
     fn update_wordlist(&mut self, entries: &[DictEntry]) -> Result<(), Error> {
-        self.config.validate_entry_flags(entries)?;
+        // Validatt flags early so we can unwrap later
+        self.parsed_config.validate_entry_flags(entries)?;
         // use baseline 3 words per line entry
         self.wordlist.0.reserve(entries.len() * 3);
 
+        // PERF: try moving flags outside of loop
         for entry in entries {
             let DictEntry { stem, flags, morph } = entry;
-            let afx_words = self.config.create_affixed_words(stem, flags);
+            let afx_words = self.create_affixed_words(stem, &flags);
+
+            // // Select the correct word to work with
+            // let map = if entry.forbid {
+            //     &mut self.wordlist_forbidden.0
+            // } else {
+            //     &mut self.wordlist.0
+            // };
+
+            // let stem_rc = self
+            //     .stems
+            //     .get_or_insert_with(&entry.stem, |stem| Rc::new(stem.to_string()))
+            //     .clone();
+            // let source_comp = SourceBorrowed::new_personal(entry.friend.as_ref(), &entry.morph);
+            // let source_rc = self
+            //     .sources
+            //     .get_or_insert_with(&source_comp, |scomp| Rc::new(scomp.to_owned()))
+            //     .clone();
+            // let extra = Extra::new(stem_rc, source_rc);
+            // // Add our word, update its meta
+            // let extra_vec = map.entry_ref(&entry.stem).or_insert_with(Vec::new);
+            // extra_vec.push(extra);
         }
 
         self.wordlist.0.shrink_to_fit();
@@ -160,7 +210,7 @@ impl Dictionary {
         for entry in entries {
             if let Some(friend) = &entry.friend {
                 // Find the friend in our dictionary, find its source affixes
-                let flags = dict.iter().find(|d| &d.stem == friend).map(|d| &d.flags);
+                // let flags = dict.iter().find(|d| &d.stem() == friend).map(|d| &d.flags);
                 todo!()
             } else {
                 // Select the correct word to work with
@@ -179,10 +229,11 @@ impl Dictionary {
                     .sources
                     .get_or_insert_with(&source_comp, |scomp| Rc::new(scomp.to_owned()))
                     .clone();
-                let extra = Extra::new(stem_rc, source_rc);
+                todo!();
+                // let extra = Extra::new(stem_rc, source_rc);
                 // Add our word, update its meta
                 let extra_vec = map.entry_ref(&entry.stem).or_insert_with(Vec::new);
-                extra_vec.push(extra);
+                // extra_vec.push(extra);
             }
         }
         Ok(())
@@ -199,10 +250,9 @@ impl WordList {
     }
 }
 
-///
 #[derive(Clone, Debug, PartialEq)]
 pub struct DictBuilder<'a> {
-    cfg: Option<Config>,
+    cfg: Option<ParsedConfig>,
     cfg_src: Option<&'a str>,
     dict_src: Option<&'a str>,
     personal_src: Option<&'a str>,
@@ -233,7 +283,7 @@ impl<'a> DictBuilder<'a> {
     ///
     /// Don't use with `config_src`
     #[inline]
-    pub fn config(mut self, cfg: Config) -> Self {
+    pub fn config(mut self, cfg: ParsedConfig) -> Self {
         self.cfg = Some(cfg);
         self
     }
@@ -265,13 +315,13 @@ impl<'a> DictBuilder<'a> {
         let cfg = if let Some(c) = self.cfg {
             c
         } else if let Some(cs) = self.cfg_src {
-            Config::load_from_str(cs)?
+            ParsedConfig::load_from_str(cs)?
         } else {
             return Err(Error::Build(BuildError::CfgUnspecified));
         };
 
         let mut dict = Dictionary::new();
-        *dict.config = cfg;
+        *dict.parsed_config = cfg;
 
         if let Some(wl) = self.dict_src {
             dict.parse_update_wordlist(wl)?;
@@ -294,3 +344,6 @@ impl<'a> Default for DictBuilder<'a> {
 
 #[cfg(test)]
 mod tests;
+
+#[cfg(test)]
+mod tests_rule;

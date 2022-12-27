@@ -1,6 +1,23 @@
 //! Type representations for affix file contents
 
+use std::fmt::Display;
+
+use lazy_static::lazy_static;
 use regex::Regex;
+
+use crate::error::{BuildError, ParseErrorType};
+
+lazy_static! {
+    static ref RE_COMPOUND_PATTERN: Regex = Regex::new(
+        r"(?x)
+        ^(?P<endchars>\w+)
+        (?:/(?P<endflags>\w+))?\s+
+        (?P<beginchars>\w+)
+        (?:/(?P<beginflag>\w+))?
+        (?P<replacement>\s\w+)?$"
+    )
+    .unwrap();
+}
 
 /// A possible encoding type
 #[non_exhaustive]
@@ -27,17 +44,108 @@ pub enum Encoding {
 }
 
 /// A representation of the flag type (the part after `/` in the `.dic` file)
+///
+/// We represent all flag types as a u32 and provide methods of conversion
 #[non_exhaustive]
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum FlagType {
-    /// ASCII flags (default)
+    /// Single-character ASCII flags (default, single byte)
     Ascii,
-    /// UTF8 flags
+    /// Single-character UTF8 flags (up to 4 bytes)
     Utf8,
-    /// Double extended ASCII flags
+    /// Double extended ASCII flags, i.e., two ASCII characters (2 bytes)
     Long,
-    /// Decimal flag type
+    /// Decimal flag type (we use u32)
     Number,
+}
+
+impl FlagType {
+    /// Convert a string flag to its u32 representation
+    pub(crate) fn convert_flag(self, flag: &str) -> Result<u32, ParseErrorType> {
+        match self {
+            // Single ascii char
+            FlagType::Ascii => Self::parse_as_ascii(flag),
+            // Single unicode character
+            FlagType::Utf8 => Self::parse_as_utf8(flag),
+            // Two asii chars
+            FlagType::Long => Self::parse_as_long(flag),
+            FlagType::Number => Self::parse_as_number(flag),
+        }
+    }
+
+    /// Parse a string to multiple flags as they are defined in the dictionary
+    /// file
+    ///
+    /// ASCII and UTF-8 flags just split by characters. Long splits every two
+    /// characters, numbers split by commas
+    pub(crate) fn parse_str(self, s: &str) -> Result<Vec<u32>, ParseErrorType> {
+        match self {
+            FlagType::Ascii => s.chars().map(|c| Self::parse_char_ascii(c)).collect(),
+            FlagType::Utf8 => Ok(s.chars().map(|c| Self::parse_char_utf8(c)).collect()),
+            FlagType::Number => s.split(',').map(|flag| self.convert_flag(flag)).collect(),
+            FlagType::Long => {
+                let mut ret = Vec::with_capacity(s.len() / 2);
+                let mut iter = s.chars();
+                for ch in s.chars() {
+                    let ch_next = iter.next().ok_or(ParseErrorType::FlagParse(self))?;
+                    ret.push(Self::parse_chars_long([ch, ch_next])?);
+                }
+                Ok(ret)
+            }
+        }
+    }
+
+    fn parse_as_ascii(flag: &str) -> Result<u32, ParseErrorType> {
+        if flag.len() != 1 {
+            Err(ParseErrorType::FlagParse(Self::Ascii))
+        } else {
+            Ok(flag.bytes().next().unwrap() as u32)
+        }
+    }
+
+    fn parse_as_utf8(flag: &str) -> Result<u32, ParseErrorType> {
+        if flag.chars().count() > 1 {
+            Err(ParseErrorType::FlagParse(Self::Utf8))
+        } else {
+            Ok(flag.chars().next().unwrap() as u32)
+        }
+    }
+
+    /// Parse two ascii characters
+    fn parse_as_long(flag: &str) -> Result<u32, ParseErrorType> {
+        if flag.len() != 2 || flag.chars().any(|c| !c.is_ascii()) {
+            Err(ParseErrorType::FlagParse(Self::Long))
+        } else {
+            Ok(u16::from_ne_bytes(flag[0..=1].as_bytes().try_into().unwrap()) as u32)
+        }
+    }
+
+    /// Parse as a number
+    fn parse_as_number(flag: &str) -> Result<u32, ParseErrorType> {
+        flag.parse()
+            .map_err(|_| ParseErrorType::FlagParse(Self::Number))
+    }
+
+    fn parse_char_ascii(c: char) -> Result<u32, ParseErrorType> {
+        if !c.is_ascii() {
+            Err(ParseErrorType::FlagParse(Self::Ascii))
+        } else {
+            Ok(c as u32)
+        }
+    }
+
+    fn parse_char_utf8(c: char) -> u32 {
+        c as u32
+    }
+
+    fn parse_chars_long(chars: [char; 2]) -> Result<u32, ParseErrorType> {
+        if chars.iter().any(|ch| !ch.is_ascii()) {
+            let char_str: String = chars.iter().collect();
+            Err(ParseErrorType::FlagParse(Self::Long))
+        } else {
+            Ok(u16::from_ne_bytes([chars[0] as u8, chars[1] as u8]) as u32)
+        }
+    }
 }
 
 /// A simple input-to-output conversion mapping.
@@ -46,52 +154,21 @@ pub enum FlagType {
 /// `OCONV`.
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Conversion {
-    pub(crate) input: String,
-    pub(crate) output: String,
-    pub(crate) bidirectional: bool,
+    input: String,
+    output: String,
+    bidirectional: bool,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Default)]
 pub struct CompoundSyllable {
-    pub(super) count: u16,
-    pub(super) vowels: String,
+    count: u16,
+    vowels: String,
 }
 
-/// A simple prefix or suffix rule
-///
-/// This struct represents a prefix or suffix option that may be applied to any
-/// base word. It contains multiple possible rule definitions that describe how
-/// to apply the rule.
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct RuleGroup {
-    /// Character identifier for this specific affix, usually any uppercase
-    /// letter
-    pub(crate) flag: String,
-    /// Prefix or suffix
-    pub(crate) kind: RuleType,
-    /// Whether or not this can be combined with the opposite affix
-    pub(crate) can_combine: bool,
-    /// Actual rules for replacing
-    pub(crate) rules: Vec<AffixRule>,
-}
-
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
 pub enum RuleType {
     Prefix,
     Suffix,
-}
-
-#[derive(Clone, Debug)]
-pub struct AffixRule {
-    /// Affix to be added
-    pub(crate) affix: String,
-    /// Characters to remove from the beginning or end
-    pub(crate) strip: Option<String>,
-    /// Regex-based rule for when this rule is true. `None` indicates `.`, i.e.,
-    /// always true
-    pub(crate) condition: Option<Regex>,
-    /// Morphological information
-    pub(crate) morph_info: Vec<MorphInfo>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -107,46 +184,220 @@ pub enum PartOfSpeech {
     Interjection,
 }
 
-#[non_exhaustive]
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum MorphInfo {
-    /// `st:` stem word
-    Stem(String),
-    /// `ph:` better phonetic transliteration if available
-    Phonetic(String),
-    /// `al:` allomorphs (e.g. sing -> sang, sung)
-    Allomorph(String),
-    /// `po:` part of speech
-    Part(PartOfSpeech),
-    /// `ds:` derivational suffix
-    DerivSfx(String),
-    /// `is:` inflectional suffix
-    InflecSfx(String),
-    /// `ts:` terminal suffix
-    TerminalSfx(String),
-    /// `dp:` derivational suffix
-    DerivPfx(String),
-    /// `ip:` inflectional suffix
-    InflecPfx(String),
-    /// `tp:` terminal suffix
-    TermPfx(String),
-    /// `sp:` surface prefix
-    SurfacePfx(String),
-    /// `pa:` parts of compound words
-    CompPart(String),
-}
-
+/// Representation of the `PHONE` rule
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Phonetic {
-    pub(crate) pattern: String,
-    pub(crate) replace: String,
+    pattern: String,
+    replace: String,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct CompoundPattern {
-    pub(crate) endchars: String,
-    pub(crate) endflag: Option<String>,
-    pub(crate) beginchars: String,
-    pub(crate) beginflag: Option<String>,
-    pub(crate) replacement: Option<String>,
+    endchars: String,
+    endflag: Option<String>,
+    beginchars: String,
+    beginflag: Option<String>,
+    replacement: Option<String>,
+}
+
+/* Method implementations */
+
+impl Phonetic {
+    pub(crate) fn new(pattern: &str, replace: &str) -> Self {
+        Self {
+            pattern: pattern.to_owned(),
+            replace: replace.to_owned(),
+        }
+    }
+}
+
+impl Conversion {
+    pub(crate) fn new(input: &str, output: &str, bidirectional: bool) -> Self {
+        Self {
+            input: input.to_owned(),
+            output: output.to_owned(),
+            bidirectional,
+        }
+    }
+    /// Create a `Conversion` from a string. Splits on whitespace
+    pub fn from_str(value: &str, bidirectional: bool) -> Result<Self, ParseErrorType> {
+        let split: Vec<_> = value.split_whitespace().collect();
+        if split.len() != 2 {
+            return Err(ParseErrorType::ConversionSplit(split.len()));
+        }
+        Ok(Self {
+            input: split[0].to_owned(),
+            output: split[1].to_owned(),
+            bidirectional,
+        })
+    }
+}
+
+/* Trait implementations */
+
+impl TryFrom<&str> for Encoding {
+    type Error = ParseErrorType;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match value.to_ascii_lowercase().as_str() {
+            "utf-8" => Ok(Self::Utf8),
+            "iso8859-1" => Ok(Self::Iso8859t1),
+            "iso8859-10" => Ok(Self::Iso8859t10),
+            "iso8859-13" => Ok(Self::Iso8859t13),
+            "iso8859-15" => Ok(Self::Iso8859t15),
+            "koi8-r" => Ok(Self::Koi8R),
+            "koi8-u" => Ok(Self::Koi8U),
+            "cp1251" => Ok(Self::Cp1251),
+            "iscii-devanagari" => Ok(Self::IsciiDevanagari),
+            _ => Err(ParseErrorType::Encoding),
+        }
+    }
+}
+
+impl From<Encoding> for &str {
+    #[inline]
+    fn from(val: Encoding) -> Self {
+        match val {
+            Encoding::Utf8 => "UTF-8",
+            Encoding::Iso8859t1 => "ISO8859-1",
+            Encoding::Iso8859t10 => "ISO8859-10",
+            Encoding::Iso8859t13 => "ISO8859-13",
+            Encoding::Iso8859t15 => "ISO8859-15",
+            Encoding::Koi8R => "KOI8-R",
+            Encoding::Koi8U => "KOI8-U",
+            Encoding::Cp1251 => "cp1251",
+            Encoding::IsciiDevanagari => "ISCII-DEVANAGARI",
+        }
+    }
+}
+
+impl TryFrom<&str> for FlagType {
+    type Error = ParseErrorType;
+
+    fn try_from(value: &str) -> Result<Self, ParseErrorType> {
+        match value.to_ascii_lowercase().as_str() {
+            "ascii" => Ok(Self::Ascii),
+            "utf-8" => Ok(Self::Utf8),
+            "long" => Ok(Self::Long),
+            "num" => Ok(Self::Number),
+            _ => Err(ParseErrorType::FlagType),
+        }
+    }
+}
+
+impl Display for FlagType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s: &str = self.into();
+        write!(f, "{s}")?;
+        Ok(())
+    }
+}
+
+impl From<&FlagType> for &str {
+    #[inline]
+    fn from(val: &FlagType) -> Self {
+        match val {
+            FlagType::Ascii => "ASCII",
+            FlagType::Utf8 => "UTF-8",
+            FlagType::Long => "long",
+            FlagType::Number => "num",
+        }
+    }
+}
+
+impl TryFrom<&str> for Phonetic {
+    type Error = ParseErrorType;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        let mut split: Vec<_> = value.split_whitespace().collect();
+        if split.len() != 2 {
+            return Err(ParseErrorType::Phonetic(split.len()));
+        }
+        Ok(Self {
+            pattern: split[0].to_owned(),
+            replace: split[1].to_owned(),
+        })
+    }
+}
+
+impl TryFrom<&str> for CompoundPattern {
+    type Error = ParseErrorType;
+
+    fn try_from(value: &str) -> Result<Self, ParseErrorType> {
+        let caps = RE_COMPOUND_PATTERN
+            .captures(value)
+            .ok_or(ParseErrorType::CompoundPattern)?;
+        Ok(Self {
+            endchars: caps.name("endchars").unwrap().as_str().to_owned(),
+            endflag: caps.name("endflag").map(|m| m.as_str().to_owned()),
+            beginchars: caps.name("beginchars").unwrap().as_str().to_owned(),
+            beginflag: caps.name("beginflag").map(|m| m.as_str().to_owned()),
+            replacement: caps.name("replacement").map(|m| m.as_str().to_owned()),
+        })
+    }
+}
+
+impl TryFrom<&str> for CompoundSyllable {
+    type Error = ParseErrorType;
+
+    /// Format: `COMPOUNDSYLLABLE count vowels`
+    fn try_from(value: &str) -> Result<Self, ParseErrorType> {
+        let mut split: Vec<_> = value.split_whitespace().collect();
+        if split.len() != 2 {
+            return Err(ParseErrorType::CompoundSyllableCount(split.len()));
+        }
+        let to_parse = split[0];
+        let count: u16 = to_parse
+            .parse()
+            .map_err(ParseErrorType::CompoundSyllableParse)?;
+        Ok(Self {
+            count,
+            vowels: split[1].to_owned(),
+        })
+    }
+}
+
+impl TryFrom<&str> for PartOfSpeech {
+    type Error = ParseErrorType;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        let ret = match value.to_lowercase().as_str() {
+            "noun" => Self::Noun,
+            "verb" => Self::Verb,
+            "adjective" => Self::Adjective,
+            "determiner" => Self::Determiner,
+            "adverb" => Self::Adverb,
+            "pronoun" => Self::Pronoun,
+            "preposition" => Self::Preposition,
+            "conjunction" => Self::Conjunction,
+            "interjection" => Self::Interjection,
+            _ => return Err(ParseErrorType::PartOfSpeech(value.to_owned())),
+        };
+        Ok(ret)
+    }
+}
+
+impl TryFrom<&str> for RuleType {
+    type Error = String;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        let ret = match value.to_lowercase().as_str() {
+            "pfx" => Self::Prefix,
+            "sfx" => Self::Suffix,
+            _ => return Err(format!("unrecognized RuleType value '{value}'")),
+        };
+        Ok(ret)
+    }
+}
+
+impl Default for Encoding {
+    fn default() -> Self {
+        Self::Utf8
+    }
+}
+
+impl Default for FlagType {
+    fn default() -> Self {
+        Self::Utf8
+    }
 }

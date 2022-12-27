@@ -1,6 +1,4 @@
 //! Helpers for CLI spelling features
-//!
-//! This is a mod.rs so that we can expand this directory at some point
 
 use std::io::{self, BufRead, Write};
 use std::process::ExitCode;

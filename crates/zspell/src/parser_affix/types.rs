@@ -1,152 +1,85 @@
-//! Parser representations of an affix file
+use std::hash::Hash;
 
-#![allow(unused)]
+use regex::Regex;
 
-use crate::affix::types::{
-    CompoundPattern, CompoundSyllable, Conversion, Encoding, FlagType, Phonetic, RuleGroup,
-};
+use crate::error::ParseErrorType;
+use crate::helpers::{compile_re_pattern, ReWrapper};
+use crate::morph::MorphInfo;
+use crate::parser_affix::RuleType;
+use crate::Error;
 
-#[non_exhaustive]
-#[derive(Debug, PartialEq, Eq)]
-pub enum AffixNode {
-    /*
-        General ptions
-    */
-    /// `SET`
-    Encoding(Encoding),
-    /// `FLAG`
-    FlagType(FlagType),
-    /// `COMPLEXPREFIXES` twofold prefix stripping
-    ComplexPrefixes,
-    /// `LANG`
-    Language(String),
-    /// `IGNORE`
-    IgnoreChars(Vec<char>),
-    /// `AF`
-    AffixAlias(Vec<String>),
-    /// `AM`
-    MorphAlias(Vec<String>),
+/// A simple prefix or suffix rule
+///
+/// This struct represents a prefix or suffix option that may be applied to any
+/// base word. It contains multiple possible rule definitions that describe how
+/// to apply the rule.
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ParsedRuleGroup {
+    /// Character identifier for this specific affix, usually any uppercase
+    /// letter
+    pub(crate) flag: String,
+    /// Prefix or suffix
+    pub(crate) kind: RuleType,
+    /// Whether or not this can be combined with the opposite affix
+    pub(crate) can_combine: bool,
+    /// Actual rules for replacing
+    pub(crate) rules: Vec<ParsedRule>,
+}
 
-    /*
-        Suggestion Options
-    */
-    /// `KEY`
-    NeighborKeys(Vec<String>),
-    /// `TRY`
-    TryCharacters(String),
-    /// `NOSUGGEST`
-    NoSuggestFlag(char),
-    /// `MAXCPDSUGS`
-    CompoundSugMax(u16),
-    /// `MAXNGRAMSUGS`
-    NGramSugMax(u16),
-    /// `MAXDIFF`
-    NGramDiffMax(u8),
-    /// `ONLYMAXDIFF`
-    NGramLimitToDiffMax,
-    /// `NOSPLITSUGS`
-    NoSplitSuggestions,
-    /// `SUGSWITHDOTS`
-    KeepTermDots,
-    /// `REP`
-    Replacement(Vec<Conversion>),
-    /// `MAP`
-    Mapping(Vec<(char, char)>),
-    /// `PHONE`
-    Phonetic(Vec<Phonetic>),
-    /// `WARN`
-    WarnRareFlag(char),
-    /*
-        Compounding Options
-    */
-    /// `FORBIDWARN`
-    ForbidWarnWords,
-    /// `BREAK`
-    BreakSeparator(Vec<String>),
-    /// `COMPOUNDRULE`
-    CompoundRule(Vec<String>),
-    /// `COMPOUNDMIN`
-    CompoundMinLen(u16),
-    /// `COMPOUNDFLAG`
-    CompoundFlag(char),
-    /// `COMPOUNDBEGIN`
-    CompoundBeginFlag(char),
-    /// `COMPOUNDLAST`
-    CompoundEndFlag(char),
-    /// `COMPOUNDMIDDLE`
-    CompoundMiddleFlag(char),
-    /// `ONLYINCOMPOUND`
-    CompoundOnlyFlag(char),
-    /// `COMPOUNDPERMITFLAG`
-    CompoundPermitFlag(char),
-    /// `COMPOUNDFORBIDFLAG`
-    CompoundForbidFlag(char),
-    /// `COMPOUNDMORESUFFIXES`
-    CompoundMoreSuffixes,
-    /// `COMPOUNDROOT`
-    CompoundRoot(char),
-    /// `COMPOUNDWORDMAX`
-    CompoundWordMax(u16),
-    /// `CHECKCOMPOUNDDUP`
-    CompoundForbidDup,
-    /// `CHECKCOMPOUNDREP`
-    CompoundForbidRepeat,
-    /// `CHECKCOMPOUNDCASE`
-    CompoundCheckCase,
-    /// `CHECKCOMPOUNDTRIPLE`
-    CompoundCheckTriple,
-    /// `SIMPLIFIEDTRIPLE`
-    CompoundSimplifyTriple,
-    /// `CHECKCOMPOUNDPATTERN`
-    CompoundForbidPats(Vec<CompoundPattern>),
-    /// `FORCEUCASE`
-    CompoundForceUpper(char),
-    /// `COMPOUNDSYLLABLE`
-    CompoundSyllable(CompoundSyllable),
-    /// `SYLLABLENUM`
-    SyllableNum(String),
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct ParsedRule {
+    /// Affix to be added
+    pub(crate) affix: String,
+    /// Characters to remove from the beginning or end
+    pub(crate) strip: Option<String>,
+    /// Regex-based rule for when this rule is true. `None` indicates `.`, i.e.,
+    /// always true
+    pub(crate) condition: Option<ReWrapper>,
+    /// Morphological information
+    pub(crate) morph_info: Vec<MorphInfo>,
+}
 
-    /*
-        Affix Options
-    */
-    /// `PFX`
-    Prefix(RuleGroup),
-    /// `SFX`
-    Suffix(RuleGroup),
+impl ParsedRule {
+    pub(crate) fn new(
+        kind: RuleType,
+        affix: &str,
+        strip: Option<&str>,
+        condition: Option<&str>,
+        morph_info: Vec<MorphInfo>,
+    ) -> Result<Self, Error> {
+        let cond_re = match condition {
+            Some(c) => compile_re_pattern(c, kind)?,
+            None => None,
+        };
 
-    /*
-        Other options
-    */
-    /// `CIRCUMFIX`
-    AfxCircumfixFlag(char),
-    /// `FORBIDDENWORD`
-    ForbiddenWordFlag(char),
-    /// `FULLSTRIP`
-    AfxFullStrip,
-    /// `KEEPCASE`
-    AfxKeepCaseFlag(char),
-    /// `ICONV`
-    AfxInputConversion(Vec<Conversion>),
-    /// `OCONV`
-    AfxOutputConversion(Vec<Conversion>),
-    /// `LEMMA_PRESENT` this flag is deprecated
-    AfxLemmaPresentFlag(char),
-    /// `NEEDAFFIX`
-    AfxNeededFlag(char),
-    /// `PSEUDOROOT` this flag is deprecated
-    AfxPseudoRootFlag(char),
-    /// `SUBSTANDARD`
-    AfxSubstandardFlag(char),
-    /// `WORDCHARS`
-    AfxWordChars(String),
-    /// `CHECKSHARPS`
-    AfxCheckSharps,
-    /// `#` line
-    Comment,
-    /// `NAME`
-    Name(String),
-    /// `HOME`
-    HomePage(String),
-    /// `VERSION`
-    Version(String),
+        Ok(Self {
+            strip: strip.map(ToOwned::to_owned),
+            affix: affix.to_owned(),
+            condition: cond_re,
+            morph_info,
+        })
+    }
+
+    /// Create from the information we have available during parse
+    pub(crate) fn new_parse(
+        kind: RuleType,
+        affix: &str,
+        strip: &str,
+        condition: &str,
+        morph_info: Vec<MorphInfo>,
+    ) -> Result<Self, ParseErrorType> {
+        let cond_re = compile_re_pattern(condition, kind)?;
+        let strip_chars = if strip == "0" {
+            None
+        } else {
+            Some(strip.to_owned())
+        };
+
+        Ok(Self {
+            strip: strip_chars,
+            affix: affix.to_owned(),
+            condition: cond_re,
+            morph_info,
+        })
+    }
 }

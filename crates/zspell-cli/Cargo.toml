@@ -14,9 +14,8 @@ name = "zspell"
 path = "src/main.rs"
 
 [dependencies]
-anyhow = "1.0.66"
 cfg-if = "1.0.0"
-clap = { version = "4.0.18", features = ["derive", "wrap_help"] }
+clap = { version = "4.0.32", features = ["derive", "wrap_help"] }
 futures-util = "0.3.25"
 hex = "0.4.3"
 indicatif = "0.17.1"

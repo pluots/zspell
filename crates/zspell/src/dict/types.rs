@@ -3,17 +3,21 @@ use std::rc::Rc;
 use hashbrown::Equivalent;
 
 use super::parser::PersonalMeta;
-use crate::affix::types::{AffixRule, MorphInfo};
+use super::rule::AfxRule;
+use crate::morph::MorphInfo;
+use crate::parser_affix::ParsedRule;
 
 /// Extra meta information about where a word came from
+#[non_exhaustive]
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Source {
     /// this meta came from an affix and has a full affix rule
-    Affix(Box<AffixRule>),
+    Affix(Rc<AfxRule>),
     /// this meta came from a .dic file, only contains morphinfo
-    Dict(Option<Box<MorphInfo>>),
+    Dict(Option<Rc<MorphInfo>>),
     /// this meta came from the personal dictionary
-    Personal(Box<PersonalMeta>),
+    /// String is the "friend" word
+    Personal(Box<(Rc<String>, Vec<Rc<MorphInfo>>)>),
     /// The source is a raw text file with no additional metadata
     Raw,
 }
@@ -23,14 +27,14 @@ pub enum Source {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Extra {
     stem: Rc<String>,
-    source: Rc<Source>,
+    source: Source,
 }
 
 impl Extra {
-    pub(crate) fn new(stem_rc: Rc<String>, source_rc: Rc<Source>) -> Self {
+    pub(crate) fn new(stem_rc: Rc<String>, source: Source) -> Self {
         Self {
             stem: stem_rc,
-            source: source_rc,
+            source: source,
         }
     }
 }
@@ -38,7 +42,7 @@ impl Extra {
 /// Clone of [`Source`] for quick construction and Eq comparison
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub(crate) enum SourceBorrowed<'a> {
-    Affix(&'a AffixRule),
+    Affix(&'a AfxRule),
     Dict(Option<&'a MorphInfo>),
     Personal {
         friend: Option<&'a String>,
@@ -95,32 +99,35 @@ impl<'a> ExtraBorrowed<'a> {
 
 impl<'a> SourceBorrowed<'a> {
     pub(crate) fn to_owned(&self) -> Source {
-        match self {
-            SourceBorrowed::Affix(rule) => Source::Affix(Box::new((*rule).clone())),
-            SourceBorrowed::Dict(morph_opt) => Source::Dict(morph_opt.map(|x| Box::new(x.clone()))),
-            SourceBorrowed::Personal { friend, morph } => {
-                Source::Personal(Box::new(PersonalMeta::new(*friend, (*morph).clone())))
-            }
-        }
+        // match self {
+        //     SourceBorrowed::Affix(rule) => Source::Affix(Box::new((*rule).clone())),
+        //     SourceBorrowed::Dict(morph_opt) => Source::Dict(morph_opt.map(|x| Box::new(x.clone()))),
+        //     SourceBorrowed::Personal { friend, morph } => {
+        //         Source::Personal(Box::new(PersonalMeta::new(*friend, (*morph).clone())))
+        //     }
+        // }
+        todo!()
     }
 }
 
 impl<'a> PartialEq<Source> for SourceBorrowed<'a> {
     fn eq(&self, other: &Source) -> bool {
-        match (self, other) {
-            (Self::Affix(l0), Source::Affix(r0)) => l0 == &r0.as_ref(),
-            (Self::Dict(l0), Source::Dict(r0)) => l0 == &r0.as_ref().map(AsRef::as_ref),
-            (Self::Personal { friend, morph }, Source::Personal(r0)) => {
-                *friend == r0.friend.as_ref() && *morph == &r0.morph
-            }
-            _ => false,
-        }
+        // match (self, other) {
+        //     (Self::Affix(l0), Source::Affix(r0)) => l0 == &r0.as_ref(),
+        //     (Self::Dict(l0), Source::Dict(r0)) => l0 == &r0.as_ref().map(AsRef::as_ref),
+        //     (Self::Personal { friend, morph }, Source::Personal(r0)) => {
+        //         *friend == r0.friend.as_ref() && *morph == &r0.morph
+        //     }
+        //     _ => false,
+        // }
+        todo!()
     }
 }
 
 impl<'a> PartialEq<SourceBorrowed<'a>> for Source {
     fn eq(&self, other: &SourceBorrowed) -> bool {
-        other == self
+        // other == self
+        todo!()
     }
 }
 
@@ -137,7 +144,8 @@ impl<'a> PartialEq<SourceBorrowed<'a>> for Source {
 
 impl Equivalent<Rc<Source>> for SourceBorrowed<'_> {
     fn equivalent(&self, key: &Rc<Source>) -> bool {
-        self == &**key
+        // self == &**key
+        todo!()
     }
 }
 

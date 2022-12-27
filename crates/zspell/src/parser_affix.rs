@@ -2,23 +2,23 @@
 //!
 //! Contains various munchers for all possible affix keys
 
-pub(crate) mod types;
-mod types_impl;
+mod node;
+mod types;
 
-use std::fmt::Display;
 use std::num::ParseIntError;
 use std::str::FromStr;
 
 use lazy_static::lazy_static;
+pub(crate) use node::AffixNode;
 use regex::Regex;
-use types::AffixNode;
+pub(crate) use types::{ParsedRule, ParsedRuleGroup};
 
-use crate::affix::types::{
-    AffixRule, CompoundPattern, CompoundSyllable, Conversion, Encoding, FlagType, MorphInfo,
-    Phonetic, RuleGroup, RuleType,
+use crate::affix::{
+    CompoundPattern, CompoundSyllable, Conversion, Encoding, FlagType, Phonetic, RuleType,
 };
 use crate::error::{ParseError, ParseErrorType};
 use crate::helpers::convertu32;
+use crate::morph::MorphInfo;
 
 /// Characters considered line enders
 ///
@@ -129,17 +129,18 @@ where
 ///
 /// Accepts a string to search, a key to search for, and a function (enum
 /// variant)
-fn char_parser<'a, F>(s: &'a str, key: &str, f: F) -> ParseResult<'a>
+fn flag_parser<'a, F>(s: &'a str, key: &str, f: F) -> ParseResult<'a>
 where
-    F: FnOnce(char) -> AffixNode,
+    F: FnOnce(String) -> AffixNode,
 {
     line_key_parser(s, key, |s| {
-        let count = s.chars().count();
+        let count = s.len();
+        let valid = s.chars().all(|c| c.is_alphanumeric());
 
-        if count == 1 {
-            Ok(f(s.chars().next().unwrap()))
+        if count <= 4 && valid {
+            Ok(f(s.chars().next().unwrap().to_string()))
         } else {
-            Err(ParseError::new_nospan(ParseErrorType::Char(1, count), s))
+            Err(ParseError::new_nospan(ParseErrorType::InvalidFlag, s))
         }
     })
 }
@@ -206,7 +207,7 @@ where
 
 fn affix_table_parser<'a, F>(s: &'a str, key: &str, f: F) -> ParseResult<'a>
 where
-    F: FnOnce(RuleGroup) -> AffixNode,
+    F: FnOnce(ParsedRuleGroup) -> AffixNode,
 {
     let Some((work, mut residual)) = line_splitter(s, key) else {
         return Ok(None);
@@ -223,7 +224,7 @@ where
 
     residual = munch_newline(residual)?.ok_or_else(|| table_count_err(residual, count, 0))?;
     let mut nlines = 1;
-    let mut rules: Vec<AffixRule> = Vec::new();
+    let mut rules: Vec<ParsedRule> = Vec::new();
 
     for i in 0..count {
         match line_splitter(residual, key) {
@@ -241,23 +242,19 @@ where
                         nlines,
                     ));
                 }
-                let sc = line_groups.name("strip_chars").unwrap().as_str();
-                let stripping_chars = if sc == "0" { None } else { Some(sc.to_owned()) };
+                let strip = line_groups.name("strip_chars").unwrap().as_str();
+                let affix = line_groups.name("affix").unwrap().as_str();
                 let cond = line_groups.name("condition").unwrap().as_str();
-                let condition = AffixRule::compile_re_pattern(cond, kind)
-                    .map_err(|e| ParseError::new_nocol(ParseErrorType::from(e), cond, nlines))?;
                 let morph_info = if let Some(m) = line_groups.name("morph") {
                     parse_morph_info(m.as_str(), nlines)?
                 } else {
                     Vec::new()
                 };
 
-                rules.push(AffixRule {
-                    strip: stripping_chars,
-                    affix: line_groups.name("affix").unwrap().as_str().to_owned(),
-                    condition,
-                    morph_info,
-                });
+                let push = ParsedRule::new_parse(kind, affix, strip, cond, morph_info)
+                    .map_err(|e| ParseError::new_nocol(e, cond, nlines))?;
+
+                rules.push(push);
             }
             None => return Err(table_count_err(residual, count, i)),
         }
@@ -269,7 +266,7 @@ where
         }
     }
 
-    let ret = RuleGroup {
+    let ret = ParsedRuleGroup {
         flag: flag.to_owned(),
         kind,
         can_combine,
@@ -348,7 +345,7 @@ fn check_contains_whitespace(s: &str) -> Result<(), ParseError> {
 
 /// Consume a comment
 fn parse_comment(s: &str) -> ParseResult {
-    line_key_parser(s, "#", |s| Ok(AffixNode::Comment))
+    line_key_parser(s, "#", |_| Ok(AffixNode::Comment))
 }
 fn parse_encoding(s: &str) -> ParseResult {
     line_key_parser(s, "SET", |s| {
@@ -407,7 +404,7 @@ fn parse_try_characters(s: &str) -> ParseResult {
     string_parser(s, "TRY", AffixNode::TryCharacters)
 }
 fn parse_nosuggest_flag(s: &str) -> ParseResult {
-    char_parser(s, "NOSUGGEST", AffixNode::NoSuggestFlag)
+    flag_parser(s, "NOSUGGEST", AffixNode::NoSuggestFlag)
 }
 fn parse_compound_suggestions_max(s: &str) -> ParseResult {
     int_parser(s, "MAXCPDSUGS", AffixNode::CompoundSugMax)
@@ -443,7 +440,7 @@ fn parse_mapping(s: &str) -> ParseResult {
     table_parser(s, "MAP", |v| {
         let mut res = Vec::new();
         for (i, item) in v.iter().enumerate() {
-            /// Expect two chars
+            // Expect two chars
             let mut chars = item.chars().fuse();
             let c1 = chars.next();
             let c2 = chars.next();
@@ -469,7 +466,7 @@ fn parse_phonetic(s: &str) -> ParseResult {
     })
 }
 fn parse_warn_rare(s: &str) -> ParseResult {
-    char_parser(s, "WARN", AffixNode::WarnRareFlag)
+    flag_parser(s, "WARN", AffixNode::WarnRareFlag)
 }
 
 /*
@@ -499,31 +496,31 @@ fn parse_compound_min_length(s: &str) -> ParseResult {
     int_parser(s, "COMPOUNDMIN", AffixNode::CompoundMinLen)
 }
 fn parse_compound_flag(s: &str) -> ParseResult {
-    char_parser(s, "COMPOUNDFLAG", AffixNode::CompoundFlag)
+    flag_parser(s, "COMPOUNDFLAG", AffixNode::CompoundFlag)
 }
 fn parse_compound_begin_flag(s: &str) -> ParseResult {
-    char_parser(s, "COMPOUNDBEGIN", AffixNode::CompoundBeginFlag)
+    flag_parser(s, "COMPOUNDBEGIN", AffixNode::CompoundBeginFlag)
 }
 fn parse_compound_end_flag(s: &str) -> ParseResult {
-    char_parser(s, "COMPOUNDLAST", AffixNode::CompoundEndFlag)
+    flag_parser(s, "COMPOUNDLAST", AffixNode::CompoundEndFlag)
 }
 fn parse_compound_middle_flag(s: &str) -> ParseResult {
-    char_parser(s, "COMPOUNDMIDDLE", AffixNode::CompoundMiddleFlag)
+    flag_parser(s, "COMPOUNDMIDDLE", AffixNode::CompoundMiddleFlag)
 }
 fn parse_compound_only_flag(s: &str) -> ParseResult {
-    char_parser(s, "ONLYINCOMPOUND", AffixNode::CompoundOnlyFlag)
+    flag_parser(s, "ONLYINCOMPOUND", AffixNode::CompoundOnlyFlag)
 }
 fn parse_compound_permit_flag(s: &str) -> ParseResult {
-    char_parser(s, "COMPOUNDPERMITFLAG", AffixNode::CompoundPermitFlag)
+    flag_parser(s, "COMPOUNDPERMITFLAG", AffixNode::CompoundPermitFlag)
 }
 fn parse_compound_forbid_flag(s: &str) -> ParseResult {
-    char_parser(s, "COMPOUNDFORBIDFLAG", AffixNode::CompoundForbidFlag)
+    flag_parser(s, "COMPOUNDFORBIDFLAG", AffixNode::CompoundForbidFlag)
 }
 fn parse_compound_more_suffixes(s: &str) -> ParseResult {
     bool_parser(s, "COMPOUNDMORESUFFIXES", AffixNode::CompoundMoreSuffixes)
 }
 fn parse_compound_root(s: &str) -> ParseResult {
-    char_parser(s, "COMPOUNDROOT", AffixNode::CompoundRoot)
+    flag_parser(s, "COMPOUNDROOT", AffixNode::CompoundRootFlag)
 }
 fn parse_compound_word_max(s: &str) -> ParseResult {
     int_parser(s, "COMPOUNDWORDMAX", AffixNode::CompoundWordMax)
@@ -556,7 +553,7 @@ fn parse_compound_forbid_patterns(s: &str) -> ParseResult {
     })
 }
 fn parse_compound_force_upper(s: &str) -> ParseResult {
-    char_parser(s, "FORCEUCASE", AffixNode::CompoundForceUpper)
+    flag_parser(s, "FORCEUCASE", AffixNode::CompoundForceUpFlag)
 }
 fn parse_compound_syllable(s: &str) -> ParseResult {
     line_key_parser(s, "COMPOUNDSYLLABLE", |s| {
@@ -585,16 +582,16 @@ fn parse_suffix(s: &str) -> ParseResult {
 */
 
 fn parse_circumfix_flag(s: &str) -> ParseResult {
-    char_parser(s, "CIRCUMFIX", AffixNode::AfxCircumfixFlag)
+    flag_parser(s, "CIRCUMFIX", AffixNode::AfxCircumfixFlag)
 }
 fn parse_forbidden_word_flag(s: &str) -> ParseResult {
-    char_parser(s, "FORBIDDENWORD", AffixNode::ForbiddenWordFlag)
+    flag_parser(s, "FORBIDDENWORD", AffixNode::ForbiddenWordFlag)
 }
 fn parse_afx_full_strip(s: &str) -> ParseResult {
     bool_parser(s, "FULLSTRIP", AffixNode::AfxFullStrip)
 }
 fn parse_afx_keep_case_flag(s: &str) -> ParseResult {
-    char_parser(s, "KEEPCASE", AffixNode::AfxKeepCaseFlag)
+    flag_parser(s, "KEEPCASE", AffixNode::AfxKeepCaseFlag)
 }
 fn parse_afx_input_conversion(s: &str) -> ParseResult {
     table_parser(s, "ICONV", |v| {
@@ -621,16 +618,16 @@ fn parse_afx_output_conversion(s: &str) -> ParseResult {
     })
 }
 fn parse_afx_lemma_present_flag(s: &str) -> ParseResult {
-    char_parser(s, "LEMMA_PRESENT", AffixNode::AfxLemmaPresentFlag)
+    flag_parser(s, "LEMMA_PRESENT", AffixNode::AfxLemmaPresentFlag)
 }
 fn parse_afx_needed_flag(s: &str) -> ParseResult {
-    char_parser(s, "NEEDAFFIX", AffixNode::AfxNeededFlag)
+    flag_parser(s, "NEEDAFFIX", AffixNode::AfxNeededFlag)
 }
 fn parse_afx_pseudoroot_flag(s: &str) -> ParseResult {
-    char_parser(s, "PSEUDOROOT", AffixNode::AfxPseudoRootFlag)
+    flag_parser(s, "PSEUDOROOT", AffixNode::AfxPseudoRootFlag)
 }
 fn parse_afx_substandard_flag(s: &str) -> ParseResult {
-    char_parser(s, "SUBSTANDARD", AffixNode::AfxSubstandardFlag)
+    flag_parser(s, "SUBSTANDARD", AffixNode::AfxSubstandardFlag)
 }
 fn parse_afx_word_chars(s: &str) -> ParseResult {
     string_parser(s, "WORDCHARS", AffixNode::AfxWordChars)

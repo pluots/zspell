@@ -3,7 +3,7 @@ use std::fs;
 use pretty_assertions::assert_eq;
 
 use super::*;
-use crate::affix::types::{PartOfSpeech, RuleType};
+use crate::affix::{PartOfSpeech, RuleType};
 use crate::error::Span;
 
 #[test]
@@ -143,21 +143,9 @@ fn test_munch_newline_err() {
 fn test_table_parser_ok() {
     let s = "REP 3\nREP a b\nREP c d\nREP longer val";
     let expected = AffixNode::Replacement(vec![
-        Conversion {
-            input: "a".to_owned(),
-            output: "b".to_owned(),
-            bidirectional: false,
-        },
-        Conversion {
-            input: "c".to_owned(),
-            output: "d".to_owned(),
-            bidirectional: false,
-        },
-        Conversion {
-            input: "longer".to_owned(),
-            output: "val".to_owned(),
-            bidirectional: false,
-        },
+        Conversion::new("a", "b", false),
+        Conversion::new("c", "d", false),
+        Conversion::new("longer", "val", false),
     ]);
     assert_eq!(parse_replacement(s), Ok(Some((expected, "", 3))));
 }
@@ -204,79 +192,48 @@ fn test_full_parse() {
         AffixNode::TryCharacters("abcd'".to_owned()),
         AffixNode::Comment,
         AffixNode::AfxInputConversion(vec![
-            Conversion {
-                input: "a".to_owned(),
-                output: "b".to_owned(),
-                bidirectional: false,
-            },
-            Conversion {
-                input: "'".to_owned(),
-                output: "\"".to_owned(),
-                bidirectional: false,
-            },
+            Conversion::new("a", "b", false),
+            Conversion::new("'", "\"", false),
         ]),
-        AffixNode::NoSuggestFlag('X'),
-        AffixNode::CompoundOnlyFlag('C'),
+        AffixNode::NoSuggestFlag("X".to_string()),
+        AffixNode::CompoundOnlyFlag("C".to_string()),
         AffixNode::AfxWordChars("01234".to_owned()),
         AffixNode::Comment,
-        AffixNode::Prefix(RuleGroup {
+        AffixNode::Prefix(ParsedRuleGroup {
             flag: "A".to_owned(),
             kind: RuleType::Prefix,
             can_combine: false,
             rules: vec![
-                AffixRule {
-                    strip: None,
-                    affix: "ar".to_owned(),
-                    condition: None,
-                    morph_info: vec![
+                ParsedRule::new(
+                    RuleType::Prefix,
+                    "ar",
+                    None,
+                    None,
+                    vec![
                         MorphInfo::Part(PartOfSpeech::Verb),
                         MorphInfo::Stem("foot".to_owned()),
                         MorphInfo::InflecSfx("ay".to_owned()),
                     ],
-                },
-                AffixRule {
-                    strip: None,
-                    affix: "br".to_owned(),
-                    condition: Some(Regex::new("^a.*$").unwrap()),
-                    morph_info: Vec::new(),
-                },
+                )
+                .unwrap(),
+                ParsedRule::new(RuleType::Prefix, "br", None, Some("^a.*$"), Vec::new()).unwrap(),
             ],
         }),
-        AffixNode::Suffix(RuleGroup {
+        AffixNode::Suffix(ParsedRuleGroup {
             flag: "B".to_owned(),
             kind: RuleType::Suffix,
             can_combine: true,
             rules: vec![
-                AffixRule {
-                    strip: None,
-                    affix: "ar".to_owned(),
-                    condition: None,
-                    morph_info: Vec::new(),
-                },
-                AffixRule {
-                    strip: None,
-                    affix: "br".to_owned(),
-                    condition: Some(Regex::new("^.*[^a]$").unwrap()),
-                    morph_info: Vec::new(),
-                },
+                ParsedRule::new(RuleType::Suffix, "ar", None, None, Vec::new()).unwrap(),
+                ParsedRule::new(RuleType::Suffix, "br", None, Some("^.*[^a]$"), Vec::new())
+                    .unwrap(),
             ],
         }),
         AffixNode::Replacement(vec![
-            Conversion {
-                input: "a".to_owned(),
-                output: "b".to_owned(),
-                bidirectional: false,
-            },
-            Conversion {
-                input: "abcd".to_owned(),
-                output: "123".to_owned(),
-                bidirectional: false,
-            },
+            Conversion::new("a", "b", false),
+            Conversion::new("abcd", "123", false),
         ]),
-        AffixNode::Phonetic(vec![Phonetic {
-            pattern: "abcd".to_owned(),
-            replace: "1234".to_owned(),
-        }]),
+        AffixNode::Phonetic(vec![Phonetic::new("abcd", "1234")]),
     ];
 
     assert_eq!(parse_affix(SAMPLE_AFX_OK), Ok(expected));
