@@ -204,7 +204,7 @@ fn test_full_parse() {
             kind: RuleType::Prefix,
             can_combine: false,
             rules: vec![
-                ParsedRule::new(
+                ParsedRule::new_raw_re(
                     RuleType::Prefix,
                     "ar",
                     None,
@@ -216,7 +216,8 @@ fn test_full_parse() {
                     ],
                 )
                 .unwrap(),
-                ParsedRule::new(RuleType::Prefix, "br", None, Some("^a.*$"), Vec::new()).unwrap(),
+                ParsedRule::new_raw_re(RuleType::Prefix, "br", None, Some("^a.*$"), Vec::new())
+                    .unwrap(),
             ],
         }),
         AffixNode::Suffix(ParsedRuleGroup {
@@ -224,8 +225,8 @@ fn test_full_parse() {
             kind: RuleType::Suffix,
             can_combine: true,
             rules: vec![
-                ParsedRule::new(RuleType::Suffix, "ar", None, None, Vec::new()).unwrap(),
-                ParsedRule::new(RuleType::Suffix, "br", None, Some("^.*[^a]$"), Vec::new())
+                ParsedRule::new_raw_re(RuleType::Suffix, "ar", None, None, Vec::new()).unwrap(),
+                ParsedRule::new_raw_re(RuleType::Suffix, "br", None, Some("^.*[^a]$"), Vec::new())
                     .unwrap(),
             ],
         }),

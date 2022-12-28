@@ -1,111 +1,120 @@
 use std::borrow::Borrow;
+use std::fmt::Debug;
 use std::rc::Rc;
 
 use hashbrown::HashSet;
 
 use super::rule::AfxRule;
+use super::{FlagValue, WordList};
 use crate::affix::{FlagType, RuleType};
+use crate::dict::types::{Meta, Source};
 use crate::error::BuildError;
+use crate::Error;
 
-pub(super) fn create_affixed_words<'a, I, D>(
-    rules: I,
+// pub(super) fn analyze_flags
+
+pub(super) fn create_affixed_word_map(
+    pfx_rules: &[&Rc<AfxRule>],
+    sfx_rules: &[&Rc<AfxRule>],
     stem: &str,
-    flags: &[u32],
-) -> Vec<(String, &'a AfxRule, Option<&'a AfxRule>)>
-where
-    I: IntoIterator<Item = &'a D>,
-    D: Borrow<AfxRule> + 'a,
-{
-    // BENCH: new vs. with capacity (with cap flags.len()?)
-    let mut ret: Vec<(String, &AfxRule, Option<&AfxRule>)> = Vec::new();
-
-    if flags.into_iter().count() == 0 {
-        return ret;
+    stem_rc: &Rc<String>,
+    dest: &mut WordList,
+) -> Result<(), ()> {
+    if pfx_rules.is_empty() && sfx_rules.is_empty() {
+        return Ok(());
     }
 
     // Store words with prefixes that can also have suffixes
-    let mut prefixed_words: Vec<(String, &AfxRule)> = Vec::new();
-    let mut suffix_rules: Vec<&AfxRule> = Vec::new();
+    let mut prefixed_words: Vec<(String, &Rc<AfxRule>)> = Vec::new();
 
-    // Loop through rules where the flag matches and there are new words to
-    // create.
-    rules
-        .into_iter()
-        // Use a fake `contains` because of `as_ref` (asm is about the same)
-        .filter_map(|rule| {
-            flags.iter().find_map(|flag| {
-                rule.borrow()
-                    .apply_if_flag_matches(stem, *flag)
-                    .map(|newword| (rule, newword))
-            })
-        })
-        .for_each(|(rule_b, newword)| {
-            let rule = rule_b.borrow();
-            if rule.can_combine() {
-                // For rules that can combine: if a prefix, store the
-                // word. If a suffix, store the rule. We'll go through
-                // and cross match these
-                if rule.is_pfx() {
-                    prefixed_words.push((newword.clone(), rule));
-                } else {
-                    suffix_rules.push(rule);
-                }
+    for &rule in pfx_rules.into_iter() {
+        let result = rule.apply_pattern(stem).ok_or(())?;
+        let meta = Meta::new(stem_rc.clone(), Source::Affix(rule.clone()));
+        let meta_vec = dest.0.entry_ref(&result).or_insert_with(Vec::new);
+        meta_vec.push(meta);
+
+        if rule.can_combine() {
+            prefixed_words.push((result, rule));
+        }
+    }
+
+    for &rule in sfx_rules.into_iter() {
+        let result = rule.apply_pattern(stem).ok_or(())?;
+        let meta = Meta::new(stem_rc.clone(), Source::Affix(rule.clone()));
+        let meta_vec = dest.0.entry_ref(&result).or_insert_with(Vec::new);
+        meta_vec.push(meta);
+
+        if rule.can_combine() {
+            let words_iter = prefixed_words.iter().filter_map(|(tmp_res, pfx_rule)| {
+                rule.apply_pattern(&tmp_res)
+                    .map(|newword| (newword, pfx_rule))
+            });
+
+            for (newword, &pfx_rule) in words_iter {
+                let meta_vec = dest.0.entry_ref(&newword).or_insert_with(Vec::new);
+                let meta1 = Meta::new(stem_rc.clone(), Source::Affix(rule.clone()));
+                let meta2 = Meta::new(stem_rc.clone(), Source::Affix(pfx_rule.clone()));
+                meta_vec.push(meta1);
+                meta_vec.push(meta2);
             }
+        }
+    }
 
-            // Add the new word
-            ret.push((newword, rule, None));
-        });
-
-    // Loop our prefixed words that allow suffixes
-    let double_matches = prefixed_words.iter().flat_map(|(pfxword, pfxrule)| {
-        // Collect suffix rules that match
-        suffix_rules.iter().filter_map(|sfxrule| {
-            sfxrule
-                .apply_pattern(pfxword)
-                .map(|newword| (newword, *pfxrule, Some(*sfxrule)))
-        })
-    });
-
-    ret.extend(double_matches);
-
-    ret
+    Ok(())
 }
 
 #[cfg(test)]
 mod tests {
+    use pretty_assertions::assert_eq;
+
     use super::*;
+    use crate::dict::rule::AfxRulePattern;
+
     #[test]
     fn test_create_words() {
-        // Does not yet check the rules component
-        fn map_tuples<'a>(
-            tup: &'a Vec<(String, &'a AfxRule, Option<&'a AfxRule>)>,
-        ) -> Vec<&'a str> {
-            // Turn our output into a vector for easier comparison
-            tup.iter().map(|t| t.0.as_str()).collect()
-        }
+        let rul1 = Rc::new(AfxRule::new(RuleType::Prefix, &["aa"], false, None, None));
+        let rul2 = Rc::new(AfxRule::new(RuleType::Prefix, &["bb"], true, None, None));
+        let rul3 = Rc::new(AfxRule::new(
+            RuleType::Suffix,
+            &["cc", "dd"],
+            true,
+            None,
+            None,
+        ));
 
-        let rules = [
-            AfxRule::new(1, RuleType::Prefix, "aa", false, None, None, Vec::new()),
-            AfxRule::new(2, RuleType::Prefix, "aa", true, None, None, Vec::new()),
-            AfxRule::new(3, RuleType::Suffix, "bb", true, None, None, Vec::new()),
-            AfxRule::new(3, RuleType::Suffix, "cc", true, None, None, Vec::new()),
+        let conditions = [
+            (&[&rul1][..], &[][..], &["aaxxx"][..]),
+            (&[&rul2][..], &[][..], &["bbxxx"][..]),
+            (&[][..], &[&rul3][..], &["xxxcc", "xxxdd"][..]),
+            (&[&rul1, &rul2][..], &[][..], &["aaxxx", "bbxxx"][..]),
+            (&[&rul1][..], &[&rul3][..], &["aaxxx", "xxxcc", "xxxdd"][..]),
+            (
+                &[&rul2][..],
+                &[&rul3][..],
+                &["bbxxx", "xxxcc", "xxxdd", "bbxxxcc", "bbxxxdd"][..],
+            ),
+            (
+                &[&rul1, &rul2][..],
+                &[&rul3][..],
+                &["aaxxx", "bbxxx", "xxxcc", "xxxdd", "bbxxxcc", "bbxxxdd"][..],
+            ),
         ];
 
-        assert_eq!(
-            map_tuples(&create_affixed_words(&rules, "xxx", &['A' as u32])),
-            vec!["aaxxx"]
-        );
-        assert_eq!(
-            map_tuples(&create_affixed_words(&rules, "xxx", &['B' as u32])),
-            vec!["xxxcc"]
-        );
-        assert_eq!(
-            map_tuples(&create_affixed_words(
-                &rules,
-                "xxx",
-                &['A' as u32, 'B' as u32]
-            )),
-            vec!["aaxxx", "xxxcc", "aaxxxcc",]
-        );
+        for (i, (pfxs, sfxs, expected_slice)) in conditions.iter().enumerate() {
+            let mut dest = WordList::new();
+            let stem_rc = Rc::new("xxx".to_string());
+            create_affixed_word_map(pfxs, sfxs, &stem_rc, &stem_rc, &mut dest);
+
+            let mut tmp: Vec<(String, _)> = dest.0.into_iter().collect();
+            let mut result: Vec<_> = tmp.iter().map(|(s, _)| s.as_str()).collect();
+            let mut expected: Vec<_> = (*expected_slice).to_owned();
+            result.sort_unstable();
+            expected.sort_unstable();
+
+            assert_eq!(
+                result, expected,
+                "testing index {i} with prefixes: {pfxs:#?}\nand suffixes: {sfxs:#?}"
+            );
+        }
     }
 }

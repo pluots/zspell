@@ -6,134 +6,63 @@ use std::rc::Rc;
 
 use regex::Regex;
 
-use crate::affix::{ParsedConfig, RuleType};
+use crate::affix::{ParsedCfg, RuleType};
+use crate::error::BuildError;
 use crate::helpers::{compile_re_pattern, ReWrapper};
 use crate::morph::MorphInfo;
 use crate::parser_affix::ParsedRuleGroup;
+use crate::Error;
 
-/// A single rule that contains the following:
-///
-/// - Type of rule (prefix or suffix)
-/// - Characters to strip, if any
-/// - Condition to strip characters
-/// - Associated morph info
+/// A single rule group
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AfxRule {
-    flag: u32,
     kind: RuleType,
-    affix: String,
     can_combine: bool,
-    strip: Option<String>,
-    condition: Option<ReWrapper>,
-    morph_info: Vec<Rc<MorphInfo>>,
+    patterns: Vec<AfxRulePattern>,
 }
 
 impl AfxRule {
-    ///
-    /// # Panics
-    ///
-    /// Panics if regex is provided invalid
+    /// Creates a rule with a single pattern
     #[cfg(test)]
     pub fn new(
-        flag: u32,
         kind: RuleType,
-        affix: &str,
+        affixes: &[&str],
         can_combine: bool,
         strip: Option<&str>,
         condition: Option<&str>,
-        morph_info: Vec<Rc<MorphInfo>>,
     ) -> Self {
         Self {
-            flag,
             kind,
-            affix: affix.to_string(),
             can_combine,
-            strip: strip.map(|s| s.to_owned()),
-            condition: condition.map(|s| ReWrapper::new(s).unwrap()),
-            morph_info,
+            patterns: affixes
+                .iter()
+                .map(|afx| AfxRulePattern::new(afx, None))
+                .collect(),
         }
     }
 
-    /// Check whether a condition is applicable
-    #[allow(clippy::option_if_let_else)]
-    pub fn check_condition(&self, s: &str) -> bool {
-        match &self.condition {
-            Some(re) => re.is_match(s),
-            None => true,
-        }
-    }
-
-    // Verify the match condition and apply this rule
-    pub fn apply_pattern(&self, s: &str) -> Option<String> {
-        // No return if condition doesn't match
-        if !self.check_condition(s) {
-            return None;
-        }
-
-        let mut working = s;
-
-        match self.kind {
-            RuleType::Prefix => {
-                // If stripping chars exist, strip them from the prefix
-                if let Some(sc) = &self.strip {
-                    working = working.strip_prefix(sc.as_str()).unwrap_or(working);
-                }
-
-                let mut w_s = self.affix.clone();
-                w_s.push_str(working);
-                Some(w_s)
-            }
-            RuleType::Suffix => {
-                // Same logic as above
-                if let Some(sc) = &self.strip {
-                    working = working.strip_suffix(sc.as_str()).unwrap_or(working);
-                }
-
-                let mut w_s = working.to_owned();
-                w_s.push_str(&self.affix);
-                Some(w_s)
-            }
-        }
-    }
-
-    pub fn apply_if_flag_matches(&self, s: &str, flag: u32) -> Option<String> {
-        if flag != self.flag {
-            None
-        } else {
-            self.apply_pattern(s)
-        }
-    }
-
-    // /// Apply a rule twice; this rule must be a prefix and other must be a suffix
-    // pub fn apply_two(&self, other: &Self) -> Option<String> {
-    //     if !(self.can_combine && other.can_combine) ||
-    //         self.kind == RuleType::Suffix || other.kind == RuleType::Prefix
-    //     {
-    //         return Err(())
-    //     }
-    // }
-
-    /// Take a ParsedGroup and turn it into a vector of `AfxRule`
+    /// Take a [`ParsedGroup`] and turn it into a vector of `AfxRule`
     ///
     /// NOTE: returns a vec reference and `Self`'s morph vec will be empty!
     /// Needs construction wherever the Rc target is
     // PERF: bench with & without vec reference instead of output
-    pub fn from_group(cfg: &ParsedConfig, group: ParsedRuleGroup) -> Vec<(Self, Vec<MorphInfo>)> {
-        let flag = cfg.convert_flag(&group.flag).unwrap();
-        let mut ret = Vec::with_capacity(group.rules.len());
-        for rule in group.rules {
-            ret.push((
-                Self {
-                    flag,
-                    kind: group.kind,
-                    affix: rule.affix,
-                    can_combine: group.can_combine,
-                    strip: rule.strip,
-                    condition: rule.condition,
-                    morph_info: Vec::with_capacity(rule.morph_info.len()),
-                },
-                rule.morph_info,
-            ))
+    pub fn from_parsed_group(cfg: &ParsedCfg, group: &ParsedRuleGroup) -> Self {
+        let mut ret = Self {
+            kind: group.kind,
+            can_combine: group.can_combine,
+            patterns: Vec::with_capacity(group.rules.len()),
+        };
+
+        for rule in &group.rules {
+            let mut morph_info: Vec<Rc<MorphInfo>> =
+                rule.morph_info.iter().map(|m| Rc::new(m.clone())).collect();
+
+            ret.patterns.push(AfxRulePattern {
+                affix: rule.affix.clone(),
+                condition: rule.condition.clone(),
+                strip: rule.strip.clone(),
+                morph_info,
+            });
         }
 
         ret
@@ -151,10 +80,99 @@ impl AfxRule {
         self.can_combine
     }
 
-    /// Helper for testing
+    /// Apply one of this rule's patterns, error if none apply
+    pub fn apply_pattern(&self, stem: &str) -> Option<String> {
+        self.patterns
+            .iter()
+            .find_map(|pat| pat.apply_pattern(stem, self.kind))
+    }
+}
+
+/// A single rule
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct AfxRulePattern {
+    affix: String,
+    /// Condition to be met to apply this rule.
+    condition: Option<ReWrapper>,
+    /// Characters to strip
+    strip: Option<String>,
+    /// Associated morph info
+    morph_info: Vec<Rc<MorphInfo>>,
+}
+
+impl AfxRulePattern {
+    /// New with a specified affix, otherwise default values
     #[cfg(test)]
-    pub fn set_re_pattern(&mut self, condition: &str, kind: RuleType) -> Result<(), regex::Error> {
+    pub fn new(afx: &str, strip: Option<&str>) -> Self {
+        Self {
+            affix: afx.to_owned(),
+            condition: None,
+            strip: strip.map(|s| s.to_owned()),
+            morph_info: Vec::new(),
+        }
+    }
+
+    /// Helper for testing, sets the condition based on a kind
+    #[cfg(test)]
+    pub fn set_pattern(&mut self, condition: &str, kind: RuleType) -> Result<(), regex::Error> {
         self.condition = compile_re_pattern(condition, kind)?;
         Ok(())
     }
+
+    /// Check whether a condition is applicable
+    #[allow(clippy::option_if_let_else)]
+    pub fn check_condition(&self, s: &str) -> bool {
+        match &self.condition {
+            Some(re) => re.is_match(s),
+            None => true,
+        }
+    }
+
+    // Verify the match condition and apply this rule
+    fn apply_pattern(&self, s: &str, kind: RuleType) -> Option<String> {
+        // No return if condition doesn't match
+        if !self.check_condition(s) {
+            return None;
+        }
+
+        match kind {
+            RuleType::Prefix => {
+                // If stripping chars exist, strip them from the prefix
+                let mut working = self.affix.clone();
+
+                if let Some(sc) = &self.strip {
+                    working.push_str(s.strip_prefix(sc.as_str()).unwrap_or(s));
+                } else {
+                    working.push_str(s);
+                }
+                working.shrink_to_fit();
+                Some(working)
+            }
+            RuleType::Suffix => {
+                // Same logic as above
+                let mut working = if let Some(sc) = &self.strip {
+                    s.strip_suffix(sc.as_str()).unwrap_or(s).to_owned()
+                } else {
+                    s.to_owned()
+                };
+                working.push_str(&self.affix);
+                working.shrink_to_fit();
+                Some(working)
+            }
+        }
+    }
 }
+
+impl Default for AfxRulePattern {
+    fn default() -> Self {
+        Self {
+            affix: Default::default(),
+            condition: Default::default(),
+            strip: Default::default(),
+            morph_info: Default::default(),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests;

@@ -42,6 +42,7 @@ predicates = "2.1"
 pretty_assertions = "1.3.0"
 tempfile = "3.3"
 util = { path = "util" }
+rand = "0.8.5"
 
 [build-dependencies]
 
@@ -58,6 +59,10 @@ harness = false
 
 [[bench]]
 name = "slice_contains"
+harness = false
+
+[[bench]]
+name = "small_map"
 harness = false
 
 [package.metadata.release]

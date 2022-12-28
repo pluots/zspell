@@ -1,4 +1,4 @@
-//! # Zspell library
+//! # ZSpell library
 //!
 //! The main operations of this module include [`Config`], which represents
 //! affix configuration options, and [`Dictionary`], which contains the
@@ -18,7 +18,7 @@
 #![allow(clippy::struct_excessive_bools)]
 #![allow(clippy::missing_panics_doc)]
 #![allow(clippy::must_use_candidate)]
-#![allow(clippy::redundant_pub_crate)]
+// #![allow(clippy::redundant_pub_crate)]
 #![allow(clippy::module_name_repetitions)]
 #![allow(clippy::missing_const_for_fn)]
 #![allow(clippy::derive_partial_eq_without_eq)]
@@ -34,7 +34,7 @@ mod parser_affix;
 mod suggestions;
 mod system;
 
-pub(crate) use affix::ParsedConfig;
+pub(crate) use affix::ParsedCfg;
 pub use dict::{DictBuilder, Dictionary};
 #[doc(inline)]
 pub use error::Error;

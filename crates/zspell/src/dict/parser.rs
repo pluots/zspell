@@ -51,7 +51,7 @@ lazy_static! {
 /// ```
 /// Flags and morph info are optional
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub(crate) struct DictEntry {
+pub struct DictEntry {
     pub(super) stem: String,
     pub(super) flags: Vec<u32>,
     pub(super) morph: Vec<MorphInfo>,
@@ -168,12 +168,12 @@ impl PersonalEntry {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct PersonalMeta {
+pub struct ParsedPersonalMeta {
     friend: Option<String>,
     morph: Vec<MorphInfo>,
 }
 
-impl PersonalMeta {
+impl ParsedPersonalMeta {
     pub(crate) fn new<S: AsRef<str>>(friend: Option<S>, morph: Vec<MorphInfo>) -> Self {
         Self {
             friend: friend.map(|s| s.as_ref().to_owned()),

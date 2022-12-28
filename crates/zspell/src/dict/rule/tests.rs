@@ -4,8 +4,8 @@ use crate::affix::RuleType;
 #[test]
 fn test_check_condition() {
     let mut kind = RuleType::Suffix;
-    let mut rule = AfxRule::new(0, kind, "", false, None, None, Vec::new());
-    rule.set_re_pattern("[^aeiou]y", kind).unwrap();
+    let mut rule = AfxRulePattern::default();
+    rule.set_pattern("[^aeiou]y", kind).unwrap();
 
     // General tests, including with pattern in the middle
     assert!(rule.check_condition("xxxy"));
@@ -14,14 +14,14 @@ fn test_check_condition() {
 
     // Test with prefix
     kind = RuleType::Prefix;
-    rule.set_re_pattern("y[^aeiou]", kind).unwrap();
+    rule.set_pattern("y[^aeiou]", kind).unwrap();
     assert!(rule.check_condition("yxxx"));
     assert!(!rule.check_condition("yaxxx"));
     assert!(!rule.check_condition("xxxyxxx"));
 
     // Test other real rules
     kind = RuleType::Suffix;
-    rule.set_re_pattern("[sxzh]", kind).unwrap();
+    rule.set_pattern("[sxzh]", kind).unwrap();
     assert!(rule.check_condition("access"));
     assert!(rule.check_condition("abyss"));
     assert!(!rule.check_condition("accomplishment"));
@@ -29,25 +29,25 @@ fn test_check_condition() {
     assert!(!rule.check_condition("mmsmm"));
 
     // Check with default condition
-    rule.set_re_pattern(".", kind).unwrap();
+    rule.set_pattern(".", kind).unwrap();
     assert!(rule.check_condition("xxx"));
 }
 
 #[test]
 fn test_apply_pattern() {
     let mut kind = RuleType::Suffix;
-    let mut rule = AfxRule::new(0, kind, "zzz", false, Some("y"), None, Vec::new());
+    let mut rule = AfxRulePattern::new("zzz", Some("y"));
 
-    rule.set_re_pattern("[^aeiou]y", kind).unwrap();
-    assert_eq!(rule.apply_pattern("xxxy"), Some("xxxzzz".to_owned()));
+    rule.set_pattern("[^aeiou]y", kind).unwrap();
+    assert_eq!(rule.apply_pattern("xxxy", kind), Some("xxxzzz".to_owned()));
 
     kind = RuleType::Prefix;
-    rule.set_re_pattern("y[^aeiou]", kind).unwrap();
-    assert_eq!(rule.apply_pattern("yxxx"), Some("zzzxxx".to_owned()));
+    rule.set_pattern("y[^aeiou]", kind).unwrap();
+    assert_eq!(rule.apply_pattern("yxxx", kind), Some("zzzxxx".to_owned()));
 
     kind = RuleType::Suffix;
-    rule.set_re_pattern(".", kind).unwrap();
-    assert_eq!(rule.apply_pattern("xxx"), Some("xxxzzz".to_owned()));
+    rule.set_pattern(".", kind).unwrap();
+    assert_eq!(rule.apply_pattern("xxx", kind), Some("xxxzzz".to_owned()));
 }
 
 // #[test]

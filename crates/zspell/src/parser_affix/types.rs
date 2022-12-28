@@ -60,6 +60,27 @@ impl ParsedRule {
         })
     }
 
+    /// Same as `new` but don't modify the regex string
+    pub(crate) fn new_raw_re(
+        kind: RuleType,
+        affix: &str,
+        strip: Option<&str>,
+        condition: Option<&str>,
+        morph_info: Vec<MorphInfo>,
+    ) -> Result<Self, Error> {
+        let cond_re = match condition {
+            Some(c) => Some(ReWrapper::new(c)?),
+            None => None,
+        };
+
+        Ok(Self {
+            strip: strip.map(ToOwned::to_owned),
+            affix: affix.to_owned(),
+            condition: cond_re,
+            morph_info,
+        })
+    }
+
     /// Create from the information we have available during parse
     pub(crate) fn new_parse(
         kind: RuleType,

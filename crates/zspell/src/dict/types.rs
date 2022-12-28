@@ -2,68 +2,80 @@ use std::rc::Rc;
 
 use hashbrown::Equivalent;
 
-use super::parser::PersonalMeta;
+use super::parser::ParsedPersonalMeta;
 use super::rule::AfxRule;
 use crate::morph::MorphInfo;
 use crate::parser_affix::ParsedRule;
 
-/// Extra meta information about where a word came from
+/// Additional information attached to an entry in a dictionary
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct Meta {
+    stem: Rc<String>,
+    source: Source,
+}
+
+impl Meta {
+    pub(crate) fn new(stem_rc: Rc<String>, source: Source) -> Self {
+        Self {
+            stem: stem_rc,
+            source,
+        }
+    }
+}
+
+/// Source information
+#[allow(clippy::box_collection)]
 #[non_exhaustive]
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Source {
     /// this meta came from an affix and has a full affix rule
     Affix(Rc<AfxRule>),
     /// this meta came from a .dic file, only contains morphinfo
-    Dict(Option<Rc<MorphInfo>>),
+    Dict(Box<Vec<Rc<MorphInfo>>>),
     /// this meta came from the personal dictionary
     /// String is the "friend" word
-    Personal(Box<(Rc<String>, Vec<Rc<MorphInfo>>)>),
+    Personal(Box<PersonalMeta>),
     /// The source is a raw text file with no additional metadata
     Raw,
 }
 
-// We will re-add this, but in the form of a RC to a stem and RC to an extra
-
+/// Representation of meta info for a personal dictionary
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct Extra {
-    stem: Rc<String>,
-    source: Source,
+pub struct PersonalMeta {
+    friend: Option<Rc<String>>,
+    morph: Vec<Rc<MorphInfo>>,
 }
 
-impl Extra {
-    pub(crate) fn new(stem_rc: Rc<String>, source: Source) -> Self {
-        Self {
-            stem: stem_rc,
-            source: source,
-        }
+impl PersonalMeta {
+    pub fn new(friend: Option<Rc<String>>, morph: Vec<Rc<MorphInfo>>) -> Self {
+        Self { friend, morph }
     }
 }
 
-/// Clone of [`Source`] for quick construction and Eq comparison
+/// Clone of [`Meta`] for quick construction and Eq comparison
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub(crate) enum SourceBorrowed<'a> {
-    Affix(&'a AfxRule),
-    Dict(Option<&'a MorphInfo>),
-    Personal {
-        friend: Option<&'a String>,
-        morph: &'a Vec<MorphInfo>,
-    },
-}
-
-/// Clone of [`Extra`] for quick construction and Eq comparison
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub(crate) struct ExtraBorrowed<'a> {
+pub struct MetaBorrowed<'a> {
     stem: &'a str,
     source: SourceBorrowed<'a>,
 }
 
+/// Clone of [`Source`] for quick construction and Eq comparison
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum SourceBorrowed<'a> {
+    Affix(&'a AfxRule),
+    Dict(Option<&'a MorphInfo>),
+    // Personal(),
+}
+
+/// Clone of [`Source`] for quick construction and comparison
 impl<'a> SourceBorrowed<'a> {
-    pub(crate) fn new_personal(friend: Option<&'a String>, morph: &'a Vec<MorphInfo>) -> Self {
-        Self::Personal { friend, morph }
+    pub fn new_personal(friend: Option<&'a String>, morph: &'a Vec<MorphInfo>) -> Self {
+        // Self::Personal { friend, morph }
+        todo!()
     }
 }
 
-impl<'a> ExtraBorrowed<'a> {
+impl<'a> MetaBorrowed<'a> {
     //     pub(crate) fn new_dict(stem: &str, morph: Option<&'a MorphInfo>) -> Self {
     //         Self {
     //             stem: stem.to_owned(),
@@ -98,7 +110,7 @@ impl<'a> ExtraBorrowed<'a> {
 }
 
 impl<'a> SourceBorrowed<'a> {
-    pub(crate) fn to_owned(&self) -> Source {
+    pub fn to_owned(&self) -> Source {
         // match self {
         //     SourceBorrowed::Affix(rule) => Source::Affix(Box::new((*rule).clone())),
         //     SourceBorrowed::Dict(morph_opt) => Source::Dict(morph_opt.map(|x| Box::new(x.clone()))),

@@ -9,9 +9,9 @@ use std::num::ParseIntError;
 use std::str::FromStr;
 
 use lazy_static::lazy_static;
-pub(crate) use node::AffixNode;
+pub use node::AffixNode;
 use regex::Regex;
-pub(crate) use types::{ParsedRule, ParsedRuleGroup};
+pub use types::{ParsedRule, ParsedRuleGroup};
 
 use crate::affix::{
     CompoundPattern, CompoundSyllable, Conversion, Encoding, FlagType, Phonetic, RuleType,
@@ -135,9 +135,10 @@ where
 {
     line_key_parser(s, key, |s| {
         let count = s.len();
-        let valid = s.chars().all(|c| c.is_alphanumeric());
+        let valid = s.chars().all(|c| !c.is_whitespace());
 
-        if count <= 4 && valid {
+        // Max length is 10 for u32::max. We will validate our flag later
+        if count <= 10 && valid {
             Ok(f(s.chars().next().unwrap().to_string()))
         } else {
             Err(ParseError::new_nospan(ParseErrorType::InvalidFlag, s))
@@ -710,7 +711,7 @@ const ALL_PARSERS: [for<'a> fn(&'a str) -> ParseResult; 61] = [
 ];
 
 /// Main parser entrypoint
-pub(crate) fn parse_affix(s: &str) -> Result<Vec<AffixNode>, ParseError> {
+pub fn parse_affix(s: &str) -> Result<Vec<AffixNode>, ParseError> {
     let mut working = s;
     let mut ret: Vec<AffixNode> = Vec::new();
     let mut nlines: u32 = 1;

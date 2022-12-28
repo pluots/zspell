@@ -1,7 +1,12 @@
+//! Various functions that are helpful throughout the crate
+
 use core::fmt::Display;
+use std::borrow::Borrow;
 use std::hash::Hash;
 use std::ops::Deref;
+use std::rc::Rc;
 
+use hashbrown::Equivalent;
 use regex::Regex;
 
 use crate::affix::RuleType;
@@ -60,4 +65,24 @@ pub fn compile_re_pattern(
         RuleType::Suffix => format!("^.*{condition}$"),
     };
     ReWrapper::new(re_pattern.as_str()).map(Some)
+}
+
+/// Implement a type that derefs to compare to a string
+#[derive(Clone, Debug, PartialEq, Hash, Eq)]
+pub struct StrWrapper<'a>(pub &'a str);
+
+impl<'a> StrWrapper<'a> {
+    pub fn new(s: &'a str) -> Self {
+        Self(s)
+    }
+
+    pub fn to_string(&self) -> String {
+        self.0.to_string()
+    }
+}
+
+impl Equivalent<Rc<String>> for StrWrapper<'_> {
+    fn equivalent(&self, key: &Rc<String>) -> bool {
+        self.0 == key.as_ref()
+    }
 }

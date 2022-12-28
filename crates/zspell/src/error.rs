@@ -1,12 +1,14 @@
-//! Module containing Zspell error types
+//! Error types
 
+use core::prelude::v1;
 use std::fmt::Display;
 use std::num::ParseIntError;
 
 use crate::affix::FlagType;
+use crate::dict::FlagValue;
 use crate::helpers::convertu32;
 
-/// Zspell main error type
+/// ZSpell main error type
 #[non_exhaustive]
 #[derive(Clone, Debug, PartialEq)]
 pub enum Error {
@@ -17,12 +19,16 @@ pub enum Error {
     Regex(regex::Error),
 }
 
-/// An error that occured while parsing
+/// An error that occured while parsing, consisting of an error variant and a
+/// location
 #[non_exhaustive]
 #[derive(Clone, Debug, PartialEq)]
 pub struct ParseError {
+    /// The error that occured
     err: Box<ParseErrorType>,
+    /// Approximate location of the error in source
     span: Option<Span>,
+    /// Context of what caused this error
     ctx: String,
 }
 
@@ -42,18 +48,28 @@ pub struct LineCol {
 }
 
 /// Errors that can occur when building a dictionary
+#[non_exhaustive]
 #[derive(Clone, Debug, PartialEq)]
 pub enum BuildError {
-    /// Config specified twice
-    CfgSpecTwice,
-    CfgUnspecified,
+    /// Config specified twice in the builder
+    BuilderCfgSpecTwice,
+    /// Builder config was not specified
+    BuilderCfgUnspecified,
     /// A given flag is invalid
     UnknownFlag(String),
     /// Got a flag that does not match the given type
-    FlagType {
-        value: String,
-        expected: FlagType,
+    FlagType { value: String, expected: FlagType },
+    /// A flag was used for >1 thing in an affix file
+    DuplicateFlag {
+        /// Flag string value
+        flag: String,
+        /// Initial duplicate type
+        t1: FlagValue,
+        /// Second duplicate type if Some; affix rule if None
+        t2: Option<FlagValue>,
     },
+    /// A flag in a dictionary file does not match any known flags
+    NonmatchingFlag { stem: String, flag: String },
 }
 
 /// A kind of error that would occur during parsing, with additional information
@@ -122,6 +138,8 @@ impl ParseError {
     pub fn err(&self) -> &ParseErrorType {
         &self.err
     }
+
+    #[inline]
     pub fn span(&self) -> Option<&Span> {
         self.span.as_ref()
     }
@@ -140,7 +158,11 @@ impl ParseError {
 
     #[inline]
     pub(crate) fn new_nospan(err: ParseErrorType, ctx: &str) -> Self {
-        Self::new(err, ctx, 0, 0)
+        Self {
+            err: Box::new(err),
+            span: None,
+            ctx: ctx.to_owned(),
+        }
     }
 
     #[inline]
@@ -204,53 +226,52 @@ impl Display for ParseErrorType {
     #[inline]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ParseErrorType::Boolean => write!(f, "expected a boolean flag with no content")?,
-            ParseErrorType::Char(a, b) => write!(f, "expected {a} flags but got {b}")?,
-            ParseErrorType::Int(e) => write!(f, "failed to parse integer: {e}")?,
+            ParseErrorType::Boolean => write!(f, "expected a boolean flag with no content"),
+            ParseErrorType::Char(a, b) => write!(f, "expected {a} flags but got {b}"),
+            ParseErrorType::Int(e) => write!(f, "failed to parse integer: {e}"),
             ParseErrorType::TableCount {
                 expected,
                 actual: received,
-            } => write!(f, "expected {expected} values in table but got {received}")?,
-            ParseErrorType::AffixHeader => write!(f, "could not parse affix header")?,
-            ParseErrorType::AffixBody => write!(f, "could not parse affix body")?,
+            } => write!(f, "expected {expected} values in table but got {received}"),
+            ParseErrorType::AffixHeader => write!(f, "could not parse affix header"),
+            ParseErrorType::AffixBody => write!(f, "could not parse affix body"),
             ParseErrorType::AffixFlagMismatch(flag) => write!(
                 f,
                 "invalid affix body: flag does not match expected '{flag}'"
-            )?,
+            ),
             ParseErrorType::AffixCrossProduct => {
-                write!(f, "value is not a valid cross product indicator")?
+                write!(f, "value is not a valid cross product indicator")
             }
             ParseErrorType::NonWhitespace(c) => write!(
                 f,
                 "unexpected non-comment characters before line termination starting at '{c}'"
-            )?,
+            ),
             ParseErrorType::MorphInfoDelim(s) => {
-                write!(f, "missing ':' delimiter in morph info at '{s}'")?
+                write!(f, "missing ':' delimiter in morph info at '{s}'")
             }
             ParseErrorType::MorphInvalidTag(s) => {
-                write!(f, "tag '{s}' does not match any morphographic types")?
+                write!(f, "tag '{s}' does not match any morphographic types")
             }
-            ParseErrorType::ContainsWhitespace => write!(f, "not allowed to contain whitespace")?,
-            ParseErrorType::Encoding => write!(f, "unrecognized encoding")?,
-            ParseErrorType::FlagType => write!(f, "unrecognized flag")?,
-            ParseErrorType::CompoundPattern => write!(f, "invalid compound pattern")?,
-            ParseErrorType::Phonetic(n) => write!(f, "expected 2 items but got {n}")?,
-            ParseErrorType::DictEntry => write!(f, "invalid dictionary entry")?,
+            ParseErrorType::ContainsWhitespace => write!(f, "not allowed to contain whitespace"),
+            ParseErrorType::Encoding => write!(f, "unrecognized encoding"),
+            ParseErrorType::FlagType => write!(f, "unrecognized flag"),
+            ParseErrorType::CompoundPattern => write!(f, "invalid compound pattern"),
+            ParseErrorType::Phonetic(n) => write!(f, "expected 2 items but got {n}"),
+            ParseErrorType::DictEntry => write!(f, "invalid dictionary entry"),
             ParseErrorType::PartOfSpeech(s) => {
-                write!(f, "value '{s}' is not a known part of speech")?
+                write!(f, "value '{s}' is not a known part of speech")
             }
             ParseErrorType::ConversionSplit(_) => todo!(),
-            ParseErrorType::CompoundSyllableCount(n) => write!(f, "expected 2 items but got {n}")?,
-            ParseErrorType::CompoundSyllableParse(e) => write!(f, "unable to parse integer: {e}")?,
-            ParseErrorType::Regex(e) => e.fmt(f)?,
+            ParseErrorType::CompoundSyllableCount(n) => write!(f, "expected 2 items but got {n}"),
+            ParseErrorType::CompoundSyllableParse(e) => write!(f, "unable to parse integer: {e}"),
+            ParseErrorType::Regex(e) => e.fmt(f),
             ParseErrorType::AffixHeader => todo!(),
-            ParseErrorType::Personal => write!(f, "error parsing entry in personal dictionary")?,
+            ParseErrorType::Personal => write!(f, "error parsing entry in personal dictionary"),
             ParseErrorType::InvalidFlag => {
-                write!(f, "expected a single alphanumeric flag (4 bytes maximum)")?
+                write!(f, "expected a single alphanumeric flag (4 bytes maximum)")
             }
-            ParseErrorType::FlagParse(v) => write!(f, "error parsing flag of type '{v}'")?,
-        };
-        Ok(())
+            ParseErrorType::FlagParse(v) => write!(f, "error parsing flag of type '{v}'"),
+        }
     }
 }
 
@@ -266,10 +287,15 @@ impl Display for ParseError {
 }
 
 impl Display for BuildError {
+    #[inline]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            BuildError::CfgSpecTwice => write!(f, "configuration specified twice in builder"),
-            BuildError::CfgUnspecified => write!(f, "configuration unspecified twice in builder"),
+            BuildError::BuilderCfgSpecTwice => {
+                write!(f, "configuration specified twice in builder")
+            }
+            BuildError::BuilderCfgUnspecified => {
+                write!(f, "configuration unspecified twice in builder")
+            }
             BuildError::UnknownFlag(v) => write!(
                 f,
                 "got flag `{v}` that wasn't present in affix configuration"
@@ -277,6 +303,22 @@ impl Display for BuildError {
             BuildError::FlagType { value, expected } => {
                 write!(f, "value '{value}' is not valid for flag type {expected}")
             }
+            BuildError::DuplicateFlag {
+                flag,
+                t1,
+                t2: Some(v),
+            } => write!(
+                f,
+                "flag '{flag}' used for two or more flags: '{t1}' and '{v}'"
+            ),
+            BuildError::DuplicateFlag { flag, t1, t2: None } => write!(
+                f,
+                "flag '{flag}' used for two or more flags: '{t1}' and affix rule"
+            ),
+            BuildError::NonmatchingFlag { stem, flag } => write!(
+                f,
+                "stem '{stem}' is marked with flag '{flag}' but it does not match any patterns"
+            ),
         }
     }
 }

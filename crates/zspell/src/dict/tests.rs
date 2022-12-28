@@ -101,7 +101,7 @@ fn test_update_personal() {
         3456
     ";
 
-    let mut d = Dictionary::new();
+    let mut d = Dictionary::new(ParsedCfg::default()).unwrap();
     d.parse_update_personal(personal_str, &[]).unwrap();
     assert!(d.wordlist.0.get("abcd").is_some());
     assert!(d.wordlist.0.get("efgh").is_some());
@@ -113,8 +113,6 @@ fn test_update_personal() {
     dbg!(&d.wordlist_nosuggest.0.len());
     dbg!(&d.wordlist_forbidden.0);
     dbg!(&d.wordlist_forbidden.0.len());
-    dbg!(&d.sources);
-    dbg!(&d.sources.len());
     dbg!(&d.stems);
     dbg!(&d.stems.len());
 }

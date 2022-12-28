@@ -1,3 +1,5 @@
+//! Types and implementation of morphological analysis
+
 use crate::affix::PartOfSpeech;
 use crate::error::{ParseError, ParseErrorType};
 

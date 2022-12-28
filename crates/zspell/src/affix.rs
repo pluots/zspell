@@ -2,17 +2,21 @@
 
 mod types;
 
-pub(crate) use self::types::{
+use std::collections::BTreeMap;
+use std::rc::Rc;
+
+pub use self::types::{
     CompoundPattern, CompoundSyllable, Conversion, Encoding, FlagType, PartOfSpeech, Phonetic,
     RuleType,
 };
-use crate::dict::DictEntry;
-use crate::error::{BuildError, Error};
+use crate::dict::{AfxRule, DictEntry, FlagValue};
+use crate::error::{BuildError, Error, ParseError, ParseErrorType};
+use crate::morph::MorphInfo;
 use crate::parser_affix::{parse_affix, AffixNode, ParsedRule, ParsedRuleGroup};
 
 /// A representation of an affix file
 #[derive(Clone, Debug, PartialEq, Eq)]
-pub struct ParsedConfig {
+pub struct ParsedCfg {
     /*
         General Options
     */
@@ -22,7 +26,7 @@ pub struct ParsedConfig {
     encoding: Encoding,
 
     /// The type of flag in the `.dic` file
-    flagtype: FlagType,
+    flag_type: FlagType,
 
     /// Twofold prefix skipping for e.g. right-to-left languages
     complex_prefixes: bool,
@@ -94,7 +98,7 @@ pub struct ParsedConfig {
         Affix Options
     */
     // Rules for setting prefixes and suffixes
-    affix_rules: Vec<ParsedRuleGroup>,
+    afx_rule_groups: Vec<ParsedRuleGroup>,
 
     /*
         Other options
@@ -102,11 +106,11 @@ pub struct ParsedConfig {
     afx_circumflex_flag: Option<u32>,
     forbidden_word_flag: Option<u32>,
     afx_full_strip: bool,
-    afx_keep_case_flag: u32,
+    afx_keep_case_flag: Option<u32>,
     input_conversions: Vec<Conversion>,
     output_conversions: Vec<Conversion>,
-    afx_needed_flag: u32,
-    afx_substandard_flag: u32,
+    afx_needed_flag: Option<u32>,
+    afx_substandard_flag: Option<u32>,
     afx_word_chars: String,
     afx_check_sharps: bool,
     name: String,
@@ -131,7 +135,7 @@ struct CompoundConfig {
     min_length: u16,
 
     /// Words with this flag may be in compounds
-    flag: Option<String>,
+    flag: Option<u32>,
 
     /// Words with this flag may start a compound
     begin_flag: Option<u32>,
@@ -149,7 +153,7 @@ struct CompoundConfig {
     permit_flag: Option<u32>,
     forbid_flag: Option<u32>,
     more_suffixes: bool,
-    root: Option<String>,
+    root_flag: Option<u32>,
     word_max: u16,
     forbid_dup: bool,
     forbid_repeat: bool,
@@ -162,13 +166,13 @@ struct CompoundConfig {
     syllable_num: String,
 }
 
-impl Default for ParsedConfig {
+impl Default for ParsedCfg {
     #[allow(clippy::default_trait_access)]
     #[inline]
     fn default() -> Self {
         Self {
             encoding: Default::default(),
-            flagtype: FlagType::Utf8,
+            flag_type: FlagType::Utf8,
             complex_prefixes: Default::default(),
             lang: Default::default(),
             ignore_chars: Default::default(),
@@ -192,7 +196,7 @@ impl Default for ParsedConfig {
             ngram_diff_max: 5,
             ngram_limit_to_diff_max: Default::default(),
             compound_config: Default::default(),
-            affix_rules: Default::default(),
+            afx_rule_groups: Default::default(),
             afx_circumflex_flag: Default::default(),
             forbidden_word_flag: Default::default(),
             afx_full_strip: Default::default(),
@@ -226,7 +230,7 @@ impl Default for CompoundConfig {
             permit_flag: Default::default(),
             forbid_flag: Default::default(),
             more_suffixes: Default::default(),
-            root: Default::default(),
+            root_flag: Default::default(),
             word_max: Default::default(),
             forbid_dup: Default::default(),
             forbid_repeat: Default::default(),
@@ -241,7 +245,11 @@ impl Default for CompoundConfig {
     }
 }
 
-impl ParsedConfig {
+impl ParsedCfg {
+    pub fn flag_type(&self) -> FlagType {
+        self.flag_type
+    }
+
     /// Create a `Config` object from a string version of an affix file
     ///
     /// # Errors
@@ -260,18 +268,11 @@ impl ParsedConfig {
 
         if let Some(node) = v.iter().find(|node| matches!(node, AffixNode::FlagType(_))) {
             if let AffixNode::FlagType(v) = node {
-                res.flagtype = *v
+                res.flag_type = *v;
             } else {
                 unreachable!()
             }
         }
-
-        // let parse_ft = match res.flagtype {
-        //     FlagType::Ascii => todo!(),
-        //     FlagType::Utf8 => todo!(),
-        //     FlagType::Long => todo!(),
-        //     FlagType::Number => todo!(),
-        // };
 
         for node in v {
             let name_str = node.name_str();
@@ -296,31 +297,35 @@ impl ParsedConfig {
                 AffixNode::Mapping(v) => res.maps = v,
                 AffixNode::Phonetic(v) => res.phonetics = v,
                 AffixNode::WarnRareFlag(v) => res.warn_rare_flag = Some(res.convert_flag(&v)?),
-                AffixNode::ForbidWarnWords => todo!(),
+                AffixNode::ForbidWarnWords => res.forbid_warn_words = true,
                 AffixNode::BreakSeparator(v) => res.compound_config.break_separators = v,
                 AffixNode::CompoundRule(v) => res.compound_config.rules = v,
                 AffixNode::CompoundMinLen(v) => res.compound_config.min_length = v,
-                AffixNode::CompoundFlag(v) => res.compound_config.flag = Some(v),
+                AffixNode::CompoundFlag(v) => {
+                    res.compound_config.flag = Some(res.convert_flag(&v)?)
+                }
                 AffixNode::CompoundBeginFlag(v) => {
-                    res.compound_config.begin_flag = Some(res.convert_flag(&v)?)
+                    res.compound_config.begin_flag = Some(res.convert_flag(&v)?);
                 }
                 AffixNode::CompoundEndFlag(v) => {
-                    res.compound_config.end_flag = Some(res.convert_flag(&v)?)
+                    res.compound_config.end_flag = Some(res.convert_flag(&v)?);
                 }
                 AffixNode::CompoundMiddleFlag(v) => {
-                    res.compound_config.middle_flag = Some(res.convert_flag(&v)?)
+                    res.compound_config.middle_flag = Some(res.convert_flag(&v)?);
                 }
                 AffixNode::CompoundOnlyFlag(v) => {
-                    res.compound_config.only_flag = Some(res.convert_flag(&v)?)
+                    res.compound_config.only_flag = Some(res.convert_flag(&v)?);
                 }
                 AffixNode::CompoundPermitFlag(v) => {
-                    res.compound_config.permit_flag = Some(res.convert_flag(&v)?)
+                    res.compound_config.permit_flag = Some(res.convert_flag(&v)?);
                 }
                 AffixNode::CompoundForbidFlag(v) => {
-                    res.compound_config.forbid_flag = Some(res.convert_flag(&v)?)
+                    res.compound_config.forbid_flag = Some(res.convert_flag(&v)?);
                 }
                 AffixNode::CompoundMoreSuffixes => res.compound_config.more_suffixes = true,
-                AffixNode::CompoundRootFlag(v) => res.compound_config.root = Some(v),
+                AffixNode::CompoundRootFlag(v) => {
+                    res.compound_config.root_flag = Some(res.convert_flag(&v)?)
+                }
                 AffixNode::CompoundWordMax(v) => res.compound_config.word_max = v,
                 AffixNode::CompoundForbidDup => res.compound_config.forbid_dup = true,
                 AffixNode::CompoundForbidRepeat => res.compound_config.forbid_repeat = true,
@@ -329,31 +334,33 @@ impl ParsedConfig {
                 AffixNode::CompoundSimplifyTriple => res.compound_config.simplify_triple = true,
                 AffixNode::CompoundForbidPats(v) => res.compound_config.forbid_pats = v,
                 AffixNode::CompoundForceUpFlag(v) => {
-                    res.compound_config.force_upper_flag = Some(res.convert_flag(&v)?)
+                    res.compound_config.force_upper_flag = Some(res.convert_flag(&v)?);
                 }
                 AffixNode::CompoundSyllable(v) => res.compound_config.syllable = v,
                 AffixNode::SyllableNum(v) => res.compound_config.syllable_num = v,
-                AffixNode::Prefix(v) => res.affix_rules.push(v),
-                AffixNode::Suffix(v) => res.affix_rules.push(v),
+                AffixNode::Prefix(v) => res.afx_rule_groups.push(v),
+                AffixNode::Suffix(v) => res.afx_rule_groups.push(v),
                 AffixNode::AfxCircumfixFlag(v) => {
-                    res.afx_circumflex_flag = Some(res.convert_flag(&v)?)
+                    res.afx_circumflex_flag = Some(res.convert_flag(&v)?);
                 }
                 AffixNode::ForbiddenWordFlag(v) => {
-                    res.forbidden_word_flag = Some(res.convert_flag(&v)?)
+                    res.forbidden_word_flag = Some(res.convert_flag(&v)?);
                 }
                 AffixNode::AfxFullStrip => res.afx_full_strip = true,
-                AffixNode::AfxKeepCaseFlag(v) => res.afx_keep_case_flag = res.convert_flag(&v)?,
+                AffixNode::AfxKeepCaseFlag(v) => {
+                    res.afx_keep_case_flag = Some(res.convert_flag(&v)?)
+                }
                 AffixNode::AfxInputConversion(v) => res.input_conversions = v,
                 AffixNode::AfxOutputConversion(v) => res.output_conversions = v,
                 AffixNode::AfxLemmaPresentFlag(v) => {
                     warnings.push(format!("flag {name_str} is deprecated"));
                 }
-                AffixNode::AfxNeededFlag(v) => res.afx_needed_flag = res.convert_flag(&v)?,
+                AffixNode::AfxNeededFlag(v) => res.afx_needed_flag = Some(res.convert_flag(&v)?),
                 AffixNode::AfxPseudoRootFlag(v) => {
                     warnings.push(format!("flag {name_str} is deprecated"));
                 }
                 AffixNode::AfxSubstandardFlag(v) => {
-                    res.afx_substandard_flag = res.convert_flag(&v)?
+                    res.afx_substandard_flag = Some(res.convert_flag(&v)?);
                 }
                 AffixNode::AfxWordChars(v) => res.afx_word_chars = v,
                 AffixNode::AfxCheckSharps => res.afx_check_sharps = true,
@@ -364,50 +371,89 @@ impl ParsedConfig {
             }
         }
 
+        for w in warnings {
+            eprintln!("warning: {w}");
+        }
+
         Ok(res)
     }
 
     /// Convert a string to the internal flag type
-    pub(crate) fn convert_flag(&self, flag: &str) -> Result<u32, BuildError> {
-        // self.flagtype.convert_flag(flag)
-        todo!()
+    pub(crate) fn convert_flag(&self, flag: &str) -> Result<u32, ParseError> {
+        self.flag_type
+            .str_to_flag(flag)
+            .map_err(|e| ParseError::new_nospan(e, flag))
     }
 
-    /// Verify that all flags for a list of entries are valid
-    pub(crate) fn validate_entry_flags(&self, entries: &[DictEntry]) -> Result<(), Error> {
-        for entry in entries {
-            // self.map_flags(&entry.flags)?;
-            todo!()
-        }
-        Ok(())
-    }
+    /// Collect all relevant flags to a map. Returns an error if there are
+    /// duplicates
+    pub fn compile_flags(&self) -> Result<BTreeMap<u32, FlagValue>, Error> {
+        let keysets = [
+            (self.afx_circumflex_flag, FlagValue::AfxCircumfix),
+            (self.afx_keep_case_flag, FlagValue::AfxKeepCase),
+            (self.afx_needed_flag, FlagValue::AfxNeeded),
+            (self.afx_substandard_flag, FlagValue::AfxSubstandard),
+            (self.compound_config.flag, FlagValue::Compound),
+            (self.compound_config.begin_flag, FlagValue::CompoundBegin),
+            (self.compound_config.end_flag, FlagValue::CompoundEnd),
+            (self.compound_config.forbid_flag, FlagValue::CompoundForbid),
+            (
+                self.compound_config.force_upper_flag,
+                FlagValue::CompoundForceUp,
+            ),
+            (self.compound_config.middle_flag, FlagValue::CompoundMiddle),
+            (self.compound_config.only_flag, FlagValue::CompoundOnly),
+            (self.compound_config.permit_flag, FlagValue::CompoundPermit),
+            (self.compound_config.root_flag, FlagValue::CompoundRoot),
+            (self.forbidden_word_flag, FlagValue::ForbiddenWord),
+            (self.nosuggest_flag, FlagValue::NoSuggest),
+            (self.warn_rare_flag, FlagValue::WarnRare),
+        ];
 
-    /// Ensure that a list of flags is valid for this affix
-    pub(crate) fn map_flags<'a, S: AsRef<str>>(
-        &'a self,
-        flags: &'a [S],
-    ) -> Result<Vec<(u32, FlagHelper)>, Error> {
-        let mut ret = Vec::new();
-        for flag in flags {
-            let flag_ref = flag.as_ref();
-            if let Some(afx_flag) = self.affix_rules.iter().find(|group| group.flag == flag_ref) {
-                ret.push((flag_ref, FlagHelper::RuleGroup(afx_flag)));
-            // } else if flag_ref == &self.nosuggest_flag {
-            //     ret.push((flag_ref, FlagHelper::NoSuggest));
-            } else {
-                return Err(BuildError::UnknownFlag(flag_ref.to_owned()).into());
+        let mut map: BTreeMap<u32, FlagValue> = BTreeMap::new();
+        let mut morphs: Vec<MorphInfo> = Vec::new();
+
+        for (key, value) in keysets
+            .iter()
+            .filter_map(|(kopt, val)| kopt.map(|keyval| (keyval, val)))
+        {
+            // Check for duplicate values
+            if let Some(duplicate) = map.get(&key) {
+                return Err(BuildError::DuplicateFlag {
+                    flag: self.flag_type.flag_to_str(key),
+                    t1: duplicate.clone(),
+                    t2: Some(value.clone()),
+                }
+                .into());
             }
+            map.insert(key, value.clone());
         }
-        // Ok(ret)
-        todo!()
+
+        for group in &self.afx_rule_groups {
+            let flag = self
+                .flag_type
+                .str_to_flag(&group.flag)
+                .map_err(|e| ParseError::new_nospan(e, &group.flag))?;
+
+            // Check for duplicate values
+            if let Some(duplicate) = map.get(&flag) {
+                return Err(BuildError::DuplicateFlag {
+                    flag: group.flag.clone(),
+                    t1: duplicate.clone(),
+                    t2: None,
+                }
+                .into());
+            }
+
+            let rule = AfxRule::from_parsed_group(&self, group);
+            map.insert(flag, FlagValue::Rule(Rc::new(rule)));
+        }
+
+        Ok(map)
     }
 }
 
 /// Indicate a kind of flag
-pub(crate) enum FlagHelper<'a> {
-    NoSuggest,
-    RuleGroup(&'a ParsedRuleGroup),
-}
 
 #[cfg(test)]
 mod tests;
