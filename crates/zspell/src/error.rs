@@ -17,6 +17,11 @@ pub enum Error {
     Build(BuildError),
     /// Regex error from user-provided input
     Regex(regex::Error),
+
+    Io {
+        fname: String,
+        err: std::io::ErrorKind,
+    },
 }
 
 /// An error that occured while parsing, consisting of an error variant and a
@@ -25,7 +30,7 @@ pub enum Error {
 #[derive(Clone, Debug, PartialEq)]
 pub struct ParseError {
     /// The error that occured
-    err: Box<ParseErrorType>,
+    err: Box<ParseErrorKind>,
     /// Approximate location of the error in source
     span: Option<Span>,
     /// Context of what caused this error
@@ -74,7 +79,7 @@ pub enum BuildError {
 
 /// A kind of error that would occur during parsing, with additional information
 #[derive(Clone, Debug, PartialEq)]
-pub enum ParseErrorType {
+pub enum ParseErrorKind {
     /// A boolean flag
     Boolean,
     /// Expected `a` chars but got `b`
@@ -135,7 +140,7 @@ impl Span {
 
 impl ParseError {
     #[inline]
-    pub fn err(&self) -> &ParseErrorType {
+    pub fn err(&self) -> &ParseErrorKind {
         &self.err
     }
 
@@ -145,7 +150,7 @@ impl ParseError {
     }
 
     #[inline]
-    pub(crate) fn new<T>(err: ParseErrorType, ctx: &str, line: T, col: T) -> Self
+    pub(crate) fn new<T>(err: ParseErrorKind, ctx: &str, line: T, col: T) -> Self
     where
         T: TryInto<u32> + Display + Copy,
     {
@@ -157,7 +162,7 @@ impl ParseError {
     }
 
     #[inline]
-    pub(crate) fn new_nospan(err: ParseErrorType, ctx: &str) -> Self {
+    pub(crate) fn new_nospan(err: ParseErrorKind, ctx: &str) -> Self {
         Self {
             err: Box::new(err),
             span: None,
@@ -166,7 +171,7 @@ impl ParseError {
     }
 
     #[inline]
-    pub(crate) fn new_nocol<T>(err: ParseErrorType, ctx: &str, line: T) -> Self
+    pub(crate) fn new_nocol<T>(err: ParseErrorKind, ctx: &str, line: T) -> Self
     where
         T: TryInto<u32> + Display + Copy,
     {
@@ -191,14 +196,14 @@ impl ParseError {
     }
 }
 
-impl ParseErrorType {
+impl ParseErrorKind {
     fn help_msg(&self) -> Option<&'static str> {
         match self {
-            ParseErrorType::Boolean => {
+            ParseErrorKind::Boolean => {
                 Some("boolean types cannot have anything else on their line")
             }
-            ParseErrorType::Int(e) => todo!(),
-            ParseErrorType::TableCount { expected, actual } => todo!(),
+            ParseErrorKind::Int(e) => todo!(),
+            ParseErrorKind::TableCount { expected, actual } => todo!(),
             _ => None,
         }
     }
@@ -208,7 +213,7 @@ impl ParseErrorType {
 
 impl std::error::Error for Error {}
 impl std::error::Error for ParseError {}
-impl std::error::Error for ParseErrorType {}
+impl std::error::Error for ParseErrorKind {}
 impl std::error::Error for BuildError {}
 
 impl Display for Error {
@@ -218,59 +223,60 @@ impl Display for Error {
             Error::Parse(e) => write!(f, "parse error: {e}"),
             Error::Build(e) => write!(f, "build error: {e}"),
             Error::Regex(e) => write!(f, "regex error: {e}"),
+            Error::Io { fname, err } => write!(f, "io error in '{fname}': {err}"),
         }
     }
 }
 
-impl Display for ParseErrorType {
+impl Display for ParseErrorKind {
     #[inline]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            ParseErrorType::Boolean => write!(f, "expected a boolean flag with no content"),
-            ParseErrorType::Char(a, b) => write!(f, "expected {a} flags but got {b}"),
-            ParseErrorType::Int(e) => write!(f, "failed to parse integer: {e}"),
-            ParseErrorType::TableCount {
+            ParseErrorKind::Boolean => write!(f, "expected a boolean flag with no content"),
+            ParseErrorKind::Char(a, b) => write!(f, "expected {a} flags but got {b}"),
+            ParseErrorKind::Int(e) => write!(f, "failed to parse integer: {e}"),
+            ParseErrorKind::TableCount {
                 expected,
                 actual: received,
             } => write!(f, "expected {expected} values in table but got {received}"),
-            ParseErrorType::AffixHeader => write!(f, "could not parse affix header"),
-            ParseErrorType::AffixBody => write!(f, "could not parse affix body"),
-            ParseErrorType::AffixFlagMismatch(flag) => write!(
+            ParseErrorKind::AffixHeader => write!(f, "could not parse affix header"),
+            ParseErrorKind::AffixBody => write!(f, "could not parse affix body"),
+            ParseErrorKind::AffixFlagMismatch(flag) => write!(
                 f,
                 "invalid affix body: flag does not match expected '{flag}'"
             ),
-            ParseErrorType::AffixCrossProduct => {
+            ParseErrorKind::AffixCrossProduct => {
                 write!(f, "value is not a valid cross product indicator")
             }
-            ParseErrorType::NonWhitespace(c) => write!(
+            ParseErrorKind::NonWhitespace(c) => write!(
                 f,
                 "unexpected non-comment characters before line termination starting at '{c}'"
             ),
-            ParseErrorType::MorphInfoDelim(s) => {
+            ParseErrorKind::MorphInfoDelim(s) => {
                 write!(f, "missing ':' delimiter in morph info at '{s}'")
             }
-            ParseErrorType::MorphInvalidTag(s) => {
+            ParseErrorKind::MorphInvalidTag(s) => {
                 write!(f, "tag '{s}' does not match any morphographic types")
             }
-            ParseErrorType::ContainsWhitespace => write!(f, "not allowed to contain whitespace"),
-            ParseErrorType::Encoding => write!(f, "unrecognized encoding"),
-            ParseErrorType::FlagType => write!(f, "unrecognized flag"),
-            ParseErrorType::CompoundPattern => write!(f, "invalid compound pattern"),
-            ParseErrorType::Phonetic(n) => write!(f, "expected 2 items but got {n}"),
-            ParseErrorType::DictEntry => write!(f, "invalid dictionary entry"),
-            ParseErrorType::PartOfSpeech(s) => {
+            ParseErrorKind::ContainsWhitespace => write!(f, "not allowed to contain whitespace"),
+            ParseErrorKind::Encoding => write!(f, "unrecognized encoding"),
+            ParseErrorKind::FlagType => write!(f, "unrecognized flag"),
+            ParseErrorKind::CompoundPattern => write!(f, "invalid compound pattern"),
+            ParseErrorKind::Phonetic(n) => write!(f, "expected 2 items but got {n}"),
+            ParseErrorKind::DictEntry => write!(f, "invalid dictionary entry"),
+            ParseErrorKind::PartOfSpeech(s) => {
                 write!(f, "value '{s}' is not a known part of speech")
             }
-            ParseErrorType::ConversionSplit(_) => todo!(),
-            ParseErrorType::CompoundSyllableCount(n) => write!(f, "expected 2 items but got {n}"),
-            ParseErrorType::CompoundSyllableParse(e) => write!(f, "unable to parse integer: {e}"),
-            ParseErrorType::Regex(e) => e.fmt(f),
-            ParseErrorType::AffixHeader => todo!(),
-            ParseErrorType::Personal => write!(f, "error parsing entry in personal dictionary"),
-            ParseErrorType::InvalidFlag => {
+            ParseErrorKind::ConversionSplit(_) => todo!(),
+            ParseErrorKind::CompoundSyllableCount(n) => write!(f, "expected 2 items but got {n}"),
+            ParseErrorKind::CompoundSyllableParse(e) => write!(f, "unable to parse integer: {e}"),
+            ParseErrorKind::Regex(e) => e.fmt(f),
+            ParseErrorKind::AffixHeader => todo!(),
+            ParseErrorKind::Personal => write!(f, "error parsing entry in personal dictionary"),
+            ParseErrorKind::InvalidFlag => {
                 write!(f, "expected a single alphanumeric flag (4 bytes maximum)")
             }
-            ParseErrorType::FlagParse(v) => write!(f, "error parsing flag of type '{v}'"),
+            ParseErrorKind::FlagParse(v) => write!(f, "error parsing flag of type '{v}'"),
         }
     }
 }
@@ -344,14 +350,14 @@ impl From<regex::Error> for Error {
     }
 }
 
-impl From<regex::Error> for ParseErrorType {
+impl From<regex::Error> for ParseErrorKind {
     #[inline]
     fn from(value: regex::Error) -> Self {
         Self::Regex(value)
     }
 }
 
-impl From<ParseIntError> for ParseErrorType {
+impl From<ParseIntError> for ParseErrorKind {
     #[inline]
     fn from(value: ParseIntError) -> Self {
         Self::Int(value)

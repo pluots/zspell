@@ -2,7 +2,7 @@ use std::hash::Hash;
 
 use regex::Regex;
 
-use crate::error::ParseErrorType;
+use crate::error::ParseErrorKind;
 use crate::helpers::{compile_re_pattern, ReWrapper};
 use crate::morph::MorphInfo;
 use crate::parser_affix::RuleType;
@@ -88,7 +88,7 @@ impl ParsedRule {
         strip: &str,
         condition: &str,
         morph_info: Vec<MorphInfo>,
-    ) -> Result<Self, ParseErrorType> {
+    ) -> Result<Self, ParseErrorKind> {
         let cond_re = compile_re_pattern(condition, kind)?;
         let strip_chars = if strip == "0" {
             None

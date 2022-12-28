@@ -89,7 +89,7 @@ impl AfxRule {
 }
 
 /// A single rule
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Default, Debug, PartialEq, Eq, Hash)]
 pub struct AfxRulePattern {
     affix: String,
     /// Condition to be met to apply this rule.
@@ -129,6 +129,7 @@ impl AfxRulePattern {
     }
 
     // Verify the match condition and apply this rule
+    #[allow(clippy::option_if_let_else)]
     fn apply_pattern(&self, s: &str, kind: RuleType) -> Option<String> {
         // No return if condition doesn't match
         if !self.check_condition(s) {
@@ -159,17 +160,6 @@ impl AfxRulePattern {
                 working.shrink_to_fit();
                 Some(working)
             }
-        }
-    }
-}
-
-impl Default for AfxRulePattern {
-    fn default() -> Self {
-        Self {
-            affix: Default::default(),
-            condition: Default::default(),
-            strip: Default::default(),
-            morph_info: Default::default(),
         }
     }
 }

@@ -11,19 +11,20 @@ use std::collections::BTreeMap;
 use std::rc::Rc;
 
 use hashbrown::{HashMap, HashSet};
+use stringmetrics::try_levenshtein;
 use unicode_segmentation::UnicodeSegmentation;
 
 pub use self::flags::FlagValue;
-use self::helpers::create_affixed_word_map;
+use self::helpers::{create_affixed_word_map, word_splitter};
 pub use self::parser::DictEntry;
 use self::parser::{parse_dict, parse_personal_dict, PersonalEntry};
 pub use self::rule::AfxRule;
-use self::types::{Meta, PersonalMeta, Source, SourceBorrowed};
+use self::types::{Meta, PersonalMeta, Source};
 use crate::affix::FlagType;
 use crate::error::{BuildError, Error};
 use crate::helpers::StrWrapper;
 use crate::morph::MorphInfo;
-use crate::ParsedCfg;
+use crate::{suggestions, ParsedCfg};
 
 /// Main dictionary object used for spellchecking and suggestions
 ///
@@ -112,9 +113,18 @@ impl Dictionary {
     /// This can be used ot create
     #[inline]
     pub fn check_indices(&self, s: &str) -> Vec<(usize, usize)> {
-        s.split_word_bound_indices()
+        word_splitter(s)
             .filter(|(idx, w)| !self.check_word(w))
             .map(|(idx, w)| (idx, idx + w.len()))
+            .collect()
+    }
+
+    pub fn suggest_indices(&self, s: &str) -> Vec<(usize, usize, Vec<&str>)> {
+        word_splitter(s)
+            .filter_map(|(idx, w)| {
+                self.suggest_word(w)
+                    .map_or_else(|v| Some((idx, idx + w.len(), v)), |_| None)
+            })
             .collect()
     }
 
@@ -129,6 +139,47 @@ impl Dictionary {
                 || self.wordlist_nosuggest.0.contains_key(s)
                 || self.wordlist_nosuggest.0.contains_key(&lower))
     }
+
+    pub fn suggest_word(&self, s: &str) -> Result<(), Vec<&str>> {
+        if self.check_word(s) {
+            return Ok(());
+        }
+        let mut suggestions: Vec<(u32, &String)> = self
+            .wordlist
+            .0
+            .keys()
+            .filter_map(|key| try_levenshtein(key, s, 1).map(|lim| (lim, key)))
+            .collect();
+        suggestions.sort_unstable_by_key(|(k, v)| *k);
+        Err(suggestions
+            .iter()
+            .take(10)
+            .map(|(k, v)| v.as_str())
+            .collect())
+    }
+
+    /// Generate the stems for a single word. Returns `None` if the word is not found
+    #[inline]
+    pub fn stem_word(&self, s: &str) -> Option<Vec<&str>> {
+        let Some(meta) = self.wordlist.0.get(s).or_else(|| self.wordlist_nosuggest.0.get(s)) else {
+            return None;
+        };
+
+        let mut stems: Vec<&str> = Vec::with_capacity(meta.len());
+        let mut morphs: Vec<&MorphInfo> = Vec::with_capacity(meta.len());
+        for item in meta {
+            item.source().push_morphs(&mut morphs);
+            stems.push(item.stem());
+        }
+
+        for morph in morphs {
+            if let MorphInfo::Stem(s) = morph {
+                stems.push(s);
+            }
+        }
+
+        Some(stems)
+    }
 }
 
 /// Internal config API
@@ -141,9 +192,10 @@ impl Dictionary {
     /// Return type is vector of `(new_word, rule, second_rule)` where
     /// `second_rule` is available if both a prefix and a suffix were applied
     // PERF: benchmark taking a vec reference instead of returning
-    fn create_affixed_words<'a>(&'a mut self, stem: &str, flags: &[u32]) {
-        let mut pfx_rules = Vec::new();
-        let mut sfx_rules = Vec::new();
+    // TODO: include morph data for generated words
+    fn create_affixed_words(&mut self, stem: &str, flags: &[u32], _morph: &[MorphInfo]) {
+        let mut prefix_rules = Vec::new();
+        let mut suffix_rules = Vec::new();
 
         let stem_rc: &Rc<String> = self
             .stems
@@ -151,36 +203,54 @@ impl Dictionary {
                 Rc::new(sw.to_string())
             });
 
+        let mut add_stem = true;
+        let mut forbid = false;
+        let mut nosuggest = false;
+
         for flag in flags {
-            let mut forbid = false;
-            let mut nosuggest = false;
+            if self.flags.get(flag).is_none() {
+                // FIXME: we get stuck on compound rules
+                continue;
+            }
 
             match self.flags.get(flag).unwrap().borrow() {
                 FlagValue::ForbiddenWord => forbid = true,
                 FlagValue::NoSuggest => nosuggest = true,
                 FlagValue::Rule(rule) => {
                     if rule.is_pfx() {
-                        pfx_rules.push(rule);
+                        prefix_rules.push(rule);
                     } else {
-                        sfx_rules.push(rule);
+                        suffix_rules.push(rule);
                     }
                 }
-                _ => unimplemented!(),
+                FlagValue::AfxNeeded => add_stem = false,
+                _ => {
+                    // FIXME: should be unimplemented
+                    // unimplemented!()
+                    // eprintln!("unexpected flag {}", flag);
+                }
             }
-
-            // Forbid trumps nosuggest
-            let map = if forbid {
-                &mut self.wordlist_forbidden
-            } else if nosuggest {
-                &mut self.wordlist_nosuggest
-            } else {
-                &mut self.wordlist
-            };
-
-            create_affixed_word_map(&pfx_rules, &sfx_rules, stem, stem_rc, map);
-            pfx_rules.clear();
-            sfx_rules.clear();
         }
+
+        // Forbid trumps nosuggest
+        let dest = if forbid {
+            &mut self.wordlist_forbidden
+        } else if nosuggest {
+            &mut self.wordlist_nosuggest
+        } else {
+            &mut self.wordlist
+        };
+
+        if add_stem {
+            // TODO: fix location for this, add morph
+            let meta = Meta::new(stem_rc.clone(), Source::Dict(Box::default()));
+            let meta_vec = dest.0.entry_ref(stem).or_insert_with(Vec::new);
+            meta_vec.push(meta);
+        }
+
+        create_affixed_word_map(&prefix_rules, &suffix_rules, stem, stem_rc, dest);
+        prefix_rules.clear();
+        suffix_rules.clear();
     }
 
     /// Update the internal wordlist and forbidden wordlist from a dictionary
@@ -191,6 +261,7 @@ impl Dictionary {
     }
 
     /// Update internal wordlists from dictionary entries
+    #[allow(clippy::unnecessary_wraps)]
     fn update_wordlist(&mut self, entries: &[DictEntry]) -> Result<(), Error> {
         // use baseline 3 words per line entry
         self.wordlist.0.reserve(entries.len() * 3);
@@ -198,32 +269,10 @@ impl Dictionary {
         // PERF: try moving flags outside of loop
         for entry in entries {
             let DictEntry { stem, flags, morph } = entry;
-            let afx_words = self.create_affixed_words(stem, flags);
 
-            // // Select the correct word to work with
-            // let map = if entry.forbid {
-            //     &mut self.wordlist_forbidden.0
-            // } else {
-            //     &mut self.wordlist.0
-            // };
-
-            // let stem_rc = self
-            //     .stems
-            //     .get_or_insert_with(&entry.stem, |stem| Rc::new(stem.to_string()))
-            //     .clone();
-            // let source_comp = SourceBorrowed::new_personal(entry.friend.as_ref(), &entry.morph);
-            // let source_rc = self
-            //     .sources
-            //     .get_or_insert_with(&source_comp, |scomp| Rc::new(scomp.to_owned()))
-            //     .clone();
-            // let extra = Extra::new(stem_rc, source_rc);
-            // // Add our word, update its meta
-            // let extra_vec = map.entry_ref(&entry.stem).or_insert_with(Vec::new);
-            // extra_vec.push(extra);
+            self.create_affixed_words(stem, flags, morph);
         }
 
-        self.wordlist.0.shrink_to_fit();
-        // todo!()
         Ok(())
     }
 
@@ -287,6 +336,13 @@ impl Dictionary {
             );
         }
         ret
+    }
+
+    /// Free as much memory as possible when we know we won't be using it anymore
+    fn shrink_storage(&mut self) {
+        self.wordlist.0.shrink_to_fit();
+        self.wordlist_nosuggest.0.shrink_to_fit();
+        self.wordlist_forbidden.0.shrink_to_fit();
     }
 }
 

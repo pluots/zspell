@@ -31,7 +31,7 @@ hashbrown = "0.13.1"
 home = "0.5.4"
 lazy_static = "1.4.0"
 regex = "1.6"
-stringmetrics = "2.1"
+stringmetrics = "2.2.2"
 sys-locale = "0.2.1"
 unicode-segmentation = "1.10.0"
 

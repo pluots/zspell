@@ -4,7 +4,10 @@
 // use std::collections::HashSet;
 // use std::ffi::OsStr;
 // use std::path::{Component, Path, PathBuf};
-// use std::{env, fs};
+use std::{env, fs};
+
+use crate::error::Error;
+use crate::{DictBuilder, Dictionary};
 
 // use home::home_dir;
 // use regex::{escape, Regex};
@@ -14,8 +17,8 @@
 // use crate::errors::{DictError, SystemError};
 // use crate::{unwrap_or_ret, Dictionary};
 
-// pub const PKG_NAME: &str = env!("CARGO_PKG_NAME");
-// pub const PKG_VERSION: &str = env!("CARGO_PKG_VERSION");
+pub const PKG_NAME: &str = env!("CARGO_PKG_NAME");
+pub const PKG_VERSION: &str = env!("CARGO_PKG_VERSION");
 
 // /// Search paths for dictionaries
 // #[cfg(windows)]
@@ -322,47 +325,36 @@
 //     Ok(existing_file_maps)
 // }
 
-// /// Take in a path and load the dictionary
-// ///
-// /// # Errors
-// ///
-// /// Error when can't find dictionary
-// #[inline]
-// pub fn create_dict_from_path(basepath: &str) -> Result<Dictionary, DictError> {
-//     let mut dic = Dictionary::new();
+/// Take in a path and load the dictionary
+///
+/// # Errors
+///
+/// Error when can't find dictionary
+#[inline]
+pub fn create_dict_from_path(basepath: &str) -> Result<Dictionary, Error> {
+    let mut dict_file_path = basepath.to_owned();
+    let mut affix_file_path = basepath.to_owned();
 
-//     let mut dict_file_path = basepath.to_owned();
-//     let mut affix_file_path = basepath.to_owned();
+    dict_file_path.push_str(".dic");
+    affix_file_path.push_str(".aff");
 
-//     dict_file_path.push_str(".dic");
-//     affix_file_path.push_str(".aff");
+    let aff_str = fs::read_to_string(&affix_file_path).map_err(|e| Error::Io {
+        fname: affix_file_path,
+        err: e.kind(),
+    })?;
 
-//     match fs::read_to_string(&affix_file_path) {
-//         Ok(s) => dic.config.load_from_str(s.as_str()).unwrap(),
-//         Err(e) => {
-//             return Err(DictError::FileError {
-//                 fname: affix_file_path,
-//                 e: e.kind(),
-//             })
-//         }
-//     }
+    let dict_str = fs::read_to_string(&dict_file_path).map_err(|e| Error::Io {
+        fname: dict_file_path,
+        err: e.kind(),
+    })?;
 
-//     match fs::read_to_string(&dict_file_path) {
-//         Ok(s) => dic.load_dict_from_str(s.as_str())?,
-//         Err(e) => {
-//             return Err(DictError::FileError {
-//                 fname: dict_file_path,
-//                 e: e.kind(),
-//             })
-//         }
-//     }
+    let dict = DictBuilder::new()
+        .config_str(&aff_str)
+        .dict_str(&dict_str)
+        .build()?;
 
-//     // dic.config.load_from_str(aff_content.as_str()).unwrap();
-//     // dic.load_dict_from_str(dic_content.as_str());
-//     dic.compile().expect("Error in dictionary compilation");
-
-//     Ok(dic)
-// }
+    Ok(dict)
+}
 
 #[cfg(test)]
 mod tests;

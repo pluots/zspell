@@ -3,6 +3,7 @@ use std::fmt::Debug;
 use std::rc::Rc;
 
 use hashbrown::HashSet;
+use unicode_segmentation::UnicodeSegmentation;
 
 use super::rule::AfxRule;
 use super::{FlagValue, WordList};
@@ -14,20 +15,20 @@ use crate::Error;
 // pub(super) fn analyze_flags
 
 pub(super) fn create_affixed_word_map(
-    pfx_rules: &[&Rc<AfxRule>],
-    sfx_rules: &[&Rc<AfxRule>],
+    prefix_rules: &[&Rc<AfxRule>],
+    suffix_rules: &[&Rc<AfxRule>],
     stem: &str,
     stem_rc: &Rc<String>,
     dest: &mut WordList,
 ) -> Result<(), ()> {
-    if pfx_rules.is_empty() && sfx_rules.is_empty() {
+    if prefix_rules.is_empty() && suffix_rules.is_empty() {
         return Ok(());
     }
 
     // Store words with prefixes that can also have suffixes
     let mut prefixed_words: Vec<(String, &Rc<AfxRule>)> = Vec::new();
 
-    for &rule in pfx_rules.into_iter() {
+    for &rule in prefix_rules.iter() {
         let result = rule.apply_pattern(stem).ok_or(())?;
         let meta = Meta::new(stem_rc.clone(), Source::Affix(rule.clone()));
         let meta_vec = dest.0.entry_ref(&result).or_insert_with(Vec::new);
@@ -38,7 +39,7 @@ pub(super) fn create_affixed_word_map(
         }
     }
 
-    for &rule in sfx_rules.into_iter() {
+    for &rule in suffix_rules.iter() {
         let result = rule.apply_pattern(stem).ok_or(())?;
         let meta = Meta::new(stem_rc.clone(), Source::Affix(rule.clone()));
         let meta_vec = dest.0.entry_ref(&result).or_insert_with(Vec::new);
@@ -46,7 +47,7 @@ pub(super) fn create_affixed_word_map(
 
         if rule.can_combine() {
             let words_iter = prefixed_words.iter().filter_map(|(tmp_res, pfx_rule)| {
-                rule.apply_pattern(&tmp_res)
+                rule.apply_pattern(tmp_res)
                     .map(|newword| (newword, pfx_rule))
             });
 
@@ -61,6 +62,11 @@ pub(super) fn create_affixed_word_map(
     }
 
     Ok(())
+}
+
+pub fn word_splitter(s: &str) -> impl Iterator<Item = (usize, &str)> {
+    s.split_word_bound_indices()
+        .filter(|split| split.1.chars().all(|c| c.is_alphanumeric() || c == '-'))
 }
 
 #[cfg(test)]
@@ -116,5 +122,10 @@ mod tests {
                 "testing index {i} with prefixes: {pfxs:#?}\nand suffixes: {sfxs:#?}"
             );
         }
+    }
+
+    #[test]
+    fn test_word_splitter() {
+        word_splitter(r#"the quick brown. Fox Jum-ped "over" (the) lazy dog"#);
     }
 }

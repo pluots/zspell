@@ -103,18 +103,14 @@ fn test_update_personal() {
 
     let mut d = Dictionary::new(ParsedCfg::default()).unwrap();
     d.parse_update_personal(personal_str, &[]).unwrap();
-    assert!(d.wordlist.0.get("abcd").is_some());
-    assert!(d.wordlist.0.get("efgh").is_some());
-    assert!(d.wordlist.0.get("ijkl").is_none());
-
-    dbg!(&d.wordlist.0);
-    dbg!(&d.wordlist.0.len());
-    dbg!(&d.wordlist_nosuggest.0);
-    dbg!(&d.wordlist_nosuggest.0.len());
-    dbg!(&d.wordlist_forbidden.0);
-    dbg!(&d.wordlist_forbidden.0.len());
-    dbg!(&d.stems);
-    dbg!(&d.stems.len());
+    assert!(d.wordlist.0.contains_key("abcd"));
+    assert!(d.wordlist.0.contains_key("efgh"));
+    assert!(!d.wordlist.0.contains_key("ijkl"));
+    assert!(d.wordlist_forbidden.0.contains_key("ijkl"));
+    assert!(d.check("abcd"));
+    assert!(d.check("uvwx"));
+    assert!(!d.check("ijkl"));
+    assert_eq!(d.stem_word("efgh").unwrap(), vec!["efgh", "something"]);
 }
 
 #[test]
@@ -123,6 +119,27 @@ fn test_builder() {
 
     let aff_content = fs::read_to_string("tests/files/w1_eng_short.aff").unwrap();
     let dic_content = fs::read_to_string("tests/files/w1_eng_short.dic").unwrap();
+    let dict = DictBuilder::new()
+        .config_str(&aff_content)
+        .dict_str(&dic_content)
+        .build()
+        .unwrap();
+
+    use std::fs::File;
+    use std::io::prelude::*;
+    let mut file = File::create("foo.txt").unwrap();
+    write!(file, "{dict:#?}");
+
+    assert_eq!(dict.check("reptiles pillow bananas"), true);
+    assert_eq!(dict.check("pine missssspelled"), false);
+}
+
+#[test]
+fn test_builder_advanced() {
+    use std::fs;
+
+    let aff_content = fs::read_to_string("../../dictionaries/en_US.aff").unwrap();
+    let dic_content = fs::read_to_string("../../dictionaries/en_US.dic").unwrap();
     let dict = DictBuilder::new()
         .config_str(&aff_content)
         .dict_str(&dic_content)

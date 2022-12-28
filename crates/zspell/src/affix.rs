@@ -10,7 +10,7 @@ pub use self::types::{
     RuleType,
 };
 use crate::dict::{AfxRule, DictEntry, FlagValue};
-use crate::error::{BuildError, Error, ParseError, ParseErrorType};
+use crate::error::{BuildError, Error, ParseError, ParseErrorKind};
 use crate::morph::MorphInfo;
 use crate::parser_affix::{parse_affix, AffixNode, ParsedRule, ParsedRuleGroup};
 
@@ -262,6 +262,7 @@ impl ParsedCfg {
     }
 
     #[allow(clippy::unnecessary_wraps)]
+    #[allow(clippy::too_many_lines)]
     fn from_parsed(v: Vec<AffixNode>) -> Result<Self, Error> {
         let mut res = Self::default();
         let mut warnings: Vec<String> = Vec::new();
@@ -302,7 +303,7 @@ impl ParsedCfg {
                 AffixNode::CompoundRule(v) => res.compound_config.rules = v,
                 AffixNode::CompoundMinLen(v) => res.compound_config.min_length = v,
                 AffixNode::CompoundFlag(v) => {
-                    res.compound_config.flag = Some(res.convert_flag(&v)?)
+                    res.compound_config.flag = Some(res.convert_flag(&v)?);
                 }
                 AffixNode::CompoundBeginFlag(v) => {
                     res.compound_config.begin_flag = Some(res.convert_flag(&v)?);
@@ -324,7 +325,7 @@ impl ParsedCfg {
                 }
                 AffixNode::CompoundMoreSuffixes => res.compound_config.more_suffixes = true,
                 AffixNode::CompoundRootFlag(v) => {
-                    res.compound_config.root_flag = Some(res.convert_flag(&v)?)
+                    res.compound_config.root_flag = Some(res.convert_flag(&v)?);
                 }
                 AffixNode::CompoundWordMax(v) => res.compound_config.word_max = v,
                 AffixNode::CompoundForbidDup => res.compound_config.forbid_dup = true,
@@ -348,7 +349,7 @@ impl ParsedCfg {
                 }
                 AffixNode::AfxFullStrip => res.afx_full_strip = true,
                 AffixNode::AfxKeepCaseFlag(v) => {
-                    res.afx_keep_case_flag = Some(res.convert_flag(&v)?)
+                    res.afx_keep_case_flag = Some(res.convert_flag(&v)?);
                 }
                 AffixNode::AfxInputConversion(v) => res.input_conversions = v,
                 AffixNode::AfxOutputConversion(v) => res.output_conversions = v,
@@ -445,7 +446,7 @@ impl ParsedCfg {
                 .into());
             }
 
-            let rule = AfxRule::from_parsed_group(&self, group);
+            let rule = AfxRule::from_parsed_group(self, group);
             map.insert(flag, FlagValue::Rule(Rc::new(rule)));
         }
 

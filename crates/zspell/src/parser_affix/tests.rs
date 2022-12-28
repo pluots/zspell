@@ -48,13 +48,13 @@ fn test_line_key_parser_some() {
 #[test]
 fn test_line_key_parser_err() {
     let s = "KEY key here\nnext line";
-    let e = ParseError::new_nospan(ParseErrorType::Boolean, "");
+    let e = ParseError::new_nospan(ParseErrorKind::Boolean, "");
     assert_eq!(line_key_parser(s, "KEY", |_| Err(e.clone())), Err(e));
 }
 
 #[test]
 fn test_line_key_parser() {
-    let err = ParseError::new_nospan(ParseErrorType::Boolean, "");
+    let err = ParseError::new_nospan(ParseErrorKind::Boolean, "");
     let get_lang = |s: &str| {
         if s == "apple" {
             Ok(AffixNode::Language("apple".to_owned()))

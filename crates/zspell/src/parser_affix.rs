@@ -16,7 +16,7 @@ pub use types::{ParsedRule, ParsedRuleGroup};
 use crate::affix::{
     CompoundPattern, CompoundSyllable, Conversion, Encoding, FlagType, Phonetic, RuleType,
 };
-use crate::error::{ParseError, ParseErrorType};
+use crate::error::{ParseError, ParseErrorKind};
 use crate::helpers::convertu32;
 use crate::morph::MorphInfo;
 
@@ -109,7 +109,7 @@ fn bool_parser<'a>(s: &'a str, key: &str, afx: AffixNode) -> ParseResult<'a> {
         if s.is_empty() {
             Ok(afx)
         } else {
-            Err(ParseError::new_nospan(ParseErrorType::Boolean, s))
+            Err(ParseError::new_nospan(ParseErrorKind::Boolean, s))
         }
     })
 }
@@ -141,7 +141,7 @@ where
         if count <= 10 && valid {
             Ok(f(s.chars().next().unwrap().to_string()))
         } else {
-            Err(ParseError::new_nospan(ParseErrorType::InvalidFlag, s))
+            Err(ParseError::new_nospan(ParseErrorKind::InvalidFlag, s))
         }
     })
 }
@@ -181,7 +181,7 @@ where
 
     let count: u32 = work
         .parse()
-        .map_err(|e| ParseError::new_nospan(ParseErrorType::from(e), work))?;
+        .map_err(|e| ParseError::new_nospan(ParseErrorKind::from(e), work))?;
 
     residual = munch_newline(residual)?.ok_or_else(|| table_count_err(residual, count, 0))?;
     let mut nlines = 1;
@@ -216,7 +216,7 @@ where
 
     let header_caps = RE_AFX_RULE_HEADER
         .captures(work)
-        .ok_or_else(|| ParseError::new_nospan(ParseErrorType::AffixBody, residual))?;
+        .ok_or_else(|| ParseError::new_nospan(ParseErrorKind::AffixBody, residual))?;
     let count: u32 = header_caps.name("num").unwrap().as_str().parse().unwrap();
     let flag = header_caps.name("flag").unwrap().as_str();
     let xprod = header_caps.name("xprod").unwrap().as_str();
@@ -232,13 +232,13 @@ where
             Some((content, resid)) => {
                 residual = resid;
                 let line_groups = RE_AFX_RULE_BODY.captures(content).ok_or_else(|| {
-                    ParseError::new_nocol(ParseErrorType::AffixBody, content, nlines)
+                    ParseError::new_nocol(ParseErrorKind::AffixBody, content, nlines)
                 })?;
 
                 let line_flag = line_groups.name("flag").unwrap().as_str();
                 if line_flag != flag {
                     return Err(ParseError::new_nocol(
-                        ParseErrorType::AffixFlagMismatch(flag.to_owned()),
+                        ParseErrorKind::AffixFlagMismatch(flag.to_owned()),
                         content,
                         nlines,
                     ));
@@ -280,7 +280,7 @@ where
 /// Create a table error at line `idx + 1`
 fn table_count_err(ctx: &str, expected: u32, line_no: u32) -> ParseError {
     ParseError::new_nocol(
-        ParseErrorType::TableCount {
+        ParseErrorKind::TableCount {
             expected,
             actual: line_no,
         },
@@ -294,7 +294,7 @@ fn parse_xprod(s: &str) -> Result<bool, ParseError> {
     match s.to_lowercase().as_str() {
         "y" => Ok(true),
         "n" => Ok(false),
-        _ => Err(ParseError::new_nospan(ParseErrorType::AffixCrossProduct, s)),
+        _ => Err(ParseError::new_nospan(ParseErrorKind::AffixCrossProduct, s)),
     }
 }
 
@@ -324,7 +324,7 @@ fn munch_newline(s: &str) -> Result<Option<&str>, ParseError> {
         .find(|c: char| !c.is_whitespace())
         .map_or(Ok(Some(ret)), |idz| {
             Err(ParseError::new_nospan(
-                ParseErrorType::NonWhitespace(validate.chars().nth(idz).unwrap()),
+                ParseErrorKind::NonWhitespace(validate.chars().nth(idz).unwrap()),
                 s,
             ))
         })
@@ -333,7 +333,7 @@ fn munch_newline(s: &str) -> Result<Option<&str>, ParseError> {
 /// Return a parse error if s contains whitespace
 fn check_contains_whitespace(s: &str) -> Result<(), ParseError> {
     if s.contains(char::is_whitespace) {
-        let e = ParseError::new_nospan(ParseErrorType::ContainsWhitespace, s);
+        let e = ParseError::new_nospan(ParseErrorKind::ContainsWhitespace, s);
         Err(e)
     } else {
         Ok(())
@@ -447,7 +447,7 @@ fn parse_mapping(s: &str) -> ParseResult {
             let c2 = chars.next();
             let push = c1.zip(c2).ok_or_else(|| {
                 let ecount = [c1, c2].iter().filter(|c| c.is_some()).count();
-                ParseError::new_nocol(ParseErrorType::Char(2, ecount), item, i + 1)
+                ParseError::new_nocol(ParseErrorKind::Char(2, ecount), item, i + 1)
             })?;
 
             res.push(push);

@@ -5,7 +5,7 @@ use std::fmt::Display;
 use lazy_static::lazy_static;
 use regex::Regex;
 
-use crate::error::{BuildError, ParseErrorType};
+use crate::error::{BuildError, ParseErrorKind};
 
 lazy_static! {
     static ref RE_COMPOUND_PATTERN: Regex = Regex::new(
@@ -61,7 +61,7 @@ pub enum FlagType {
 
 impl FlagType {
     /// Convert a string flag to its u32 representation
-    pub(crate) fn str_to_flag(self, flag: &str) -> Result<u32, ParseErrorType> {
+    pub(crate) fn str_to_flag(self, flag: &str) -> Result<u32, ParseErrorKind> {
         match self {
             // Single ascii char
             FlagType::Ascii => Self::parse_as_ascii(flag),
@@ -78,7 +78,7 @@ impl FlagType {
     ///
     /// ASCII and UTF-8 flags just split by characters. Long splits every two
     /// characters, numbers split by commas
-    pub(crate) fn parse_str(self, s: &str) -> Result<Vec<u32>, ParseErrorType> {
+    pub(crate) fn parse_str(self, s: &str) -> Result<Vec<u32>, ParseErrorKind> {
         match self {
             FlagType::Ascii => s.chars().map(Self::parse_char_ascii).collect(),
             FlagType::Utf8 => Ok(s.chars().map(Self::parse_char_utf8).collect()),
@@ -87,7 +87,7 @@ impl FlagType {
                 let mut ret = Vec::with_capacity(s.len() / 2);
                 let mut iter = s.chars();
                 for ch in s.chars() {
-                    let ch_next = iter.next().ok_or(ParseErrorType::FlagParse(self))?;
+                    let ch_next = iter.next().ok_or(ParseErrorKind::FlagParse(self))?;
                     ret.push(Self::parse_chars_long([ch, ch_next])?);
                 }
                 Ok(ret)
@@ -95,26 +95,26 @@ impl FlagType {
         }
     }
 
-    fn parse_as_ascii(flag: &str) -> Result<u32, ParseErrorType> {
+    fn parse_as_ascii(flag: &str) -> Result<u32, ParseErrorKind> {
         if flag.len() == 1 {
             Ok(u32::from(flag.bytes().next().unwrap()))
         } else {
-            Err(ParseErrorType::FlagParse(Self::Ascii))
+            Err(ParseErrorKind::FlagParse(Self::Ascii))
         }
     }
 
-    fn parse_as_utf8(flag: &str) -> Result<u32, ParseErrorType> {
+    fn parse_as_utf8(flag: &str) -> Result<u32, ParseErrorKind> {
         if flag.chars().count() == 1 {
             Ok(flag.chars().next().unwrap() as u32)
         } else {
-            Err(ParseErrorType::FlagParse(Self::Utf8))
+            Err(ParseErrorKind::FlagParse(Self::Utf8))
         }
     }
 
     /// Parse two ascii characters
-    fn parse_as_long(flag: &str) -> Result<u32, ParseErrorType> {
+    fn parse_as_long(flag: &str) -> Result<u32, ParseErrorKind> {
         if flag.len() != 2 || flag.chars().any(|c| !c.is_ascii()) {
-            Err(ParseErrorType::FlagParse(Self::Long))
+            Err(ParseErrorKind::FlagParse(Self::Long))
         } else {
             Ok(u32::from(u16::from_ne_bytes(
                 flag[0..=1].as_bytes().try_into().unwrap(),
@@ -123,16 +123,16 @@ impl FlagType {
     }
 
     /// Parse as a number
-    fn parse_as_number(flag: &str) -> Result<u32, ParseErrorType> {
+    fn parse_as_number(flag: &str) -> Result<u32, ParseErrorKind> {
         flag.parse()
-            .map_err(|_| ParseErrorType::FlagParse(Self::Number))
+            .map_err(|_| ParseErrorKind::FlagParse(Self::Number))
     }
 
-    fn parse_char_ascii(c: char) -> Result<u32, ParseErrorType> {
+    fn parse_char_ascii(c: char) -> Result<u32, ParseErrorKind> {
         if c.is_ascii() {
             Ok(c as u32)
         } else {
-            Err(ParseErrorType::FlagParse(Self::Ascii))
+            Err(ParseErrorKind::FlagParse(Self::Ascii))
         }
     }
 
@@ -140,10 +140,10 @@ impl FlagType {
         c as u32
     }
 
-    fn parse_chars_long(chars: [char; 2]) -> Result<u32, ParseErrorType> {
+    fn parse_chars_long(chars: [char; 2]) -> Result<u32, ParseErrorKind> {
         if chars.iter().any(|ch| !ch.is_ascii()) {
             let char_str: String = chars.iter().collect();
-            Err(ParseErrorType::FlagParse(Self::Long))
+            Err(ParseErrorKind::FlagParse(Self::Long))
         } else {
             Ok(u32::from(u16::from_ne_bytes([
                 chars[0] as u8,
@@ -159,8 +159,8 @@ impl FlagType {
             FlagType::Ascii | FlagType::Utf8 => char::from_u32(flag).unwrap().to_string(),
             FlagType::Number => flag.to_string(),
             FlagType::Long => {
-                let bytes = (flag as u16).to_ne_bytes();
-                String::from_iter(bytes.iter().map(|b| *b as char))
+                let bytes = (u16::try_from(flag).unwrap()).to_ne_bytes();
+                bytes.iter().map(|b| *b as char).collect::<String>()
             }
         }
     }
@@ -238,10 +238,10 @@ impl Conversion {
         }
     }
     /// Create a `Conversion` from a string. Splits on whitespace
-    pub fn from_str(value: &str, bidirectional: bool) -> Result<Self, ParseErrorType> {
+    pub fn from_str(value: &str, bidirectional: bool) -> Result<Self, ParseErrorKind> {
         let split: Vec<_> = value.split_whitespace().collect();
         if split.len() != 2 {
-            return Err(ParseErrorType::ConversionSplit(split.len()));
+            return Err(ParseErrorKind::ConversionSplit(split.len()));
         }
         Ok(Self {
             input: split[0].to_owned(),
@@ -254,7 +254,7 @@ impl Conversion {
 /* Trait implementations */
 
 impl TryFrom<&str> for Encoding {
-    type Error = ParseErrorType;
+    type Error = ParseErrorKind;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         match value.to_ascii_lowercase().as_str() {
@@ -267,7 +267,7 @@ impl TryFrom<&str> for Encoding {
             "koi8-u" => Ok(Self::Koi8U),
             "cp1251" => Ok(Self::Cp1251),
             "iscii-devanagari" => Ok(Self::IsciiDevanagari),
-            _ => Err(ParseErrorType::Encoding),
+            _ => Err(ParseErrorKind::Encoding),
         }
     }
 }
@@ -290,15 +290,15 @@ impl From<Encoding> for &str {
 }
 
 impl TryFrom<&str> for FlagType {
-    type Error = ParseErrorType;
+    type Error = ParseErrorKind;
 
-    fn try_from(value: &str) -> Result<Self, ParseErrorType> {
+    fn try_from(value: &str) -> Result<Self, ParseErrorKind> {
         match value.to_ascii_lowercase().as_str() {
             "ascii" => Ok(Self::Ascii),
             "utf-8" => Ok(Self::Utf8),
             "long" => Ok(Self::Long),
             "num" => Ok(Self::Number),
-            _ => Err(ParseErrorType::FlagType),
+            _ => Err(ParseErrorKind::FlagType),
         }
     }
 }
@@ -324,12 +324,12 @@ impl From<&FlagType> for &str {
 }
 
 impl TryFrom<&str> for Phonetic {
-    type Error = ParseErrorType;
+    type Error = ParseErrorKind;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         let mut split: Vec<_> = value.split_whitespace().collect();
         if split.len() != 2 {
-            return Err(ParseErrorType::Phonetic(split.len()));
+            return Err(ParseErrorKind::Phonetic(split.len()));
         }
         Ok(Self {
             pattern: split[0].to_owned(),
@@ -339,12 +339,12 @@ impl TryFrom<&str> for Phonetic {
 }
 
 impl TryFrom<&str> for CompoundPattern {
-    type Error = ParseErrorType;
+    type Error = ParseErrorKind;
 
-    fn try_from(value: &str) -> Result<Self, ParseErrorType> {
+    fn try_from(value: &str) -> Result<Self, ParseErrorKind> {
         let caps = RE_COMPOUND_PATTERN
             .captures(value)
-            .ok_or(ParseErrorType::CompoundPattern)?;
+            .ok_or(ParseErrorKind::CompoundPattern)?;
         Ok(Self {
             endchars: caps.name("endchars").unwrap().as_str().to_owned(),
             endflag: caps.name("endflag").map(|m| m.as_str().to_owned()),
@@ -356,18 +356,18 @@ impl TryFrom<&str> for CompoundPattern {
 }
 
 impl TryFrom<&str> for CompoundSyllable {
-    type Error = ParseErrorType;
+    type Error = ParseErrorKind;
 
     /// Format: `COMPOUNDSYLLABLE count vowels`
-    fn try_from(value: &str) -> Result<Self, ParseErrorType> {
+    fn try_from(value: &str) -> Result<Self, ParseErrorKind> {
         let mut split: Vec<_> = value.split_whitespace().collect();
         if split.len() != 2 {
-            return Err(ParseErrorType::CompoundSyllableCount(split.len()));
+            return Err(ParseErrorKind::CompoundSyllableCount(split.len()));
         }
         let to_parse = split[0];
         let count: u16 = to_parse
             .parse()
-            .map_err(ParseErrorType::CompoundSyllableParse)?;
+            .map_err(ParseErrorKind::CompoundSyllableParse)?;
         Ok(Self {
             count,
             vowels: split[1].to_owned(),
@@ -376,7 +376,7 @@ impl TryFrom<&str> for CompoundSyllable {
 }
 
 impl TryFrom<&str> for PartOfSpeech {
-    type Error = ParseErrorType;
+    type Error = ParseErrorKind;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         let ret = match value.to_lowercase().as_str() {
@@ -389,7 +389,7 @@ impl TryFrom<&str> for PartOfSpeech {
             "preposition" => Self::Preposition,
             "conjunction" => Self::Conjunction,
             "interjection" => Self::Interjection,
-            _ => return Err(ParseErrorType::PartOfSpeech(value.to_owned())),
+            _ => return Err(ParseErrorKind::PartOfSpeech(value.to_owned())),
         };
         Ok(ret)
     }

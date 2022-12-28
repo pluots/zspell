@@ -1,3 +1,4 @@
+use std::borrow::Borrow;
 use std::rc::Rc;
 
 use hashbrown::Equivalent;
@@ -21,6 +22,14 @@ impl Meta {
             source,
         }
     }
+
+    pub fn stem(&self) -> &str {
+        &self.stem
+    }
+
+    pub fn source(&self) -> &Source {
+        &self.source
+    }
 }
 
 /// Source information
@@ -39,6 +48,19 @@ pub enum Source {
     Raw,
 }
 
+impl Source {
+    pub fn push_morphs<'a>(&'a self, dest: &mut Vec<&'a MorphInfo>) {
+        match self {
+            // Unsure how to handle nesting types. Maybe need rule group number
+            // in Affix source
+            Source::Affix(_) => todo!(),
+            Source::Dict(v) => v.iter().for_each(|val| dest.push(val)),
+            Source::Personal(pm) => pm.morph.iter().for_each(|val| dest.push(val)),
+            Source::Raw => (),
+        }
+    }
+}
+
 /// Representation of meta info for a personal dictionary
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct PersonalMeta {
@@ -49,115 +71,6 @@ pub struct PersonalMeta {
 impl PersonalMeta {
     pub fn new(friend: Option<Rc<String>>, morph: Vec<Rc<MorphInfo>>) -> Self {
         Self { friend, morph }
-    }
-}
-
-/// Clone of [`Meta`] for quick construction and Eq comparison
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct MetaBorrowed<'a> {
-    stem: &'a str,
-    source: SourceBorrowed<'a>,
-}
-
-/// Clone of [`Source`] for quick construction and Eq comparison
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum SourceBorrowed<'a> {
-    Affix(&'a AfxRule),
-    Dict(Option<&'a MorphInfo>),
-    // Personal(),
-}
-
-/// Clone of [`Source`] for quick construction and comparison
-impl<'a> SourceBorrowed<'a> {
-    pub fn new_personal(friend: Option<&'a String>, morph: &'a Vec<MorphInfo>) -> Self {
-        // Self::Personal { friend, morph }
-        todo!()
-    }
-}
-
-impl<'a> MetaBorrowed<'a> {
-    //     pub(crate) fn new_dict(stem: &str, morph: Option<&'a MorphInfo>) -> Self {
-    //         Self {
-    //             stem: stem.to_owned(),
-    //             source: MetaInfo::Dict(morph),
-    //         }
-    // }
-
-    //     pub(crate) fn new_afx(stem: &str, rule: &'a AffixRule) -> Self {
-    //         Self {
-    //             stem: stem.to_owned(),
-    //             source: MetaInfo::Affix(rule),
-    //         }
-    //     }
-
-    // pub(crate) fn new_personal(
-    //     stem: &'a str,
-    //     friend: Option<&'a String>,
-    //     morph: &'a Vec<MorphInfo>,
-    // ) -> Self {
-    //     Self {
-    //         stem: stem,
-    //         source: SourceBorrowed::Personal { friend, morph },
-    //     }
-    // }
-
-    // pub(crate) fn to_owned(&self) -> Extra {
-    //     Extra {
-    //         stem: self.stem.to_owned(),
-    //         source: self.source.to_owned(),
-    //     }
-    // }
-}
-
-impl<'a> SourceBorrowed<'a> {
-    pub fn to_owned(&self) -> Source {
-        // match self {
-        //     SourceBorrowed::Affix(rule) => Source::Affix(Box::new((*rule).clone())),
-        //     SourceBorrowed::Dict(morph_opt) => Source::Dict(morph_opt.map(|x| Box::new(x.clone()))),
-        //     SourceBorrowed::Personal { friend, morph } => {
-        //         Source::Personal(Box::new(PersonalMeta::new(*friend, (*morph).clone())))
-        //     }
-        // }
-        todo!()
-    }
-}
-
-impl<'a> PartialEq<Source> for SourceBorrowed<'a> {
-    fn eq(&self, other: &Source) -> bool {
-        // match (self, other) {
-        //     (Self::Affix(l0), Source::Affix(r0)) => l0 == &r0.as_ref(),
-        //     (Self::Dict(l0), Source::Dict(r0)) => l0 == &r0.as_ref().map(AsRef::as_ref),
-        //     (Self::Personal { friend, morph }, Source::Personal(r0)) => {
-        //         *friend == r0.friend.as_ref() && *morph == &r0.morph
-        //     }
-        //     _ => false,
-        // }
-        todo!()
-    }
-}
-
-impl<'a> PartialEq<SourceBorrowed<'a>> for Source {
-    fn eq(&self, other: &SourceBorrowed) -> bool {
-        // other == self
-        todo!()
-    }
-}
-
-// impl<'a> PartialEq<Extra> for ExtraBorrowed<'a> {
-//     fn eq(&self, other: &Extra) -> bool {
-//         self.stem == other.stem && self.source == other.source
-//     }
-// }
-// impl<'a> PartialEq<ExtraBorrowed<'a>> for Extra {
-//     fn eq(&self, other: &ExtraBorrowed) -> bool {
-//         self.stem == other.stem && self.source == other.source
-//     }
-// }
-
-impl Equivalent<Rc<Source>> for SourceBorrowed<'_> {
-    fn equivalent(&self, key: &Rc<Source>) -> bool {
-        // self == &**key
-        todo!()
     }
 }
 

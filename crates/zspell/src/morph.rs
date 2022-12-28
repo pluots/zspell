@@ -1,7 +1,7 @@
 //! Types and implementation of morphological analysis
 
 use crate::affix::PartOfSpeech;
-use crate::error::{ParseError, ParseErrorType};
+use crate::error::{ParseError, ParseErrorKind};
 
 #[non_exhaustive]
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -43,12 +43,12 @@ impl MorphInfo {
 }
 
 impl TryFrom<&str> for MorphInfo {
-    type Error = ParseErrorType;
+    type Error = ParseErrorKind;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         let (tag, val) = value
             .split_once(':')
-            .ok_or_else(|| ParseErrorType::MorphInfoDelim(value.to_owned()))?;
+            .ok_or_else(|| ParseErrorKind::MorphInfoDelim(value.to_owned()))?;
         let ret = match tag {
             "st" => Self::Stem(val.to_owned()),
             "ph" => Self::Phonetic(val.to_owned()),
@@ -62,7 +62,7 @@ impl TryFrom<&str> for MorphInfo {
             "tp" => Self::TermPfx(val.to_owned()),
             "sp" => Self::SurfacePfx(val.to_owned()),
             "pa" => Self::CompPart(val.to_owned()),
-            _ => return Err(ParseErrorType::MorphInvalidTag(tag.to_owned())),
+            _ => return Err(ParseErrorKind::MorphInvalidTag(tag.to_owned())),
         };
         Ok(ret)
     }

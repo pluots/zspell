@@ -4,7 +4,7 @@ use lazy_static::lazy_static;
 use regex::Regex;
 
 use crate::affix::FlagType;
-use crate::error::{ParseError, ParseErrorType};
+use crate::error::{ParseError, ParseErrorKind};
 use crate::helpers::convertu32;
 use crate::morph::MorphInfo;
 
@@ -76,7 +76,7 @@ impl DictEntry {
     ) -> Result<Self, ParseError> {
         let Some(caps) = RE_DICT_LINE.captures(value) else {
             return Err(ParseError::new_nocol(
-                ParseErrorType::DictEntry,
+                ParseErrorKind::DictEntry,
                 value,
                 line_num,
             ));
@@ -118,7 +118,7 @@ impl DictEntry {
 /// The hunspell spec doesn't say anything about morph info, but why not allow
 /// it
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub(crate) struct PersonalEntry {
+pub struct PersonalEntry {
     pub stem: String,
     pub friend: Option<String>,
     pub morph: Vec<MorphInfo>,
@@ -143,7 +143,7 @@ impl PersonalEntry {
     pub(crate) fn parse_str(value: &str, line_num: u32) -> Result<Self, ParseError> {
         let Some(caps) = RE_PERSONAL_LINE.captures(value) else {
             return Err(ParseError::new_nocol(
-                ParseErrorType::Personal,
+                ParseErrorKind::Personal,
                 value,
                 line_num,
             ));
@@ -184,7 +184,7 @@ impl ParsedPersonalMeta {
 
 /// Parse a complete dictionary file (usually `.dic`)
 #[allow(clippy::single_match_else, clippy::option_if_let_else)]
-pub(crate) fn parse_dict(s: &str, flag_type: FlagType) -> Result<Vec<DictEntry>, ParseError> {
+pub fn parse_dict(s: &str, flag_type: FlagType) -> Result<Vec<DictEntry>, ParseError> {
     let mut lines = s.lines();
     let Some(first) = lines.next() else {
         return Ok(Vec::new())
@@ -214,7 +214,7 @@ pub(crate) fn parse_dict(s: &str, flag_type: FlagType) -> Result<Vec<DictEntry>,
 }
 
 /// Parse a personal dictionary file
-pub(crate) fn parse_personal_dict(s: &str) -> Result<Vec<PersonalEntry>, ParseError> {
+pub fn parse_personal_dict(s: &str) -> Result<Vec<PersonalEntry>, ParseError> {
     let mut ret = Vec::new();
 
     for (i, line) in s.lines().map(str::trim).enumerate() {

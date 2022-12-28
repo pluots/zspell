@@ -32,7 +32,9 @@ mod meta;
 mod morph;
 mod parser_affix;
 mod suggestions;
-mod system;
+
+#[feature(zspell_unstable)]
+pub mod system;
 
 pub(crate) use affix::ParsedCfg;
 pub use dict::{DictBuilder, Dictionary};
