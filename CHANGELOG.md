@@ -4,6 +4,16 @@
 
 ## [Unreleased] - ReleaseDate
 
+### Added
+
+### Changed
+
+### Removed
+
+
+
+## [0.3.0] - 2022-12-30
+
 This change is a huge rewrite of the library! Hopefully this will pave the way
 forward for more features and easier growth.
 
@@ -111,7 +121,8 @@ Minor bups in the dependency list
 - Behind the scenes work to prepare for automatic dictionary location
 
 <!-- next-url -->
-[Unreleased]: https://github.com/pluots/zspell/compare/v0.2.2...HEAD
+[Unreleased]: https://github.com/pluots/zspell/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/pluots/zspell/compare/v0.2.2...v0.3.0
 [0.2.2]: https://github.com/pluots/zspell/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/pluots/zspell/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/pluots/zspell/compare/v0.1.4...v0.2.0
