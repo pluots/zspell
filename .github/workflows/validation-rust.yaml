@@ -23,7 +23,7 @@ jobs:
     name: "Check (cargo check)"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions/cache@v3
         with:
           path: |
@@ -46,11 +46,6 @@ jobs:
         with:
           command: check
           args: --all-features --all-targets
-      - uses: actions-rs/cargo@v1
-        # check with no features
-        with:
-          command: check
-          args: --no-default-features --all-targets
 
   test:
     strategy:
@@ -68,7 +63,7 @@ jobs:
     name: "Test on ${{ matrix.name }} (cargo test)"
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - name: List files
         run: |
           pwd
@@ -97,7 +92,7 @@ jobs:
     name: "Format (cargo fmt)"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions/cache@v3
         with:
           path: |
@@ -125,7 +120,7 @@ jobs:
     name: "Clippy (cargo clippy)"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions/cache@v3
         with:
           path: |
@@ -151,7 +146,7 @@ jobs:
     name: "Docs (cargo doc)"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions/cache@v3
         with:
           path: |
@@ -174,7 +169,7 @@ jobs:
     name: "Book (mdbook)"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - uses: actions/cache@v3
         with:
           path: |
@@ -203,5 +198,5 @@ jobs:
     name: "Verify critical fixmes"
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
       - run: grep -r "FIXME:CRIT" --exclude-dir="target" --exclude-dir=".git" --exclude="validation-rust.yaml" && exit 1 || exit 0

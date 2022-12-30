@@ -19,7 +19,8 @@ jobs:
         include:
           - build: linux
             os: ubuntu-latest
-            target: x86_64-unknown-linux-musl
+            target: x86_64-unknown-linux-gnu
+            # target: x86_64-unknown-linux-musl
             extension: ''
             # Unsuccessful compilation; try on local
           # - build: linux-arm
@@ -41,7 +42,7 @@ jobs:
 
     steps:
         # Retreive git files
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         # Set cache configuration
       - uses: actions/cache@v3
         with:
@@ -52,7 +53,11 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-        # Install cargo
+      # - name: Install System Requirements
+      #   run: |
+      #     if [ "${{ matrix.os }}" = "ububtu-latest" ]; then
+      #       sudo apt-get install musl-tools libssl-dev
+      #     fi
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
@@ -70,7 +75,8 @@ jobs:
           echo "target flag is: ${{ env.TARGET_FLAGS }}"
           echo "target dir is: ${{ env.TARGET_DIR }}"
         # Perform build
-      - uses: actions-rs/cargo@v1
+      - name: Build binary
+        uses: actions-rs/cargo@v1
         with:
           command: build
           # We only want to build zspell-cli, not plain zspell or zspell-py (does not support cdylib)
@@ -143,7 +149,7 @@ jobs:
   deploy_book:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         fetch-depth: 0
     - name: Install mdbook

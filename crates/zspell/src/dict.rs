@@ -471,6 +471,7 @@ impl WordList {
 
     /// **UNSTABLE** Get a reference to the internal map. This is behind the
     /// `zspell-unstable` marker as the internal format may change
+    #[inline]
     #[cfg_attr(feature = "zspell-unstable", visibility::make(pub))]
     pub(crate) fn inner(&self) -> &HashMap<String, Vec<Meta>> {
         &self.0

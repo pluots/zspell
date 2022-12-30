@@ -11,7 +11,7 @@ furo = "2022.12"
 [dev-packages]
 black = "2022.12"
 pytest = "7.2"
-m2r = "*"
+m2r = "0.2"
 
 [requires]
 python_version = "3.10"

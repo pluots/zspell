@@ -7,7 +7,7 @@ ZSpell Documentation: Python Interface
 =========================================
 
 Welcome to the documentation for ZSpell's Python interface. This contains the
-basics, please visit the repositoy at https://github.com/pluots/zspell for
+basics, please visit the repository at https://github.com/pluots/zspell for
 more information.
 
 .. toctree::
