@@ -106,8 +106,8 @@ impl Dictionary {
     /// assert_eq!(dict.check("pine missssspelled"), false);
     /// ```
     #[inline]
-    pub fn check(&self, s: &str) -> bool {
-        s.unicode_words().all(|w| self.check_word(w))
+    pub fn check(&self, input: &str) -> bool {
+        input.unicode_words().all(|w| self.check_word(w))
     }
 
     /// Check that a single word is spelled correctly, returns `true` if so
@@ -130,13 +130,13 @@ impl Dictionary {
     /// assert_eq!(dict.check_word("reptiles pillow"), false);
     /// ```
     #[inline]
-    pub fn check_word(&self, s: &str) -> bool {
+    pub fn check_word(&self, word: &str) -> bool {
         // FIXME: we should make sure there are no overlaps among our wordlists
-        let lower = s.to_lowercase();
-        (!self.wordlist_forbidden.0.contains_key(s))
-            && (self.wordlist.0.contains_key(s)
+        let lower = word.to_lowercase();
+        (!self.wordlist_forbidden.0.contains_key(word))
+            && (self.wordlist.0.contains_key(word)
                 || self.wordlist.0.contains_key(&lower)
-                || self.wordlist_nosuggest.0.contains_key(s)
+                || self.wordlist_nosuggest.0.contains_key(word)
                 || self.wordlist_nosuggest.0.contains_key(&lower))
     }
 
@@ -165,8 +165,8 @@ impl Dictionary {
     /// );
     /// ```
     #[inline]
-    pub fn check_indices<'a>(&self, s: &'a str) -> Vec<(usize, &'a str)> {
-        word_splitter(s)
+    pub fn check_indices<'a>(&self, input: &'a str) -> Vec<(usize, &'a str)> {
+        word_splitter(input)
             .filter(|(idx, w)| !self.check_word(w))
             .collect()
     }
@@ -175,8 +175,8 @@ impl Dictionary {
     /// `unstable-suggestions`.
     #[inline]
     #[cfg(feature = "unstable-suggestions")]
-    pub fn suggest_indices<'a>(&self, s: &'a str) -> Vec<(usize, &'a str, Vec<&str>)> {
-        word_splitter(s)
+    pub fn suggest_indices<'a>(&self, input: &'a str) -> Vec<(usize, &'a str, Vec<&str>)> {
+        word_splitter(input)
             .filter_map(|(idx, w)| {
                 self.suggest_word(w)
                     .map_or_else(|v| Some((idx, w, v)), |_| None)
@@ -196,15 +196,15 @@ impl Dictionary {
     #[inline]
     #[cfg(feature = "unstable-suggestions")]
     #[allow(clippy::missing_errors_doc)]
-    pub fn suggest_word(&self, s: &str) -> Result<(), Vec<&str>> {
-        if self.check_word(s) {
+    pub fn suggest_word(&self, word: &str) -> Result<(), Vec<&str>> {
+        if self.check_word(word) {
             return Ok(());
         }
         let mut suggestions: Vec<(u32, &String)> = self
             .wordlist
             .0
             .keys()
-            .filter_map(|key| try_levenshtein(key, s, 1).map(|lim| (lim, key)))
+            .filter_map(|key| try_levenshtein(key, word, 1).map(|lim| (lim, key)))
             .collect();
         suggestions.sort_unstable_by_key(|(k, v)| *k);
         Err(suggestions
@@ -225,8 +225,8 @@ impl Dictionary {
     /// Returns a dummy error if the word is not found
     #[inline]
     #[cfg(feature = "unstable-stem")]
-    pub fn stem_word(&self, s: &str) -> Result<Vec<&str>, WordNotFoundError> {
-        let Some(meta) = self.wordlist.0.get(s).or_else(|| self.wordlist_nosuggest.0.get(s)) else {
+    pub fn stem_word(&self, word: &str) -> Result<Vec<&str>, WordNotFoundError> {
+        let Some(meta) = self.wordlist.0.get(word).or_else(|| self.wordlist_nosuggest.0.get(word)) else {
             return Err(WordNotFoundError);
         };
 
@@ -254,7 +254,7 @@ impl Dictionary {
     /// Returns a dummy error if the word is not found
     #[inline]
     #[cfg(feature = "unstable-analysis")]
-    pub fn analyze_word(&self, s: &str) -> Result<Vec<MorphInfo>, WordNotFoundError> {
+    pub fn analyze_word(&self, word: &str) -> Result<Vec<MorphInfo>, WordNotFoundError> {
         todo!()
     }
 
@@ -488,8 +488,8 @@ impl<'a> DictBuilder<'a> {
     /// Load the affix file from the given string.
     #[inline]
     #[must_use]
-    pub fn config_str(mut self, s: &'a str) -> Self {
-        self.cfg_src = Some(s);
+    pub fn config_str(mut self, config: &'a str) -> Self {
+        self.cfg_src = Some(config);
         self
     }
 
@@ -506,16 +506,16 @@ impl<'a> DictBuilder<'a> {
     /// Load the dictionary file from a string
     #[inline]
     #[must_use]
-    pub fn dict_str(mut self, s: &'a str) -> Self {
-        self.dict_src = Some(s);
+    pub fn dict_str(mut self, dict: &'a str) -> Self {
+        self.dict_src = Some(dict);
         self
     }
 
     /// Load a personal dictionary file from a string
     #[inline]
     #[must_use]
-    pub fn personal_str(mut self, s: &'a str) -> Self {
-        self.personal_src = Some(s);
+    pub fn personal_str(mut self, personal: &'a str) -> Self {
+        self.personal_src = Some(personal);
         self
     }
 
