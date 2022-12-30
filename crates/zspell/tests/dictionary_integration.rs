@@ -1,7 +1,12 @@
 // use std::fs;
 
-// use util::TestCollection;
-// use zspell::Dictionary;
+use util::TestManager;
+use zspell::Dictionary;
+
+#[test]
+fn test_pfx_sfx() {
+    // TestManager::n
+}
 
 // /// Run integration tests on a file located in tests/files
 // fn create_dic_from_file(fname: &str) -> Dictionary {

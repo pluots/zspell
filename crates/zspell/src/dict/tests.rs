@@ -1,5 +1,7 @@
 //! Tests for a dict file
 
+use std::path::PathBuf;
+
 use pretty_assertions::assert_eq;
 
 use super::parser::{parse_personal_dict, DictEntry};
@@ -138,8 +140,19 @@ fn test_builder() {
 fn test_builder_advanced() {
     use std::fs;
 
-    let aff_content = fs::read_to_string("../../dictionaries/en_US.aff").unwrap();
-    let dic_content = fs::read_to_string("../../dictionaries/en_US.dic").unwrap();
+    let mut aff_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    aff_path.pop();
+    aff_path.pop();
+    aff_path.push("dictionaries");
+    let mut dic_path = aff_path.clone();
+    aff_path.push("en_US.aff");
+    dic_path.push("en_US.dic");
+
+    dbg!(&aff_path);
+    dbg!(&dic_path);
+
+    let aff_content = fs::read_to_string(aff_path).unwrap();
+    let dic_content = fs::read_to_string(dic_path).unwrap();
     let dict = DictBuilder::new()
         .config_str(&aff_content)
         .dict_str(&dic_content)

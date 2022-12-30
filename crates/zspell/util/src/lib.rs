@@ -75,7 +75,7 @@ impl TestManager {
         ret
     }
     /// Load a `TestManager` from a given file name
-    pub fn load_file(fname: &str) -> Self {
+    pub fn new_from_file(fname: &str) -> Self {
         let fname_new = format!("tests/files/{fname}");
         let f_content = fs::read_to_string(fname_new.clone())
             .unwrap_or_else(|_| panic!("error reading file '{fname_new}'"));
@@ -178,6 +178,7 @@ impl TestManager {
             eprintln!("skipped stem testing");
             return;
         };
+        todo!()
     }
 
     fn check_morphs(&self, dict: &Dictionary) {
@@ -185,6 +186,7 @@ impl TestManager {
             eprintln!("skipped stem testing");
             return;
         };
+        todo!()
     }
 
     pub fn afx_str(&self) -> &str {
