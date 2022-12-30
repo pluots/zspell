@@ -34,7 +34,7 @@ jobs:
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - name: Install System Requirements
-        run: apt-get install musl-tools
+        run: sudo apt-get install musl-tools
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
