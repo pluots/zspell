@@ -41,7 +41,7 @@ jobs:
 
     steps:
         # Retreive git files
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
         # Set cache configuration
       - uses: actions/cache@v3
         with:
@@ -145,7 +145,7 @@ jobs:
   deploy_book:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
       with:
         fetch-depth: 0
     - name: Install mdbook
