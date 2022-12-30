@@ -1,4 +1,3 @@
-avoid-breaking-exported-api = false # FIXME:CRIT remove before merge
 # for performance, we always want to use HashBrown
 disallowed-types = ["std::collections::HashMap", "std::collections::HashSet"]
 doc-valid-idents = ["ZSpell"]

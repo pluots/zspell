@@ -3,7 +3,7 @@
 members = [
     "crates/zspell",
     # "crates/zspell-py",
-    "crates/zspell-cli", # FIXME:CRIT re-enable
+    "crates/zspell-cli",
 ]
 
 # Build with `cargo build --profile=release-debug`
@@ -13,8 +13,6 @@ members = [
 inherits = "release"
 debug = true
 
-
-# FIXME:CRIT re-enable
-# [profile.release.package.zspell-cli]
-# # Minimize binary size by removing all symbols
-# strip = "symbols"
+[profile.release.package.zspell-cli]
+# Minimize binary size by removing all symbols
+strip = "symbols"
