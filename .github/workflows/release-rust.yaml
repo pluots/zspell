@@ -53,7 +53,10 @@ jobs:
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
       - name: Install System Requirements
-        run: sudo apt-get install musl-tools
+        run: |
+          if [ "${{ matrix.os }}" = "ububtu-latest" ]; then
+            sudo apt-get install musl-tools libssl-dev
+          fi
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal

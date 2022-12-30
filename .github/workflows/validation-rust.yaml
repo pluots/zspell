@@ -39,7 +39,7 @@ jobs:
           toolchain: stable
           override: true
       - name: Install System Requirements
-        run: sudo apt-get install musl-tools
+        run: sudo apt-get install musl-tools libssl-dev
       - uses: actions-rs/cargo@v1
         with:
           command: check
