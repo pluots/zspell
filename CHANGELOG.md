@@ -21,7 +21,9 @@ forward for more features and easier growth.
 
 ### Additions
 
-- `check_indices` is now available to return
+- `check_indices` is now available to return better information about the
+  location of errors
+- Python modules now have correct bindings (horray!)
 
 There are also a few new APIs that are feature gated. They should be considered
 very unstable until those feature gates are removed.
@@ -35,7 +37,7 @@ very unstable until those feature gates are removed.
 
 ## [0.2.2] - 2022-11-04
 
-
+Minor bups in the dependency list
 
 
 ## [0.2.1] - 2022-11-04

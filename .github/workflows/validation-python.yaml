@@ -7,29 +7,36 @@ on:
   pull_request:
 
 jobs:
-  linux_wheels:
+  verify:
+    name: Verify
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v3
-    - name: Build libc wheels
-      uses: messense/maturin-action@v1
+    - uses: actions/cache@v3
       with:
-        manylinux: auto
-        command: build
-        # container default is manylinux
-        args: --release -o dist --manifest-path crates/zspell-py/Cargo.toml
-    - name: Upload wheels
-      uses: actions/upload-artifact@v2
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+        key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+    - uses: actions/cache@v3
       with:
-        name: wheels
-        path: dist
-
-  doc:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: ammaraskar/sphinx-action@master
-        with:
-          docs-folder: "crates/zspell-py/docs/"
-
-# Add pytest here when applicable
+        path: ~/.local/share/virtualenvs
+        key: ${{ runner.os }}-pipenv-${{ hashFiles('**/Pipfile.lock') }}
+    - name: Install pipenv
+      run: python -m pip install --upgrade pipenv wheel
+    - uses: actions-rs/toolchain@v1
+      with:
+        profile: minimal
+        toolchain: stable
+        override: true
+    - name: Install dependencies
+      run: |
+        pipenv install --dev
+        pipenv run maturin develop --manifest-path crates/zspell-py/Cargo.toml
+    - name: Pytest
+      run: pipenv run pytest
+    - name: Validate docs
+      run: pipenv run make -C crates/zspell-py/docs html

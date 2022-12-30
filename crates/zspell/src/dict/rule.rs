@@ -2,7 +2,7 @@
 
 use std::hash::Hash;
 use std::ops::Deref;
-use std::rc::Rc;
+use std::sync::Arc;
 
 use regex::Regex;
 
@@ -49,7 +49,7 @@ impl AfxRule {
     /// Take a [`ParsedGroup`] and turn it into a vector of `AfxRule`
     ///
     /// NOTE: returns a vec reference and `Self`'s morph vec will be empty!
-    /// Needs construction wherever the Rc target is
+    /// Needs construction wherever the Arc target is
     // PERF: bench with & without vec reference instead of output
     pub fn from_parsed_group(cfg: &ParsedCfg, group: &ParsedRuleGroup) -> Self {
         let mut ret = Self {
@@ -59,8 +59,11 @@ impl AfxRule {
         };
 
         for rule in &group.rules {
-            let mut morph_info: Vec<Rc<MorphInfo>> =
-                rule.morph_info.iter().map(|m| Rc::new(m.clone())).collect();
+            let mut morph_info: Vec<Arc<MorphInfo>> = rule
+                .morph_info
+                .iter()
+                .map(|m| Arc::new(m.clone()))
+                .collect();
 
             ret.patterns.push(AfxRulePattern {
                 affix: rule.affix.clone(),
@@ -102,7 +105,7 @@ pub struct AfxRulePattern {
     /// Characters to strip
     strip: Option<String>,
     /// Associated morph info
-    morph_info: Vec<Rc<MorphInfo>>,
+    morph_info: Vec<Arc<MorphInfo>>,
 }
 
 impl AfxRulePattern {

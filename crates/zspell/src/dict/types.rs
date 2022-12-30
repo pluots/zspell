@@ -1,5 +1,5 @@
 use std::borrow::Borrow;
-use std::rc::Rc;
+use std::sync::Arc;
 
 use hashbrown::Equivalent;
 
@@ -11,12 +11,12 @@ use crate::parser_affix::ParsedRule;
 /// Additional information attached to an entry in a dictionary
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Meta {
-    stem: Rc<String>,
+    stem: Arc<String>,
     source: Source,
 }
 
 impl Meta {
-    pub(crate) fn new(stem_rc: Rc<String>, source: Source) -> Self {
+    pub(crate) fn new(stem_rc: Arc<String>, source: Source) -> Self {
         Self {
             stem: stem_rc,
             source,
@@ -53,9 +53,9 @@ impl Meta {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Source {
     /// this meta came from an affix and has a full affix rule
-    Affix(Rc<AfxRule>),
+    Affix(Arc<AfxRule>),
     /// this meta came from a .dic file, only contains morphinfo
-    Dict(Box<Vec<Rc<MorphInfo>>>),
+    Dict(Box<Vec<Arc<MorphInfo>>>),
     /// this meta came from the personal dictionary
     /// String is the "friend" word
     Personal(Box<PersonalMeta>),
@@ -80,12 +80,12 @@ impl Source {
 /// Representation of meta info for a personal dictionary
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct PersonalMeta {
-    friend: Option<Rc<String>>,
-    morph: Vec<Rc<MorphInfo>>,
+    friend: Option<Arc<String>>,
+    morph: Vec<Arc<MorphInfo>>,
 }
 
 impl PersonalMeta {
-    pub fn new(friend: Option<Rc<String>>, morph: Vec<Rc<MorphInfo>>) -> Self {
+    pub fn new(friend: Option<Arc<String>>, morph: Vec<Arc<MorphInfo>>) -> Self {
         Self { friend, morph }
     }
 }

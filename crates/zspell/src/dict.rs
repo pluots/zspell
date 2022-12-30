@@ -8,7 +8,7 @@ mod types;
 
 use std::borrow::Borrow;
 use std::collections::BTreeMap;
-use std::rc::Rc;
+use std::sync::Arc;
 
 use hashbrown::{HashMap, HashSet};
 use stringmetrics::try_levenshtein;
@@ -54,11 +54,11 @@ pub struct Dictionary {
 
     /* the following few types are used to store  meta information */
     /// A list of all stem words
-    stems: HashSet<Rc<String>>,
+    stems: HashSet<Arc<String>>,
     /// Affix flags and rules
     flags: BTreeMap<u32, FlagValue>,
     /// Possible morphs
-    morphs: HashSet<Rc<MorphInfo>>,
+    morphs: HashSet<Arc<MorphInfo>>,
     /// Type of flags to expect in our file
     flag_type: FlagType,
     /// Affix configuration file. This will also hold references where our `meta`
@@ -307,10 +307,10 @@ impl Dictionary {
         let mut prefix_rules = Vec::new();
         let mut suffix_rules = Vec::new();
 
-        let stem_rc: &Rc<String> = self
+        let stem_rc: &Arc<String> = self
             .stems
             .get_or_insert_with(&StrWrapper::new(stem), |sw: &StrWrapper| {
-                Rc::new(sw.to_string())
+                Arc::new(sw.to_string())
             });
 
         let mut add_stem = true;
@@ -406,16 +406,16 @@ impl Dictionary {
                 // let flags = dict.iter().find(|d| &d.stem() == friend).map(|d| &d.flags);
                 todo!()
             } else {
-                let stem_rc: Rc<String> = self
+                let stem_arc: Arc<String> = self
                     .stems
-                    .get_or_insert_with(&entry.stem, |stem| Rc::new(stem.to_string()))
+                    .get_or_insert_with(&entry.stem, |stem| Arc::new(stem.to_string()))
                     .clone();
 
                 let source = Source::Personal(Box::new(PersonalMeta::new(
                     None,
                     self.get_or_insert_morphs(&entry.morph),
                 )));
-                let meta = Meta::new(stem_rc, source);
+                let meta = Meta::new(stem_arc, source);
 
                 // Select the correct word to work with
                 let hmap = if entry.forbid {
@@ -436,12 +436,12 @@ impl Dictionary {
 
     /// For each morph in the slice: find it or insert it in our hashset, return
     /// a vector of references to the newly inserted (or found) items
-    fn get_or_insert_morphs(&mut self, morphs: &[MorphInfo]) -> Vec<Rc<MorphInfo>> {
-        let mut ret: Vec<Rc<MorphInfo>> = Vec::with_capacity(morphs.len());
+    fn get_or_insert_morphs(&mut self, morphs: &[MorphInfo]) -> Vec<Arc<MorphInfo>> {
+        let mut ret: Vec<Arc<MorphInfo>> = Vec::with_capacity(morphs.len());
         for morph in morphs {
             ret.push(
                 self.morphs
-                    .get_or_insert_with(morph, |m| Rc::new(m.clone()))
+                    .get_or_insert_with(morph, |m| Arc::new(m.clone()))
                     .clone(),
             );
         }

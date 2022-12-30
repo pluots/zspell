@@ -5,6 +5,7 @@ use std::borrow::Borrow;
 use std::hash::Hash;
 use std::ops::Deref;
 use std::rc::Rc;
+use std::sync::Arc;
 
 use hashbrown::Equivalent;
 use regex::Regex;
@@ -85,6 +86,12 @@ impl Display for StrWrapper<'_> {
 
 impl Equivalent<Rc<String>> for StrWrapper<'_> {
     fn equivalent(&self, key: &Rc<String>) -> bool {
+        self.0 == key.as_ref()
+    }
+}
+
+impl Equivalent<Arc<String>> for StrWrapper<'_> {
+    fn equivalent(&self, key: &Arc<String>) -> bool {
         self.0 == key.as_ref()
     }
 }
