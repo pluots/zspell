@@ -112,7 +112,7 @@ pub mod system;
 
 pub(crate) use affix::ParsedCfg;
 pub use affix::PartOfSpeech;
-pub use dict::{DictBuilder, Dictionary};
+pub use dict::{DictBuilder, Dictionary, WordList};
 #[doc(inline)]
 pub use error::Error;
 pub use morph::MorphInfo;

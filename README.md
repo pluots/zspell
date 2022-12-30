@@ -6,13 +6,13 @@ native and does not rely on any other backends (Enchant, Hunspell, Aspell,
 etc.). This library also has the goal of being usable via WASM.
 
 The library side has a stabalized checker, but the suggestion API is not yet
-finalized. The CLI side is usable but not yet considered stabalized.
-See [Feature Status](#feature-status) for more information on what is available.
+finalized. The CLI is usable but not yet considered stabalized. See
+[Feature Status](#feature-status) for more information on what is available.
 
 Here are some useful quick links:
 
 - Crate info: <https://crates.io/crates/zspell>
-- Crate CLI docs: <https://pluots.github.io/zspell/>
+- Crate CLI docs (incomplete): <https://pluots.github.io/zspell/>
 - Crate library docs: <https://docs.rs/zspell/>
 - Python library page: <https://pypi.org/project/zspell/>
 - Crate source: <https://github.com/pluots/zspell>
@@ -54,12 +54,12 @@ added at some point.
 | Feature                        | Available via Library | Available via CLI | Tracking Issue |
 |--------------------------------|-----------------------|-------------------|----------------|
 | Basic spellcheck functionality | ✓                     | ✓                 |                |
-| Forbidden word handling        | WIP                   | ✕                 | [#17](https://github.com/pluots/zspell/issues/17) |
+| Forbidden word handling        | ✓                     | ✓                 | [#17](https://github.com/pluots/zspell/issues/17) |
 | Suggestions                    | WIP                   | ✕                 | [#16](https://github.com/pluots/zspell/issues/16) |
 | Compound word handling         | ✕                     | ✕                 |                |
 | Full Morph/Phone Handling      | WIP                   | ✕                 |                |
-| Python Interface               | ✕                     | ✕                 | [#18](https://github.com/pluots/zspell/issues/18) |
-| Prebuilt WASM bindings         | ✕                     | ✕                 | [#19](https://github.com/pluots/zspell/issues/19) |
+| Python Interface               | Beta                  | N/A               | [#18](https://github.com/pluots/zspell/issues/18) |
+| Prebuilt WASM bindings         | ✕                     | N/A               | [#19](https://github.com/pluots/zspell/issues/19) |
 
 ## Performance
 

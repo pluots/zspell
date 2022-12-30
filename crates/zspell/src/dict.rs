@@ -458,7 +458,7 @@ impl Dictionary {
     }
 }
 
-/// The internal representation of a wordlist
+/// The internal representation of a wordlist.
 ///
 /// Currently contains a `HashMap<String, Vec<Meta>>`
 #[derive(Clone, Debug, PartialEq)]

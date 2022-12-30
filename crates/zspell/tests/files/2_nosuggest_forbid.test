@@ -10,22 +10,30 @@ SFX A   0     aaa       .
 ==== dic_str ====
 nosuggest/A!
 forbid/A*
+nosuggest2/!
+forbid2/*
+ok
 
 ==== check_valid ====
 nosuggest
 nosuggestaaa
-
+nosuggest2
+ok
 
 ==== check_invalid ====
 forbid
 forbidaaa
+forbid2
 
 ==== wordlist ====
+ok
 
 ==== wordlist_nosuggest ====
 nosuggest
 nosuggestaaa
+nosuggest2
 
 ==== wordlist_forbidden ====
 forbid
 forbidaaa
+forbid2
