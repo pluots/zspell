@@ -38,8 +38,6 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
-      - name: Install System Requirements
-        run: sudo apt-get install musl-tools libssl-dev
       - uses: actions-rs/cargo@v1
         with:
           command: check
@@ -48,17 +46,6 @@ jobs:
         with:
           command: check
           args: --all-features --all-targets
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-          target: x86_64-unknown-linux-musl
-      # Validate our musl build
-      - uses: actions-rs/cargo@v1
-        with:
-          command: check
-          args: --no-default-features --all-targets --target x86_64-unknown-linux-musl
 
   test:
     strategy:
