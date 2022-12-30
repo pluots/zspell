@@ -27,18 +27,23 @@ impl AfxRule {
     pub fn new(
         kind: RuleType,
         affixes: &[&str],
+        patterns: &[&str],
         can_combine: bool,
         strip: Option<&str>,
         condition: Option<&str>,
     ) -> Self {
-        Self {
+        let mut ret = Self {
             kind,
             can_combine,
             patterns: affixes
                 .iter()
                 .map(|afx| AfxRulePattern::new(afx, None))
                 .collect(),
+        };
+        for (idx, pat) in patterns.iter().enumerate() {
+            ret.patterns[idx].set_pattern(pat, kind);
         }
+        ret
     }
 
     /// Take a [`ParsedGroup`] and turn it into a vector of `AfxRule`

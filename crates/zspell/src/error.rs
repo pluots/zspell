@@ -1,4 +1,7 @@
-//! Error types
+//! Crate error types (module is semi-unstable)
+//!
+//! [`Error`] is the main error type for this crate, all other types of errors
+//! will fall under it.
 
 use core::prelude::v1;
 use std::fmt::Display;
@@ -8,20 +11,18 @@ use crate::affix::FlagType;
 use crate::dict::FlagValue;
 use crate::helpers::convertu32;
 
-/// ZSpell main error type
+/// Main crate error type, returned by most public functions
 #[non_exhaustive]
 #[derive(Clone, Debug, PartialEq)]
 pub enum Error {
+    /// Error during parsing
     Parse(ParseError),
     /// Error during building
     Build(BuildError),
     /// Regex error from user-provided input
     Regex(regex::Error),
 
-    Io {
-        fname: String,
-        err: std::io::ErrorKind,
-    },
+    Io(IoError),
 }
 
 /// An error that occured while parsing, consisting of an error variant and a
@@ -77,6 +78,13 @@ pub enum BuildError {
     NonmatchingFlag { stem: String, flag: String },
 }
 
+/// An I/O error. This is a wrapper around [`std::io::ErrorKind`]
+#[derive(Clone, Debug, PartialEq)]
+pub struct IoError {
+    fname: String,
+    err: std::io::ErrorKind,
+}
+
 /// A kind of error that would occur during parsing, with additional information
 #[derive(Clone, Debug, PartialEq)]
 pub enum ParseErrorKind {
@@ -123,6 +131,11 @@ pub enum ParseErrorKind {
     /// Regex error while parsing
     Regex(regex::Error),
 }
+
+/// An error returned from functions that expect a word to be present in a
+/// dictionary but were unable to find the word.
+#[derive(Clone, Debug, PartialEq)]
+pub struct WordNotFoundError;
 
 impl Span {
     /// New with only start line & column specified. End will be start line + 1
@@ -209,6 +222,15 @@ impl ParseErrorKind {
     }
 }
 
+impl IoError {
+    pub(crate) fn new(fname: &str, err: std::io::ErrorKind) -> Self {
+        Self {
+            fname: fname.to_owned(),
+            err,
+        }
+    }
+}
+
 /* trait impls */
 
 impl std::error::Error for Error {}
@@ -223,7 +245,7 @@ impl Display for Error {
             Error::Parse(e) => write!(f, "parse error: {e}"),
             Error::Build(e) => write!(f, "build error: {e}"),
             Error::Regex(e) => write!(f, "regex error: {e}"),
-            Error::Io { fname, err } => write!(f, "io error in '{fname}': {err}"),
+            Error::Io(e) => write!(f, "io error: {e}"),
         }
     }
 }
@@ -267,7 +289,9 @@ impl Display for ParseErrorKind {
             ParseErrorKind::PartOfSpeech(s) => {
                 write!(f, "value '{s}' is not a known part of speech")
             }
-            ParseErrorKind::ConversionSplit(_) => todo!(),
+            ParseErrorKind::ConversionSplit(n) => {
+                write!(f, "expected a conversion with 2 items but got {n}")
+            }
             ParseErrorKind::CompoundSyllableCount(n) => write!(f, "expected 2 items but got {n}"),
             ParseErrorKind::CompoundSyllableParse(e) => write!(f, "unable to parse integer: {e}"),
             ParseErrorKind::Regex(e) => e.fmt(f),
@@ -329,6 +353,13 @@ impl Display for BuildError {
     }
 }
 
+impl Display for IoError {
+    #[inline]
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "in file '{}' {}", self.fname, self.err)
+    }
+}
+
 impl From<ParseError> for Error {
     #[inline]
     fn from(value: ParseError) -> Self {
@@ -361,5 +392,12 @@ impl From<ParseIntError> for ParseErrorKind {
     #[inline]
     fn from(value: ParseIntError) -> Self {
         Self::Int(value)
+    }
+}
+
+impl From<IoError> for Error {
+    #[inline]
+    fn from(value: IoError) -> Self {
+        Self::Io(value)
     }
 }

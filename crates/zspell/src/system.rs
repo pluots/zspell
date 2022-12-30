@@ -6,7 +6,7 @@
 // use std::path::{Component, Path, PathBuf};
 use std::{env, fs};
 
-use crate::error::Error;
+use crate::error::{Error, IoError};
 use crate::{DictBuilder, Dictionary};
 
 // use home::home_dir;
@@ -338,16 +338,11 @@ pub fn create_dict_from_path(basepath: &str) -> Result<Dictionary, Error> {
     dict_file_path.push_str(".dic");
     affix_file_path.push_str(".aff");
 
-    let aff_str = fs::read_to_string(&affix_file_path).map_err(|e| Error::Io {
-        fname: affix_file_path,
-        err: e.kind(),
-    })?;
+    let aff_str = fs::read_to_string(&affix_file_path)
+        .map_err(|e| IoError::new(&affix_file_path, e.kind()))?;
 
-    let dict_str = fs::read_to_string(&dict_file_path).map_err(|e| Error::Io {
-        fname: dict_file_path,
-        err: e.kind(),
-    })?;
-
+    let dict_str =
+        fs::read_to_string(&dict_file_path).map_err(|e| IoError::new(&dict_file_path, e.kind()))?;
     let dict = DictBuilder::new()
         .config_str(&aff_str)
         .dict_str(&dict_str)

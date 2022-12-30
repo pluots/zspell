@@ -21,7 +21,7 @@ use self::parser::{parse_dict, parse_personal_dict, PersonalEntry};
 pub use self::rule::AfxRule;
 use self::types::{Meta, PersonalMeta, Source};
 use crate::affix::FlagType;
-use crate::error::{BuildError, Error};
+use crate::error::{BuildError, Error, WordNotFoundError};
 use crate::helpers::StrWrapper;
 use crate::morph::MorphInfo;
 use crate::{suggestions, ParsedCfg};
@@ -37,7 +37,11 @@ use crate::{suggestions, ParsedCfg};
 /// - A list of stem words and source information
 /// - Configuration information
 ///
-/// The easiest way to construct a dictionary is using a [`DictBuilder`].
+/// The easiest way to construct a dictionary is using a [`DictBuilder`]. You
+/// can use this `Dictionary` object to perform various checks, likely via
+/// [`check`][Dictionary::check] (for simple true/false checking of strings) or
+/// [`check_indices`][Dictionary::check_indices] (to validate a string and
+/// return the location of errors).
 #[derive(Clone, Debug, PartialEq)]
 pub struct Dictionary {
     /// General word list of words that are accepted and suggested. Note that it
@@ -64,9 +68,10 @@ pub struct Dictionary {
     parsed_config: Box<ParsedCfg>,
 }
 
-/// Check API
+// Check API
 impl Dictionary {
     /// Create a new empty dictionary with default config
+    #[inline]
     fn new(cfg: ParsedCfg) -> Result<Self, Error> {
         Ok(Self {
             wordlist: WordList::new(),
@@ -80,10 +85,8 @@ impl Dictionary {
         })
     }
 
-    /// Check that a string contains only words that are spelled correctly.
-    /// Returns true if so
-    ///
-    /// # Example
+    /// Check that an entire string contains only words that are spelled
+    /// correctly, returns `true` if so.
     ///
     /// ```
     /// use std::fs;
@@ -107,28 +110,25 @@ impl Dictionary {
         s.unicode_words().all(|w| self.check_word(w))
     }
 
-    /// Check words in a string, returning a list of the start and end indices
-    /// of any incorrect words
+    /// Check that a single word is spelled correctly, returns `true` if so
     ///
-    /// This can be used ot create
-    #[inline]
-    pub fn check_indices(&self, s: &str) -> Vec<(usize, usize)> {
-        word_splitter(s)
-            .filter(|(idx, w)| !self.check_word(w))
-            .map(|(idx, w)| (idx, idx + w.len()))
-            .collect()
-    }
-
-    pub fn suggest_indices(&self, s: &str) -> Vec<(usize, usize, Vec<&str>)> {
-        word_splitter(s)
-            .filter_map(|(idx, w)| {
-                self.suggest_word(w)
-                    .map_or_else(|v| Some((idx, idx + w.len(), v)), |_| None)
-            })
-            .collect()
-    }
-
-    /// Check that a single word is spelled correctly: returns `true` if so
+    /// ```
+    /// use std::fs;
+    ///
+    /// use zspell::DictBuilder;
+    ///
+    /// let aff_content = fs::read_to_string("tests/files/w1_eng_short.aff").unwrap();
+    /// let dic_content = fs::read_to_string("tests/files/w1_eng_short.dic").unwrap();
+    ///
+    /// let dict = DictBuilder::new()
+    ///     .config_str(&aff_content)
+    ///     .dict_str(&dic_content)
+    ///     .build()
+    ///     .unwrap();
+    ///
+    /// assert_eq!(dict.check_word("reptiles"), true);
+    /// assert_eq!(dict.check_word("reptiles pillow"), false);
+    /// ```
     #[inline]
     pub fn check_word(&self, s: &str) -> bool {
         // FIXME: we should make sure there are no overlaps among our wordlists
@@ -140,6 +140,62 @@ impl Dictionary {
                 || self.wordlist_nosuggest.0.contains_key(&lower))
     }
 
+    /// Check words in a string, returning a list of the start and end indices
+    /// of any incorrect words.
+    ///
+    /// This can be used ot create spellcheckers that provide feedback to a user.
+    ///
+    /// ```
+    /// use std::fs;
+    ///
+    /// use zspell::DictBuilder;
+    ///
+    /// let aff_content = fs::read_to_string("tests/files/w1_eng_short.aff").unwrap();
+    /// let dic_content = fs::read_to_string("tests/files/w1_eng_short.dic").unwrap();
+    ///
+    /// let dict = DictBuilder::new()
+    ///     .config_str(&aff_content)
+    ///     .dict_str(&dic_content)
+    ///     .build()
+    ///     .unwrap();
+    ///
+    /// assert_eq!(
+    ///     dict.check_indices("pine missspelled"),
+    ///     vec![(5, "missspelled")]
+    /// );
+    /// ```
+    #[inline]
+    pub fn check_indices<'a>(&self, s: &'a str) -> Vec<(usize, &'a str)> {
+        word_splitter(s)
+            .filter(|(idx, w)| !self.check_word(w))
+            .collect()
+    }
+
+    /// **UNSTABLE** Suggest a word at given indices. Feature gated behind
+    /// `unstable-suggestions`.
+    #[inline]
+    #[cfg(feature = "unstable-suggestions")]
+    pub fn suggest_indices<'a>(&self, s: &'a str) -> Vec<(usize, &'a str, Vec<&str>)> {
+        word_splitter(s)
+            .filter_map(|(idx, w)| {
+                self.suggest_word(w)
+                    .map_or_else(|v| Some((idx, w, v)), |_| None)
+            })
+            .collect()
+    }
+
+    /// **UNSTABLE** Suggest a replacement for a single word. Feature gated
+    /// behind `unstable-suggestions`.
+    ///
+    /// If the word exists, this will return `Ok(())`. If it does not, it will
+    /// return a vector of suggestions `Err(Vec<&str>)`.
+    ///
+    /// This function is unstable because it has performance issues. We are
+    /// going to try to speed up the algorithm significantly.
+    // PERF: bench with par_iter
+    #[inline]
+    #[cfg(feature = "unstable-suggestions")]
+    #[allow(clippy::missing_errors_doc)]
     pub fn suggest_word(&self, s: &str) -> Result<(), Vec<&str>> {
         if self.check_word(s) {
             return Ok(());
@@ -158,11 +214,20 @@ impl Dictionary {
             .collect())
     }
 
-    /// Generate the stems for a single word. Returns `None` if the word is not found
+    /// **UNSTABLE** Generate the stems for a single word. Feature gated behind
+    /// `unstable-stem`.
+    ///
+    /// If the word is found, this will return a vector of `&str` potential
+    /// stems.
+    ///
+    /// # Errors
+    ///
+    /// Returns a dummy error if the word is not found
     #[inline]
-    pub fn stem_word(&self, s: &str) -> Option<Vec<&str>> {
+    #[cfg(feature = "unstable-stem")]
+    pub fn stem_word(&self, s: &str) -> Result<Vec<&str>, WordNotFoundError> {
         let Some(meta) = self.wordlist.0.get(s).or_else(|| self.wordlist_nosuggest.0.get(s)) else {
-            return None;
+            return Err(WordNotFoundError);
         };
 
         let mut stems: Vec<&str> = Vec::with_capacity(meta.len());
@@ -178,7 +243,37 @@ impl Dictionary {
             }
         }
 
-        Some(stems)
+        Ok(stems)
+    }
+
+    /// **UNSTABLE** Generate the morphological analysis for a single word.
+    /// Feature gated behind `unstable-analysis`.
+    ///
+    /// # Errors
+    ///
+    /// Returns a dummy error if the word is not found
+    #[inline]
+    #[cfg(feature = "unstable-analysis")]
+    pub fn analyze_word(&self, s: &str) -> Result<Vec<MorphInfo>, WordNotFoundError> {
+        todo!()
+    }
+
+    /// Return a reference to the internal wordlist
+    #[inline]
+    pub fn wordlist(&self) -> &WordList {
+        &self.wordlist
+    }
+
+    /// Return a reference to the internal nosuggest wordlist
+    #[inline]
+    pub fn wordlist_nosuggest(&self) -> &WordList {
+        &self.wordlist_nosuggest
+    }
+
+    /// Return a reference to the internal forbidden wordlist
+    #[inline]
+    pub fn wordlist_forbidden(&self) -> &WordList {
+        &self.wordlist_forbidden
     }
 }
 
@@ -343,6 +438,8 @@ impl Dictionary {
         self.wordlist.0.shrink_to_fit();
         self.wordlist_nosuggest.0.shrink_to_fit();
         self.wordlist_forbidden.0.shrink_to_fit();
+        self.stems.shrink_to_fit();
+        self.morphs.shrink_to_fit();
     }
 }
 
@@ -356,8 +453,18 @@ impl WordList {
     fn new() -> Self {
         Self(HashMap::new())
     }
+
+    /// **UNSTABLE** Get a reference to the internal map. This is behind the
+    /// `zspell-unstable` marker as the internal format may change
+    #[cfg_attr(feature = "zspell-unstable", visibility::make(pub))]
+    pub(crate) fn inner(&self) -> &HashMap<String, Vec<Meta>> {
+        &self.0
+    }
 }
 
+/// A builder stucture that is used to create a [`Dictionary`].
+///
+/// See module-level documentation for an example.
 #[derive(Clone, Debug, PartialEq)]
 pub struct DictBuilder<'a> {
     cfg: Option<ParsedCfg>,
@@ -378,9 +485,7 @@ impl<'a> DictBuilder<'a> {
         }
     }
 
-    /// Load the affix file from the given string
-    ///
-    /// Don't use with `config`
+    /// Load the affix file from the given string.
     #[inline]
     #[must_use]
     pub fn config_str(mut self, s: &'a str) -> Self {
@@ -393,11 +498,12 @@ impl<'a> DictBuilder<'a> {
     /// Don't use with `config_src`
     #[inline]
     #[must_use]
-    pub fn config(mut self, cfg: ParsedCfg) -> Self {
+    fn config(mut self, cfg: ParsedCfg) -> Self {
         self.cfg = Some(cfg);
         self
     }
 
+    /// Load the dictionary file from a string
     #[inline]
     #[must_use]
     pub fn dict_str(mut self, s: &'a str) -> Self {
@@ -405,6 +511,7 @@ impl<'a> DictBuilder<'a> {
         self
     }
 
+    /// Load a personal dictionary file from a string
     #[inline]
     #[must_use]
     pub fn personal_str(mut self, s: &'a str) -> Self {
@@ -442,6 +549,8 @@ impl<'a> DictBuilder<'a> {
         if let Some(wl) = self.personal_src {
             dict.parse_update_personal(wl, &[])?;
         }
+
+        dict.shrink_storage();
 
         Ok(dict)
     }

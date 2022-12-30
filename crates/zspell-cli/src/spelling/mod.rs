@@ -40,9 +40,7 @@ pub fn spellcheck_cli(cli: &Cli) -> ExitCode {
         Ok(v) => v,
         Err(e) => {
             match e {
-                Error::Io { fname, err } => {
-                    eprintln!("Error opening '{fname}': {err}")
-                }
+                Error::Io(e) => eprintln!("IO error: {e}"),
                 Error::Parse(e) => eprintln!("Error parsing: {e}"),
                 Error::Build(e) => eprintln!("Error building: {e}"),
                 Error::Regex(e) => eprintln!("Regex error: {e}"),
@@ -85,15 +83,15 @@ fn runner_interactive(dict: &Dictionary) {
         let line_val = line.expect("IO error");
 
         // FIXME: if not a tty, lock output once before writing
-        for (start, end, suggestions) in dict.suggest_indices(&line_val) {
-            println!("HERE: {}, {:?} END", &line_val[start..end], suggestions)
-        }
-        // for (start, end) in dict.check_indices(&line_val) {
-        //     println!("{}", &line_val[start..end])
+        // for (start, end, suggestions) in dict.suggest_indices(&line_val) {
+        //     println!("HERE: {}, {:?} END", &line_val[start..end], suggestions)
         // }
+        for (_, misspelled) in dict.check_indices(&line_val) {
+            println!("{misspelled}");
+        }
     }
 }
 
-fn runner_morph(dict: &Dictionary) {
+fn runner_morph(_dict: &Dictionary) {
     todo!()
 }

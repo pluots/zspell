@@ -1,6 +1,6 @@
 # ZSpell
 
-This project is a spellchecker written completely in rust, that maintains
+This project is a spellchecker written completely in Rust, that maintains
 compatibility with the venerable Hunspell dictionary format. It is entirely
 native and does not rely on any other backends (Enchant, Hunspell, Aspell,
 etc.). This library also has the goal of being usable via WASM.
@@ -54,10 +54,10 @@ added at some point.
 | Feature                        | Available via Library | Available via CLI | Tracking Issue |
 |--------------------------------|-----------------------|-------------------|----------------|
 | Basic spellcheck functionality | ✓                     | ✓                 |                |
-| Forbidden word handling        | ✕                     | ✕                 | [#17](https://github.com/pluots/zspell/issues/17) |
-| Suggestions                    | ✕                     | ✕                 | [#16](https://github.com/pluots/zspell/issues/16) |
+| Forbidden word handling        | WIP                   | ✕                 | [#17](https://github.com/pluots/zspell/issues/17) |
+| Suggestions                    | WIP                   | ✕                 | [#16](https://github.com/pluots/zspell/issues/16) |
 | Compound word handling         | ✕                     | ✕                 |                |
-| Full Morph/Phone Handling      | ✕                     | ✕                 |                |
+| Full Morph/Phone Handling      | WIP                   | ✕                 |                |
 | Python Interface               | ✕                     | ✕                 | [#18](https://github.com/pluots/zspell/issues/18) |
 | Prebuilt WASM bindings         | ✕                     | ✕                 | [#19](https://github.com/pluots/zspell/issues/19) |
 
@@ -66,7 +66,7 @@ added at some point.
 This repository has the goal of highly prioritizing the most expected usage,
 i.e., that most words to be checked are correct. With optimizations based around
 this concept and with the modern computers now able to store entire compiled
-word lists in memory (~2 MiB), `zspell` tends to outperform other spellcheckers.
+word lists in memory (~20 MiB), `zspell` tends to outperform other spellcheckers.
 
 ## License
 

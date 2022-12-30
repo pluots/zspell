@@ -1,5 +1,4 @@
 //! Affix tests
-use util::TestCollection;
 
 use super::*;
 

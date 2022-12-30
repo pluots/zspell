@@ -30,16 +30,18 @@ cfg-if = "1.0"
 hashbrown = "0.13.1"
 home = "0.5.4"
 lazy_static = "1.4.0"
-regex = "1.6"
+regex = "1.7"
 stringmetrics = "2.2.2"
 sys-locale = "0.2.1"
 unicode-segmentation = "1.10.0"
+itertools = "0.10.5"
+visibility = "0.0.1"
 
 
 [dev-dependencies]
 criterion = "0.4"
 predicates = "2.1"
-pretty_assertions = "1.3.0"
+pretty_assertions = "1.3"
 tempfile = "3.3"
 util = { path = "util" }
 rand = "0.8.5"
@@ -47,7 +49,11 @@ rand = "0.8.5"
 [build-dependencies]
 
 [features]
-zspell-unstable = []
+unstable-suggestions = []
+unstable-analysis = []
+unstable-stem = []
+unstable-system = []
+zspell-unstable = ["unstable-suggestions", "unstable-analysis", "unstable-stem", "unstable-system"]
 
 [[bench]]
 name = "datastructure"
@@ -63,6 +69,10 @@ harness = false
 
 [[bench]]
 name = "small_map"
+harness = false
+
+[[bench]]
+name = "word_splitter"
 harness = false
 
 [package.metadata.release]

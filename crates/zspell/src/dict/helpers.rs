@@ -64,6 +64,7 @@ pub(super) fn create_affixed_word_map(
     Ok(())
 }
 
+/// Segment words by unicode boundaries.
 pub fn word_splitter(s: &str) -> impl Iterator<Item = (usize, &str)> {
     s.split_word_bound_indices()
         .filter(|split| split.1.chars().all(|c| c.is_alphanumeric() || c == '-'))
@@ -78,37 +79,68 @@ mod tests {
 
     #[test]
     fn test_create_words() {
-        let rul1 = Rc::new(AfxRule::new(RuleType::Prefix, &["aa"], false, None, None));
-        let rul2 = Rc::new(AfxRule::new(RuleType::Prefix, &["bb"], true, None, None));
+        let rul1 = Rc::new(AfxRule::new(
+            RuleType::Prefix,
+            &["aa"],
+            &["."],
+            false,
+            None,
+            None,
+        ));
+        let rul2 = Rc::new(AfxRule::new(
+            RuleType::Prefix,
+            &["bb"],
+            &["."],
+            true,
+            None,
+            None,
+        ));
         let rul3 = Rc::new(AfxRule::new(
             RuleType::Suffix,
             &["cc", "dd"],
+            &["x", "[^x]"],
             true,
             None,
             None,
         ));
 
         let conditions = [
-            (&[&rul1][..], &[][..], &["aaxxx"][..]),
-            (&[&rul2][..], &[][..], &["bbxxx"][..]),
-            (&[][..], &[&rul3][..], &["xxxcc", "xxxdd"][..]),
-            (&[&rul1, &rul2][..], &[][..], &["aaxxx", "bbxxx"][..]),
-            (&[&rul1][..], &[&rul3][..], &["aaxxx", "xxxcc", "xxxdd"][..]),
+            ("xxx", &[&rul1][..], &[][..], &["aaxxx"][..]),
+            ("xxx", &[&rul2][..], &[][..], &["bbxxx"][..]),
+            ("xxx", &[][..], &[&rul3][..], &["xxxcc"][..]),
+            ("yyy", &[][..], &[&rul3][..], &["yyydd"][..]),
+            ("xxx", &[&rul1, &rul2][..], &[][..], &["aaxxx", "bbxxx"][..]),
+            ("xxx", &[&rul1][..], &[&rul3][..], &["aaxxx", "xxxcc"][..]),
+            ("yyy", &[&rul1][..], &[&rul3][..], &["aayyy", "yyydd"][..]),
             (
+                "xxx",
                 &[&rul2][..],
                 &[&rul3][..],
-                &["bbxxx", "xxxcc", "xxxdd", "bbxxxcc", "bbxxxdd"][..],
+                &["bbxxx", "xxxcc", "bbxxxcc"][..],
             ),
             (
+                "yyy",
+                &[&rul2][..],
+                &[&rul3][..],
+                &["bbyyy", "yyydd", "bbyyydd"][..],
+            ),
+            (
+                "xxx",
                 &[&rul1, &rul2][..],
                 &[&rul3][..],
-                &["aaxxx", "bbxxx", "xxxcc", "xxxdd", "bbxxxcc", "bbxxxdd"][..],
+                &["aaxxx", "bbxxx", "xxxcc", "bbxxxcc"][..],
+            ),
+            (
+                "yyy",
+                &[&rul1, &rul2][..],
+                &[&rul3][..],
+                &["aayyy", "bbyyy", "yyydd", "bbyyydd"][..],
             ),
         ];
 
-        for (i, (pfxs, sfxs, expected_slice)) in conditions.iter().enumerate() {
+        for (i, (word, pfxs, sfxs, expected_slice)) in conditions.iter().enumerate() {
             let mut dest = WordList::new();
-            let stem_rc = Rc::new("xxx".to_string());
+            let stem_rc = Rc::new(word.to_string());
             create_affixed_word_map(pfxs, sfxs, &stem_rc, &stem_rc, &mut dest);
 
             let mut tmp: Vec<(String, _)> = dest.0.into_iter().collect();
@@ -126,6 +158,81 @@ mod tests {
 
     #[test]
     fn test_word_splitter() {
-        word_splitter(r#"the quick brown. Fox Jum-ped "over" (the) lazy dog"#);
+        let s = "the quick brown.     Fox Jum-ped --\t where? 'over' (the) very--lazy dog";
+        let v: Vec<_> = dbg!(word_splitter(s).collect());
+        let v: Vec<_> = dbg!(s.split_word_bound_indices().collect());
     }
 }
+
+// TODO: evaluate this for hyphenation
+// mod peek_map {
+//     use std::iter::Peekable;
+//     use unicode_segmentation::UnicodeSegmentation;
+
+//     pub struct PeekMap<I: Iterator, F>(Peekable<I>, F);
+
+//     pub fn peek_map<R, I: Iterator, F: FnMut(I::Item, Option<&I::Item>) -> R>(
+//         it: Peekable<I>,
+//         f: F,
+//     ) -> PeekMap<I, F> {
+//         PeekMap(it, f)
+//     }
+
+//     impl<R, I: Iterator, F: FnMut(I::Item, Option<&I::Item>) -> R> Iterator for PeekMap<I, F> {
+//         type Item = R;
+//         fn next(&mut self) -> Option<R> {
+//             let x = self.0.next()?;
+//             Some((self.1)(x, self.0.peek()))
+//         }
+//     }
+
+//     #[cfg(test)]
+//     mod tests {
+//         use super::*;
+
+//         #[test]
+//         fn test_x() {
+//             let s = "the quick brown.   Fox Jum-ped -- where? 'over' (the) very-lazy dog";
+
+//             enum HyphenState {
+//                 None,
+//                 AwaitingHyphen(usize),
+//                 AwaitingWord(usize)
+//             }
+
+//             let mut accum = HyphenState::None;
+
+//             let v: Vec<_> = peek_map(s.split_word_bound_indices().peekable(),
+//                 |(idx, w), next|{
+
+//                 let c1 = w.chars().next().unwrap();
+//                 if !(c1.is_alphanumeric() || c1 == '-') {
+//                     accum = HyphenState::None;
+//                     return None;
+//                 }
+
+//                 if let Some((nidx, nw)) = next {
+//                     // If our next item is a hyphen, start accumulating
+//                     if nw == "-" {
+//                         accum = HyphenState::AwaitingHyphen(idx);
+//                         return None;
+//                     }
+//                 }
+//                 match accum {
+//                     HyphenState::None => {
+//                         // No upcoming hyphen? Just return our value
+//                         Some((idx, w))
+//                     },
+//                     HyphenState::AwaitingHyphen(_) => {
+
+//                     },
+//                     HyphenState::AwaitingWord(_) => todo!(),
+//                 }
+//             }
+//             ).collect();
+
+//             dbg!(v);
+
+//         }
+//     }
+// }

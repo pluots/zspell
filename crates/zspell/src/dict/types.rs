@@ -23,7 +23,22 @@ impl Meta {
         }
     }
 
+    /// Return the stem of a word. Prefers the stem from the morph info if it is available
     pub fn stem(&self) -> &str {
+        // If we have a dictionary source, check if we have a stem `MorphInfo`
+        // and return it
+        if let Source::Dict(morphvec) = &self.source {
+            if let Some(stem) = morphvec.iter().find_map(|morph| {
+                if let MorphInfo::Stem(st) = morph.borrow() {
+                    Some(st)
+                } else {
+                    None
+                }
+            }) {
+                return stem.as_str();
+            }
+        }
+
         &self.stem
     }
 
@@ -49,6 +64,7 @@ pub enum Source {
 }
 
 impl Source {
+    /// Add morphinfo, if any, to a vector
     pub fn push_morphs<'a>(&'a self, dest: &mut Vec<&'a MorphInfo>) {
         match self {
             // Unsure how to handle nesting types. Maybe need rule group number

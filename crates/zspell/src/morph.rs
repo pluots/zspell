@@ -3,6 +3,7 @@
 use crate::affix::PartOfSpeech;
 use crate::error::{ParseError, ParseErrorKind};
 
+/// Morphographical information about a word, used by analysis methods
 #[non_exhaustive]
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum MorphInfo {
@@ -33,6 +34,12 @@ pub enum MorphInfo {
 }
 
 impl MorphInfo {
+    /// Parse the kind of string that a dictionary file has, usually something like:
+    ///
+    /// ```text
+    /// po:verb st:rootword ts:abcd
+    /// ```
+    #[inline]
     pub(crate) fn many_from_str(s: &str) -> Result<Vec<Self>, ParseError> {
         let mut res = Vec::new();
         for morph in s.split_whitespace() {
@@ -45,6 +52,7 @@ impl MorphInfo {
 impl TryFrom<&str> for MorphInfo {
     type Error = ParseErrorKind;
 
+    #[inline]
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         let (tag, val) = value
             .split_once(':')
@@ -65,5 +73,42 @@ impl TryFrom<&str> for MorphInfo {
             _ => return Err(ParseErrorKind::MorphInvalidTag(tag.to_owned())),
         };
         Ok(ret)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn morph_single_ok() {
+        let tests = [
+            ("st:stem", MorphInfo::Stem("stem".to_owned())),
+            ("ip:abc", MorphInfo::InflecPfx("abc".to_owned())),
+            ("pa:xyz", MorphInfo::CompPart("xyz".to_owned())),
+        ];
+
+        for (input, expected) in tests.into_iter() {
+            assert_eq!(
+                MorphInfo::try_from(input),
+                Ok(expected),
+                "failure parsing {input}"
+            )
+        }
+    }
+
+    #[test]
+    fn morph_string_ok() {
+        let input = "st:stem ip:abcd pa:xyz    st:some-stem\tal:def";
+        let output = MorphInfo::many_from_str(input);
+        let expected = vec![
+            MorphInfo::Stem("stem".to_owned()),
+            MorphInfo::InflecPfx("abcd".to_owned()),
+            MorphInfo::CompPart("xyz".to_owned()),
+            MorphInfo::Stem("some-stem".to_owned()),
+            MorphInfo::Allomorph("def".to_owned()),
+        ];
+
+        assert_eq!(output, Ok(expected))
     }
 }

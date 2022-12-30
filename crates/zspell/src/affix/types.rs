@@ -189,6 +189,7 @@ pub enum RuleType {
     Suffix,
 }
 
+/// Representation of a part of speech
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum PartOfSpeech {
     Noun,
@@ -378,6 +379,7 @@ impl TryFrom<&str> for CompoundSyllable {
 impl TryFrom<&str> for PartOfSpeech {
     type Error = ParseErrorKind;
 
+    #[inline]
     fn try_from(value: &str) -> Result<Self, Self::Error> {
         let ret = match value.to_lowercase().as_str() {
             "noun" => Self::Noun,
