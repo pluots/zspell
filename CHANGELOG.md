@@ -4,71 +4,76 @@
 
 ## [Unreleased] - ReleaseDate
 
-### Added
+This change is a huge rewrite of the library! Hopefully this will pave the way
+forward for more features and easier growth.
 
-### Changed
+### Changes
 
-### Removed
+- Added `DictBuilder` to simplify dictionary creation
+- Removed `affix::Config` as the representation was limiting & clunky
+- The methods on `Dictionary` are now infallible since an uncompiled dictionary
+  can no longer be created
+- Rewrote the `error` module
+- Simplified imports, everything needed is now top-level
+- Rewrote affix file parser so it is much more efficient and now handles all
+  known keys. We do not yet act on all possible values.
+- Rewrote the dictionary & personal wordlist parsers
 
+### Additions
+
+- `check_indices` is now available to return
+
+There are also a few new APIs that are feature gated. They should be considered
+very unstable until those feature gates are removed.
+
+- Suggestions
+- Stemming
+- Morphological analysis
+- System tools. These were previously public but have been moved behind the
+  feature gate.
 
 
 ## [0.2.2] - 2022-11-04
 
-### Added
-
-### Changed
-
-### Removed
 
 
 
 ## [0.2.1] - 2022-11-04
 
-### Added
-
-### Changed
+### Changes
 
 - Changed word breaking to use unicode segmentation, as suggested by @saona-raimundo
-
-### Removed
-
 
 
 ## [0.2.0] - 2022-11-04
 
-### Added
+### Additions
 
 - Ability to automatically locate dictionaries on the system, WIP and not yet
   documented
 - Command line option to download dictionaries
 
-### Changed
+### Changes
 
 - Rename helper CLI and py crates (only relevant within this project)
-
-### Removed
-
 
 
 ## [0.1.4] - 2022-08-17
 
-### Added
+### Additions
 
 - Started generating manpages and autocomplete scripts on build
 - Started generating a documentation book for the CLI
 
-### Changed
+### Changes
 
 - Better reserve & shrink vectors and hash sets to save a small ammount of
   overhead
 
-### Removed
-
-
 
 ## [0.1.3] - 2022-08-16
 
-### Changed
+### Changes
 
 - Correction to output generation
 
@@ -76,11 +81,11 @@
 
 ## [0.1.2] - 2022-08-16
 
-### Added
+### Additions
 
 - Framework for locating files on a user's local machine
 
-### Changed
+### Changes
 
 - Updated binary output configuration
 
@@ -88,7 +93,7 @@
 
 ## [0.1.1] - 2022-07-25
 
-### Changed
+### Changes
 
 - Updated wheel release configuration
 
@@ -96,7 +101,7 @@
 
 ## [0.1.0] - 2022-07-25
 
-### Changed
+### Changes
 
 - Restructured project to make all modules public that might be needed to
   interface with this library.

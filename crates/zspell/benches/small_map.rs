@@ -15,6 +15,8 @@
 //! eventual benefits of keeping sortability. We should re benchmark this in
 //! situ (should only affect compile times)
 
+#![allow(clippy::disallowed_types)]
+
 use std::collections::{BTreeMap, HashMap};
 use std::hint::black_box;
 
@@ -248,28 +250,28 @@ pub fn bench_btree_map(c: &mut Criterion) {
     c.bench_function("BTreeMap short get", |b| {
         b.iter(|| {
             for key in &keys_short {
-                black_box(black_box(&map_short).get(black_box(&key)));
+                black_box(black_box(&map_short).get(black_box(key)));
             }
         })
     });
     c.bench_function("BTreeMap med get", |b| {
         b.iter(|| {
             for key in &keys_med {
-                black_box(black_box(&map_med).get(black_box(&key)));
+                black_box(black_box(&map_med).get(black_box(key)));
             }
         })
     });
     c.bench_function("BTreeMap long get", |b| {
         b.iter(|| {
             for key in &keys_long {
-                black_box(black_box(&map_long).get(black_box(&key)));
+                black_box(black_box(&map_long).get(black_box(key)));
             }
         })
     });
     c.bench_function("BTreeMap xlong get", |b| {
         b.iter(|| {
             for key in &keys_xlong {
-                black_box(black_box(&map_xlong).get(black_box(&key)));
+                black_box(black_box(&map_xlong).get(black_box(key)));
             }
         })
     });

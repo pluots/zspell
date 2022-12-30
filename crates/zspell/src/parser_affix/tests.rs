@@ -1,6 +1,8 @@
 use std::fs;
+use std::path::PathBuf;
 
 use pretty_assertions::assert_eq;
+use util::workspace_root;
 
 use super::*;
 use crate::affix::{PartOfSpeech, RuleType};
@@ -155,7 +157,7 @@ fn test_afx_table_parser_err() {
     // check line offset count
     let s = "PFX A N 2\nPFX A a b x .\nPFX A 0 c a";
     let res = parse_prefix(s);
-    assert_eq!(res.unwrap_err().span().unwrap(), &Span::new(1, 0))
+    assert_eq!(res.unwrap_err().span().unwrap(), &Span::new(1, 0));
 }
 
 const SAMPLE_AFX_OK: &str = r#"
@@ -195,8 +197,8 @@ fn test_full_parse() {
             Conversion::new("a", "b", false),
             Conversion::new("'", "\"", false),
         ]),
-        AffixNode::NoSuggestFlag("X".to_string()),
-        AffixNode::CompoundOnlyFlag("C".to_string()),
+        AffixNode::NoSuggestFlag("X".to_owned()),
+        AffixNode::CompoundOnlyFlag("C".to_owned()),
         AffixNode::AfxWordChars("01234".to_owned()),
         AffixNode::Comment,
         AffixNode::Prefix(ParsedRuleGroup {
@@ -241,7 +243,15 @@ fn test_full_parse() {
 }
 
 #[test]
-fn test_file_parse() {
-    let txt = fs::read_to_string("../../dictionaries/en_US.aff").unwrap();
-    assert!(parse_affix(&txt).is_ok());
+fn test_large_file_parse() {
+    let mut aff_path = workspace_root();
+    aff_path.push("dictionaries");
+    aff_path.push("en_US.aff");
+
+    let Ok(aff_content) = fs::read_to_string(aff_path) else {
+        eprintln!("skipping large test flies; not found");
+        return;
+    };
+
+    assert!(parse_affix(&aff_content).is_ok());
 }

@@ -140,7 +140,7 @@ mod tests {
 
         for (i, (word, pfxs, sfxs, expected_slice)) in conditions.iter().enumerate() {
             let mut dest = WordList::new();
-            let stem_rc = Rc::new(word.to_string());
+            let stem_rc = Rc::new((*word).to_owned());
             create_affixed_word_map(pfxs, sfxs, &stem_rc, &stem_rc, &mut dest);
 
             let mut tmp: Vec<(String, _)> = dest.0.into_iter().collect();

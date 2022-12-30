@@ -1,3 +1,4 @@
+%% Test basic affix
 ==== afx_str ====
 SET UTF-8
 
@@ -9,7 +10,7 @@ SFX B   y     bb         y
 SFX B   0     cc         [^y]
 
 
-==== dic_str =====
+==== dic_str ====
 3
 xxx/A
 yyy/B
@@ -28,4 +29,15 @@ aazzzcc
 
 
 ==== check_invalid ====
-not contained
+%% Nothing to see here
+nothing
+
+==== wordlist ====
+xxx
+yyy
+zzz
+aaxxx
+yybb
+aazzz
+zzzcc
+aazzzcc

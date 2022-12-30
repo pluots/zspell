@@ -88,12 +88,12 @@ mod tests {
             ("pa:xyz", MorphInfo::CompPart("xyz".to_owned())),
         ];
 
-        for (input, expected) in tests.into_iter() {
+        for (input, expected) in tests {
             assert_eq!(
                 MorphInfo::try_from(input),
                 Ok(expected),
                 "failure parsing {input}"
-            )
+            );
         }
     }
 
@@ -109,6 +109,6 @@ mod tests {
             MorphInfo::Allomorph("def".to_owned()),
         ];
 
-        assert_eq!(output, Ok(expected))
+        assert_eq!(output, Ok(expected));
     }
 }

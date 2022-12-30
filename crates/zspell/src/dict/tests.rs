@@ -1,6 +1,10 @@
 //! Tests for a dict file
 
+use std::fs;
+use std::path::PathBuf;
+
 use pretty_assertions::assert_eq;
+use util::workspace_root;
 
 use super::parser::{parse_personal_dict, DictEntry};
 use super::*;
@@ -115,8 +119,6 @@ fn test_update_personal() {
 
 #[test]
 fn test_builder() {
-    use std::fs;
-
     let aff_content = fs::read_to_string("tests/files/w1_eng_short.aff").unwrap();
     let dic_content = fs::read_to_string("tests/files/w1_eng_short.dic").unwrap();
     let dict = DictBuilder::new()
@@ -125,21 +127,24 @@ fn test_builder() {
         .build()
         .unwrap();
 
-    use std::fs::File;
-    use std::io::prelude::*;
-    let mut file = File::create("foo.txt").unwrap();
-    write!(file, "{dict:#?}");
-
     assert_eq!(dict.check("reptiles pillow bananas"), true);
     assert_eq!(dict.check("pine missssspelled"), false);
 }
 
 #[test]
-fn test_builder_advanced() {
-    use std::fs;
+fn test_builder_large_file() {
+    let mut aff_path = workspace_root();
+    aff_path.push("dictionaries");
+    let mut dic_path = aff_path.clone();
+    aff_path.push("en_US.aff");
+    dic_path.push("en_US.dic");
 
-    let aff_content = fs::read_to_string("../../dictionaries/en_US.aff").unwrap();
-    let dic_content = fs::read_to_string("../../dictionaries/en_US.dic").unwrap();
+    let Ok(aff_content) = fs::read_to_string(aff_path) else {
+        eprintln!("skipping large test flies; not found");
+        return;
+    };
+
+    let dic_content = fs::read_to_string(dic_path).unwrap();
     let dict = DictBuilder::new()
         .config_str(&aff_content)
         .dict_str(&dic_content)
