@@ -4,6 +4,16 @@
 
 ## [Unreleased] - ReleaseDate
 
+### Added
+
+### Changed
+
+### Removed
+
+
+
+## [0.3.1] - 2022-12-30
+
 Minor patch to build system workflow
 
 
@@ -116,7 +126,8 @@ Minor bups in the dependency list
 - Behind the scenes work to prepare for automatic dictionary location
 
 <!-- next-url -->
-[Unreleased]: https://github.com/pluots/zspell/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/pluots/zspell/compare/v0.3.1...HEAD
+[0.3.1]: https://github.com/pluots/zspell/compare/v0.3.0...v0.3.1
 [0.3.0]: https://github.com/pluots/zspell/compare/v0.2.2...v0.3.0
 [0.2.2]: https://github.com/pluots/zspell/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/pluots/zspell/compare/v0.2.0...v0.2.1
