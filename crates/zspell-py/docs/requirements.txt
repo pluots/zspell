@@ -1,3 +1,4 @@
-furo>=2022.06.21
-sphinx>=5.0
-pygments>=2.8
+furo>=2022.12
+sphinx>=6.0
+pygments>=2.13
+m23>=0.3
