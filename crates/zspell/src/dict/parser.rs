@@ -14,7 +14,7 @@ lazy_static! {
         ^
         (?P<stem>\S+?)
         (?:/
-            (?P<flags>\w+)
+            (?P<flags>\S+)
         )?
         (?:\s+
             (?P<morph>[\s\w:]+?)
@@ -185,8 +185,14 @@ impl ParsedPersonalMeta {
 /// Parse a complete dictionary file (usually `.dic`)
 #[allow(clippy::single_match_else, clippy::option_if_let_else)]
 pub fn parse_dict(s: &str, flag_type: FlagType) -> Result<Vec<DictEntry>, ParseError> {
-    let mut lines = s.lines();
-    let Some(first) = lines.next() else {
+    // Ignore empty lines and
+    let mut lines_iter = s
+        .lines()
+        .map(|line| line.trim())
+        .filter(|line| !(line.is_empty() || line.starts_with('#')));
+    let lines_backup = lines_iter.clone();
+
+    let Some(first) = lines_iter.next() else {
         return Ok(Vec::new())
     };
 
@@ -194,16 +200,12 @@ pub fn parse_dict(s: &str, flag_type: FlagType) -> Result<Vec<DictEntry>, ParseE
     let (mut ret, start) = match first.parse::<usize>() {
         Ok(cap) => (Vec::with_capacity(cap), 2),
         Err(_) => {
-            lines = s.lines();
+            lines_iter = lines_backup;
             (Vec::new(), 1)
         }
     };
 
-    for (i, line) in s.lines().map(str::trim).enumerate() {
-        if line.starts_with('#') {
-            continue;
-        }
-
+    for (i, line) in lines_iter.enumerate() {
         ret.push(DictEntry::parse_str(
             line,
             flag_type,

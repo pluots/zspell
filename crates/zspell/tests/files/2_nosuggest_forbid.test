@@ -1,0 +1,31 @@
+%% Verify our nosuggest flag works
+
+==== afx_str ====
+NOSUGGEST !
+FORBIDDENWORD *
+
+SFX A Y 1
+SFX A   0     aaa       .
+
+==== dic_str ====
+nosuggest/A!
+forbid/A*
+
+==== check_valid ====
+nosuggest
+nosuggestaaa
+
+
+==== check_invalid ====
+forbid
+forbidaaa
+
+==== wordlist ====
+
+==== wordlist_nosuggest ====
+nosuggest
+nosuggestaaa
+
+==== wordlist_forbidden ====
+forbid
+forbidaaa

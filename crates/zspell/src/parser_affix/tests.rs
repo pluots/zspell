@@ -2,6 +2,7 @@ use std::fs;
 use std::path::PathBuf;
 
 use pretty_assertions::assert_eq;
+use util::workspace_root;
 
 use super::*;
 use crate::affix::{PartOfSpeech, RuleType};
@@ -242,15 +243,15 @@ fn test_full_parse() {
 }
 
 #[test]
-fn test_file_parse() {
-    let root = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    let mut aff_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    aff_path.pop();
-    aff_path.pop();
+fn test_large_file_parse() {
+    let mut aff_path = workspace_root();
     aff_path.push("dictionaries");
     aff_path.push("en_US.aff");
 
-    // Just test parsing a real-world file
-    let txt = fs::read_to_string(aff_path).unwrap();
-    assert!(parse_affix(&txt).is_ok());
+    let Ok(aff_content) = fs::read_to_string(aff_path) else {
+        eprintln!("skipping large test flies; not found");
+        return;
+    };
+
+    assert!(parse_affix(&aff_content).is_ok());
 }

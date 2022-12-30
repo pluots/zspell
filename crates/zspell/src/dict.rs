@@ -143,7 +143,8 @@ impl Dictionary {
     /// Check words in a string, returning a list of the start and end indices
     /// of any incorrect words.
     ///
-    /// This can be used ot create spellcheckers that provide feedback to a user.
+    /// This can be used ot create spellcheckers that provide feedback to a
+    /// user.
     ///
     /// ```
     /// use std::fs;
@@ -159,29 +160,43 @@ impl Dictionary {
     ///     .build()
     ///     .unwrap();
     ///
-    /// assert_eq!(
-    ///     dict.check_indices("pine missspelled"),
-    ///     vec![(5, "missspelled")]
-    /// );
+    /// let errors: Vec<(usize, &str)> = dict.check_indices("pine missspelled").collect();
+    /// assert_eq!(errors, vec![(5, "missspelled")]);
     /// ```
+    ///
+    /// The return signature is a bit clunky looking if you're not familiar with
+    /// Rust, but I promise it's more simple than it looks
+    /// 1. It returns an iterator so you can lazily iterate: `for (idx, wrongword)
+    ///    in dict.check_indice(ssentence) {...}`
+    /// 2. Lifetimes: the iterator itself can't outlive the `Dictionary` object
+    ///    itself (both have lifetime `'d`) since it calls some internal
+    ///    functions
+    /// 3. Lifetimes 2: the strings in the returned iterator values can't
+    ///    outlive the input string (both have lifetime `'a` since they're
+    ///    just references to the input string)
+    ///
+    /// Still hitting lifetime errors? Just `.collect()` it into a vector like
+    /// in the above example.
     #[inline]
-    pub fn check_indices<'a>(&self, input: &'a str) -> Vec<(usize, &'a str)> {
-        word_splitter(input)
-            .filter(|(idx, w)| !self.check_word(w))
-            .collect()
+    pub fn check_indices<'a: 'd, 'd>(
+        &'d self,
+        input: &'a str,
+    ) -> impl Iterator<Item = (usize, &'a str)> + 'd {
+        word_splitter(input).filter(|(idx, w)| !self.check_word(w))
     }
 
     /// **UNSTABLE** Suggest a word at given indices. Feature gated behind
     /// `unstable-suggestions`.
     #[inline]
     #[cfg(feature = "unstable-suggestions")]
-    pub fn suggest_indices<'a>(&self, input: &'a str) -> Vec<(usize, &'a str, Vec<&str>)> {
-        word_splitter(input)
-            .filter_map(|(idx, w)| {
-                self.suggest_word(w)
-                    .map_or_else(|v| Some((idx, w, v)), |_| None)
-            })
-            .collect()
+    pub fn suggest_indices<'a>(
+        &self,
+        input: &'a str,
+    ) -> impl Iterator<Item = (usize, &'a str, Vec<&str>)> {
+        word_splitter(input).filter_map(|(idx, w)| {
+            self.suggest_word(w)
+                .map_or_else(|v| Some((idx, w, v)), |_| None)
+        })
     }
 
     /// **UNSTABLE** Suggest a replacement for a single word. Feature gated

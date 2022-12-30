@@ -2,15 +2,41 @@
 #![allow(unused)]
 
 use std::fs;
+use std::path::PathBuf;
 
 use pretty_assertions::{assert_eq, assert_str_eq};
 use zspell::{DictBuilder, Dictionary, MorphInfo};
+
+/// Get the workspace root. We use this as a workaround because Github actions
+/// seems to switch this around for some reason.
+pub fn workspace_root() -> PathBuf {
+    dbg!(std::env::current_dir().unwrap());
+    // use github workspace directory if available, or `../../this_dir` if not
+    let ret = match dbg!(std::env::var("GITHUB_WORKSPACE")) {
+        Ok(v) => PathBuf::from(v),
+        Err(_) => {
+            let mut tmp = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+            tmp.pop();
+            tmp.pop();
+            tmp.pop();
+            tmp
+        }
+    };
+
+    let paths = fs::read_dir(&ret).unwrap();
+    for path in paths {
+        println!("Name: {}", path.unwrap().path().display());
+    }
+    ret
+}
 
 /// A collection from a `.test` file that we can easily validate
 ///
 /// See `0_example.test`  for descriptions of what this file should look like
 #[derive(Clone, Debug, Default)]
 pub struct TestManager {
+    description: String,
+    fname: String,
     /// The affix file as a string
     afx_str: String,
     /// The dictionary file as a string
@@ -31,9 +57,19 @@ pub struct TestManager {
 
 impl TestManager {
     /// Load a `TestManager` from a string
-    pub fn load_str(input: &str) -> Self {
+    pub fn new_from_str(input: &str) -> Self {
         let mut ret = Self::default();
-        let mut content_iter = input.trim().split("====");
+        // Remove our comments that start with "%%"
+        let input_cleaned: String = input
+            .lines()
+            .filter(|line| !line.trim().starts_with("%%"))
+            .fold(String::new(), |mut a, b| {
+                a.reserve(b.len() + 1);
+                a.push_str(b);
+                a.push_str("\n");
+                a
+            });
+        let mut content_iter = input_cleaned.trim().split("====").filter(|s| !s.is_empty());
 
         while let Some(s_title) = content_iter.next() {
             let sec_title = s_title.trim();
@@ -41,7 +77,6 @@ impl TestManager {
             let lines_content: Vec<_> = sec_content
                 .trim()
                 .lines()
-                .filter(|line| !line.starts_with('#'))
                 .map(|line| line.to_owned())
                 .collect();
 
@@ -74,13 +109,21 @@ impl TestManager {
 
         ret
     }
-    /// Load a `TestManager` from a given file name
+    /// Load a `TestManager` from a given file name. Assumes the file will be
+    /// located in `zspell/tests/files`.
     pub fn new_from_file(fname: &str) -> Self {
-        let fname_new = format!("tests/files/{fname}");
-        let f_content = fs::read_to_string(fname_new.clone())
-            .unwrap_or_else(|_| panic!("error reading file '{fname_new}'"));
+        let mut fpath = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+        fpath.pop();
+        fpath.push("tests");
+        fpath.push("files");
+        fpath.push(fname);
 
-        Self::load_str(&f_content)
+        let f_content = fs::read_to_string(&fpath)
+            .unwrap_or_else(|_| panic!("error reading file '{}'", fpath.to_string_lossy()));
+
+        let mut ret = Self::new_from_str(&f_content);
+        ret.fname = fname.to_owned();
+        ret
     }
 
     /// Build the dictionary based on given input
@@ -107,7 +150,11 @@ impl TestManager {
     /// Validate all expected checks are correct
     fn run_check_valid_invalid(&self, dict: &Dictionary) {
         for item in &self.check_valid {
-            assert!(dict.check(item), "{item} failed check (expected true)");
+            assert!(
+                dict.check(item),
+                "'{item}' failed check (expected true) in {}",
+                self.fname
+            );
         }
 
         if self.check_valid.is_empty() {
@@ -117,7 +164,11 @@ impl TestManager {
         }
 
         for item in &self.check_invalid {
-            assert!(!dict.check(item), "{item} failed check (expected false)");
+            assert!(
+                !dict.check(item),
+                "'{item}' failed check (expected false) in {}",
+                self.fname
+            );
         }
 
         if self.check_invalid.is_empty() {
@@ -143,15 +194,22 @@ impl TestManager {
             ),
         ];
 
-        for (name, expected, actual) in check_lists {
-            let Some (wordlist) = expected else {
+        for (name, expected_ref, actual_ref) in check_lists.into_iter() {
+            let Some (tmp) = expected_ref else {
                 eprintln!("skipped testing for {name}");
                 continue;
             };
-            let map = actual.inner();
-            let mut keys: Vec<String> = map.keys().cloned().collect();
-            keys.sort_unstable();
-            assert_eq!(wordlist, &keys);
+            let mut expected = tmp.clone();
+            expected.sort_unstable();
+
+            let mut actual: Vec<String> = actual_ref.inner().keys().cloned().collect();
+            actual.sort_unstable();
+
+            assert_eq!(
+                expected, actual,
+                "failed {name} checks for '{}'",
+                self.fname
+            );
             eprintln!("testing for {name} succeeded");
         }
     }
@@ -168,7 +226,11 @@ impl TestManager {
             let mut sug_exp: Vec<&str> = expected.iter().map(|s| s.as_str()).collect();
             sug_dict.sort_unstable();
             sug_exp.sort_unstable();
-            assert_eq!(sug_dict, sug_exp);
+            assert_eq!(
+                sug_dict, sug_exp,
+                "failed suggestion checks for '{}'",
+                self.fname
+            );
         }
         eprintln!("all suggestions passed");
     }

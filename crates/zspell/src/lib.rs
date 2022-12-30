@@ -47,10 +47,10 @@
 //! assert_eq!(dict.check_word("okay okay"), false);
 //!
 //! // `.check_indices(str)` provides more useful information for anything other than trivial
-//! // checks. It returns a `Vec<(usize, &str)>`, that gives the byte offset and string
-//! // reference of any spelling errors.
+//! // checks. It returns an iterator over `(usize, &str)`, which gives the byte offset and
+//! // string reference of any spelling errors.
 //! let input = "okay, I misspelled soemthing this tiem";
-//! let errors = dict.check_indices(input);
+//! let errors: Vec<(usize, &str)> = dict.check_indices(input).collect();
 //! let expected = vec![(19, "soemthing"), (34, "tiem")];
 //!
 //! assert_eq!(errors, expected);
