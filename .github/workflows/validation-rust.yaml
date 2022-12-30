@@ -25,7 +25,7 @@ jobs:
     strategy:
       matrix:
         include:
-          - build: linux
+          - build: linux x86_64
             os: ubuntu-latest
             target: x86_64-unknown-linux-gnu
             # target: x86_64-unknown-linux-musl
@@ -39,21 +39,21 @@ jobs:
           #   os: ubuntu-latest
           #   target: arm-unknown-linux-gnueabihf
           #   extension: ''
-          - build: macos
+          - build: macos x86_64
             os: macos-latest
             target: x86_64-apple-darwin
             extension: ''
-          - build: macos
+          - build: macos aarch64
             os: macos-latest
             target: aarch64-apple-darwin
             extension: ''
-          - build: windows-msvc
+          - build: windows msvc
             os: windows-latest
             target: x86_64-pc-windows-msvc
             extension: .exe
-          - build: windows-msvc
+          - build: windows gnu
             os: windows-latest
-            target: x86_64-pc-windows-msvc
+            target: x86_64-pc-windows-gnu
             extension: .exe
     env:
       CARGO: cargo
