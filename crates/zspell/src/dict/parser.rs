@@ -58,7 +58,7 @@ pub struct DictEntry {
 }
 
 impl DictEntry {
-    /// Create a new DictEntry
+    /// Create a new `DictEntry`
     #[cfg(test)]
     pub(crate) fn new(stem: String, flags: &[u32], morph: Vec<MorphInfo>) -> Self {
         Self {
@@ -188,7 +188,7 @@ pub fn parse_dict(s: &str, flag_type: FlagType) -> Result<Vec<DictEntry>, ParseE
     // Ignore empty lines and
     let mut lines_iter = s
         .lines()
-        .map(|line| line.trim())
+        .map(str::trim)
         .filter(|line| !(line.is_empty() || line.starts_with('#')));
     let lines_backup = lines_iter.clone();
 

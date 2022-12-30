@@ -1,6 +1,8 @@
 //! Benchmarks for operations on datastructures that resemble operations we
 //! might use in our spellchecker
 
+#![allow(clippy::disallowed_types)]
+
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::fs::File;
 use std::hint::black_box;

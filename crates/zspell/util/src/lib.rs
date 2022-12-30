@@ -66,7 +66,7 @@ impl TestManager {
             .fold(String::new(), |mut a, b| {
                 a.reserve(b.len() + 1);
                 a.push_str(b);
-                a.push_str("\n");
+                a.push('\n');
                 a
             });
         let mut content_iter = input_cleaned.trim().split("====").filter(|s| !s.is_empty());

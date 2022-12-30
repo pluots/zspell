@@ -112,7 +112,7 @@ impl AfxRulePattern {
         Self {
             affix: afx.to_owned(),
             condition: None,
-            strip: strip.map(|s| s.to_owned()),
+            strip: strip.map(ToOwned::to_owned),
             morph_info: Vec::new(),
         }
     }
