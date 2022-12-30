@@ -113,6 +113,6 @@ file = "../../CHANGELOG.md"
 search = "<!-- next-url -->"
 replace = """\
   <!-- next-url -->\n\
-  [Unreleased]: https://github.com/pluots/stringmetrics/compare/{{tag_name}}...HEAD\
+  [Unreleased]: https://github.com/pluots/zspell/compare/{{tag_name}}...HEAD\
   """
 exactly = 1

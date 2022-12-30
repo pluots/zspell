@@ -17,7 +17,7 @@ from pathlib import Path
 
 # -- Project information -----------------------------------------------------
 
-project = "stringmetrics"
+project = "zspell"
 copyright = "2022, Trevor Gross"
 author = "Trevor Gross"
 
