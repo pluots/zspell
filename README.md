@@ -22,7 +22,7 @@ Here are some useful quick links:
 This project exposes multiple interfaces to its spellchecker, listed in
 this section.
 
-### CLI Interface
+### Command Line Interface
 
 Just want to use this spellchecker from the command line? Check out the book,
 located here <https://pluots.github.io/zspell/>, for a more in-depth explanation
