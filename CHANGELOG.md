@@ -4,12 +4,7 @@
 
 ## [Unreleased] - ReleaseDate
 
-### Added
-
-### Changed
-
-### Removed
-
+Minor patch to build system workflow
 
 
 ## [0.3.0] - 2022-12-30
