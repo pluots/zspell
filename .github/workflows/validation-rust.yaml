@@ -33,6 +33,8 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+      - name: Install System Requirements
+        run: apt-get install musl-tools
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
@@ -46,11 +48,17 @@ jobs:
         with:
           command: check
           args: --all-features --all-targets
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: stable
+          override: true
+          target: ${{ matrix.target }}
+      # Validate our musl build
       - uses: actions-rs/cargo@v1
-        # check with no features
         with:
           command: check
-          args: --no-default-features --all-targets
+          args: --no-default-features --all-targets --target x86_64-unknown-linux-musl
 
   test:
     strategy:

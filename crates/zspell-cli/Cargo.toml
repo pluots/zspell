@@ -14,21 +14,21 @@ name = "zspell"
 path = "src/main.rs"
 
 [dependencies]
-cfg-if = "1.0.0"
+cfg-if = "1.0"
 clap = { version = "4.0.32", features = ["derive", "wrap_help"] }
-futures-util = "0.3.25"
-hex = "0.4.3"
-indicatif = "0.17.1"
+futures-util = "0.3"
+hex = "0.4"
+indicatif = "0.17"
 # We opt to use rustls instead of linking openssl
-reqwest = { version = "0.11.12", features = ["blocking", "stream", "rustls-tls"], default-features = false }
-serde = { version = "1.0.147", features = ["derive"] }
-serde_json = "1.0.87"
+reqwest = { version = "0.11", features = ["blocking", "stream", "rustls-tls"], default-features = false }
+serde = { version = "1.0.152", features = ["derive"] }
+serde_json = "1.0.91"
 sha1 = "0.10.5"
-stringmetrics = "2.1"
+stringmetrics = "2.2"
 termcolor = "1.1.3"
 tokio = "1.21.2"
-zspell = { path = "../zspell", features = ["zspell-unstable"] }
 anyhow = "1.0.68"
+zspell = { path = "../zspell", features = ["zspell-unstable"] }
 
 [dev-dependencies]
 criterion = "0.4"

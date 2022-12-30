@@ -52,7 +52,8 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-        # Install cargo
+      - name: Install System Requirements
+        run: apt-get install musl-tools
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
@@ -70,7 +71,8 @@ jobs:
           echo "target flag is: ${{ env.TARGET_FLAGS }}"
           echo "target dir is: ${{ env.TARGET_DIR }}"
         # Perform build
-      - uses: actions-rs/cargo@v1
+      - name: Build binary
+        uses: actions-rs/cargo@v1
         with:
           command: build
           # We only want to build zspell-cli, not plain zspell or zspell-py (does not support cdylib)
