@@ -203,6 +203,8 @@ impl ParseError {
             span.end.line += l_inc;
             span.start.col += c_inc;
             span.end.col += c_inc;
+        } else {
+            self.span = Some(Span::new(l_inc, c_inc));
         }
 
         self
@@ -247,6 +249,21 @@ impl Display for Error {
             Error::Regex(e) => write!(f, "regex error: {e}"),
             Error::Io(e) => write!(f, "io error: {e}"),
         }
+    }
+}
+
+impl Display for ParseError {
+    #[inline]
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match &self.span {
+            Some(span) => write!(
+                f,
+                "parse error at line {}: {}. Context: '{}'",
+                span.start.line, self.err, self.ctx
+            )?,
+            None => write!(f, "parse error: {}", self.err)?,
+        };
+        Ok(())
     }
 }
 
@@ -302,17 +319,6 @@ impl Display for ParseErrorKind {
             }
             ParseErrorKind::FlagParse(v) => write!(f, "error parsing flag of type '{v}'"),
         }
-    }
-}
-
-impl Display for ParseError {
-    #[inline]
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match &self.span {
-            Some(span) => write!(f, "parse error at line {}: {}", span.start.line, self.err)?,
-            None => write!(f, "error: {}", self.err)?,
-        };
-        Ok(())
     }
 }
 

@@ -16,6 +16,7 @@ doc = false
 [dependencies]
 pyo3 = { version = "0.17.3", features = ["extension-module"] }
 zspell = { path = "../zspell" }
+regex = "1.7"
 
 [build-dependencies]
 pyo3-build-config = "0.17.3"

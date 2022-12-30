@@ -15,10 +15,12 @@
 import re
 from pathlib import Path
 
+import m2r
+
 # -- Project information -----------------------------------------------------
 
 project = "zspell"
-copyright = "2022, Trevor Gross"
+copyright = "2023, Trevor Gross"
 author = "Trevor Gross"
 
 # The full version, including alpha/beta/rc tags
@@ -54,6 +56,10 @@ exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 github_url = "https://github.com/pluots/zspell/"
 
+# Autodoc options
+autodoc_member_order = "bysource"
+autoclass_content = "both"
+
 
 # -- Options for HTML output -------------------------------------------------
 
@@ -66,3 +72,15 @@ html_theme = "furo"
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
 html_static_path = ["_static"]
+
+
+def convert_docstrings(app, what, name, obj, options, lines):
+    """Convert docstrings from markdown to RST"""
+    md = "\n".join(lines)
+    rst = m2r.convert(md)
+    lines.clear()
+    lines += rst.splitlines()
+
+
+def setup(app):
+    app.connect("autodoc-process-docstring", convert_docstrings)

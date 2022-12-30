@@ -1,6 +1,6 @@
 use std::borrow::Borrow;
 use std::fmt::Debug;
-use std::rc::Rc;
+use std::sync::Arc;
 
 use hashbrown::HashSet;
 use unicode_segmentation::UnicodeSegmentation;
@@ -15,10 +15,10 @@ use crate::Error;
 // pub(super) fn analyze_flags
 
 pub(super) fn create_affixed_word_map(
-    prefix_rules: &[&Rc<AfxRule>],
-    suffix_rules: &[&Rc<AfxRule>],
+    prefix_rules: &[&Arc<AfxRule>],
+    suffix_rules: &[&Arc<AfxRule>],
     stem: &str,
-    stem_rc: &Rc<String>,
+    stem_rc: &Arc<String>,
     dest: &mut WordList,
 ) -> Result<(), ()> {
     if prefix_rules.is_empty() && suffix_rules.is_empty() {
@@ -26,7 +26,7 @@ pub(super) fn create_affixed_word_map(
     }
 
     // Store words with prefixes that can also have suffixes
-    let mut prefixed_words: Vec<(String, &Rc<AfxRule>)> = Vec::new();
+    let mut prefixed_words: Vec<(String, &Arc<AfxRule>)> = Vec::new();
 
     for &rule in prefix_rules.iter() {
         let result = rule.apply_pattern(stem).ok_or(())?;
@@ -79,7 +79,7 @@ mod tests {
 
     #[test]
     fn test_create_words() {
-        let rul1 = Rc::new(AfxRule::new(
+        let rul1 = Arc::new(AfxRule::new(
             RuleType::Prefix,
             &["aa"],
             &["."],
@@ -87,7 +87,7 @@ mod tests {
             None,
             None,
         ));
-        let rul2 = Rc::new(AfxRule::new(
+        let rul2 = Arc::new(AfxRule::new(
             RuleType::Prefix,
             &["bb"],
             &["."],
@@ -95,7 +95,7 @@ mod tests {
             None,
             None,
         ));
-        let rul3 = Rc::new(AfxRule::new(
+        let rul3 = Arc::new(AfxRule::new(
             RuleType::Suffix,
             &["cc", "dd"],
             &["x", "[^x]"],
@@ -140,7 +140,7 @@ mod tests {
 
         for (i, (word, pfxs, sfxs, expected_slice)) in conditions.iter().enumerate() {
             let mut dest = WordList::new();
-            let stem_rc = Rc::new((*word).to_owned());
+            let stem_rc = Arc::new((*word).to_owned());
             create_affixed_word_map(pfxs, sfxs, &stem_rc, &stem_rc, &mut dest);
 
             let mut tmp: Vec<(String, _)> = dest.0.into_iter().collect();

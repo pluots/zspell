@@ -4,11 +4,14 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-maturin = "*"
-sphinx = "*"
+maturin = "0.14"
+sphinx = "6.0"
+furo = "2022.12"
 
 [dev-packages]
-black = "*"
+black = "2022.12"
+pytest = "7.2"
+m2r = "*"
 
 [requires]
 python_version = "3.10"

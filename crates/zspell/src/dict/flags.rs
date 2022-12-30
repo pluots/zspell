@@ -1,5 +1,5 @@
 use std::fmt::Display;
-use std::rc::Rc;
+use std::sync::Arc;
 
 use super::rule::AfxRule;
 
@@ -26,7 +26,7 @@ pub enum FlagValue {
     NoSuggest,
     WarnRare,
     /// Special case
-    Rule(Rc<AfxRule>),
+    Rule(Arc<AfxRule>),
 }
 
 impl Display for FlagValue {

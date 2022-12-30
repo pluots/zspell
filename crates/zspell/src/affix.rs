@@ -3,7 +3,7 @@
 mod types;
 
 use std::collections::BTreeMap;
-use std::rc::Rc;
+use std::sync::Arc;
 
 pub use self::types::{
     CompoundPattern, CompoundSyllable, Conversion, Encoding, FlagType, PartOfSpeech, Phonetic,
@@ -447,7 +447,7 @@ impl ParsedCfg {
             }
 
             let rule = AfxRule::from_parsed_group(self, group);
-            map.insert(flag, FlagValue::Rule(Rc::new(rule)));
+            map.insert(flag, FlagValue::Rule(Arc::new(rule)));
         }
 
         Ok(map)
