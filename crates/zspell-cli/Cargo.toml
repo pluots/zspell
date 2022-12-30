@@ -14,9 +14,8 @@ name = "zspell"
 path = "src/main.rs"
 
 [dependencies]
-anyhow = "1.0.66"
 cfg-if = "1.0.0"
-clap = { version = "4.0.18", features = ["derive", "wrap_help"] }
+clap = { version = "4.0.32", features = ["derive", "wrap_help"] }
 futures-util = "0.3.25"
 hex = "0.4.3"
 indicatif = "0.17.1"
@@ -28,7 +27,8 @@ sha1 = "0.10.5"
 stringmetrics = "2.1"
 termcolor = "1.1.3"
 tokio = "1.21.2"
-zspell = { path = "../zspell" }
+zspell = { path = "../zspell", features = ["zspell-unstable"] }
+anyhow = "1.0.68"
 
 [dev-dependencies]
 criterion = "0.4"

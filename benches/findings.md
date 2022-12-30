@@ -1,5 +1,7 @@
 # Benchmark Findings
 
+Simple notes from benchmarks that have been run
+
 ## Collection types
 
 Four collections were compared; `Vec` (as a baseline),
@@ -22,3 +24,9 @@ problem for our applications).
 For some reason, the improvements going from `std` to `hashbrown` don't really
 seem to show up for the dictionary integration tests. This will take some
 looking into.
+
+## Slice `contains` vs. `binary_search`
+
+Overall, the price of sorting doesn't seem to have any payoff, especially for
+our use cases of short arrays. If it is already sorted then we can save time,
+about 20% on average.

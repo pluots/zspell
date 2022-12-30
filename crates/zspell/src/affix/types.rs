@@ -1,655 +1,423 @@
-// use super::affix::Affix;
-// use super::affix_serde::{ENCODING_CLASS_LIST, TOKEN_CLASS_LIST};
+//! Type representations for affix file contents
 
-use std::string::ToString;
+use std::fmt::Display;
 
+use lazy_static::lazy_static;
 use regex::Regex;
-use strum::EnumString;
 
-use crate::affix::{t_data_unwrap, ProcessedToken, ProcessedTokenData};
-use crate::errors::AffixError;
+use crate::error::{BuildError, ParseErrorKind};
 
-/// All possible types found in hunspell affix files
-/// This represents a generic token type that will have associated
-#[non_exhaustive]
-#[derive(
-    Debug,
-    Eq,
-    PartialEq,
-    EnumString,
-    strum_macros::Display,
-    strum_macros::EnumVariantNames,
-    strum_macros::EnumProperty,
-)]
-pub enum TokenType {
-    #[strum(to_string = "SET", props(dtype = "str"))]
-    Encoding,
-
-    #[strum(to_string = "FLAG", props(dtype = "str"))]
-    FlagType,
-
-    #[strum(to_string = "COMPLEXPREFIXES", props(dtype = "bool"))]
-    ComplexPrefixes,
-
-    #[strum(to_string = "LANG", props(dtype = "str"))]
-    Language,
-
-    #[strum(to_string = "IGNORE", props(dtype = "str"))]
-    IgnoreChars,
-
-    #[strum(to_string = "AF", props(dtype = "table"))]
-    AffixFlag,
-
-    #[strum(to_string = "AM", props(dtype = "table"))]
-    MorphAlias,
-
-    // Suggestion-related
-    #[strum(to_string = "KEY", props(dtype = "str"))]
-    NeighborKeys,
-
-    #[strum(to_string = "TRY", props(dtype = "str"))]
-    TryCharacters,
-
-    #[strum(to_string = "NOSUGGEST", props(dtype = "str"))]
-    NoSuggestFlag,
-
-    #[strum(to_string = "MAXCPDSUGS", props(dtype = "int"))]
-    CompoundSuggestionsMax,
-
-    #[strum(to_string = "MAXNGRAMSUGS", props(dtype = "int"))]
-    NGramSuggestionsMax,
-
-    #[strum(to_string = "MAXDIFF", props(dtype = "int"))]
-    NGramDiffMax,
-
-    #[strum(to_string = "ONLYMAXDIFF", props(dtype = "bool"))]
-    NGramLimitToDiffMax,
-
-    #[strum(to_string = "NOSPLITSUGS", props(dtype = "bool"))]
-    NoSpaceSubs,
-
-    #[strum(to_string = "SUGSWITHDOTS", props(dtype = "bool"))]
-    KeepTerminationDots,
-
-    #[strum(to_string = "REP", props(dtype = "table"))]
-    Replacement,
-
-    #[strum(to_string = "MAP", props(dtype = "table"))]
-    Mapping,
-
-    #[strum(to_string = "PHONE", props(dtype = "table"))]
-    Phonetic,
-
-    #[strum(to_string = "WARN", props(dtype = "str"))]
-    WarnRareFlag,
-
-    #[strum(to_string = "FORBIDWARN", props(dtype = "bool"))]
-    ForbidWarnWords,
-
-    #[strum(to_string = "BREAK", props(dtype = "table"))]
-    Breakpoint,
-
-    // Compound-related
-    #[strum(to_string = "COMPOUNDRULE", props(dtype = "table"))]
-    CompoundRule,
-
-    #[strum(to_string = "COMPOUNDMIN", props(dtype = "int"))]
-    CompoundMinLength,
-
-    #[strum(to_string = "COMPOUNDFLAG", props(dtype = "str"))]
-    CompoundFlag,
-
-    #[strum(to_string = "COMPOUNDBEGIN", props(dtype = "str"))]
-    CompoundBeginFlag,
-
-    #[strum(to_string = "COMPOUNDLAST", props(dtype = "str"))]
-    CompoundEndFlag,
-
-    #[strum(to_string = "COMPOUNDMIDDLE", props(dtype = "str"))]
-    CompoundMiddleFlag,
-
-    #[strum(to_string = "ONLYINCOMPOUND", props(dtype = "str"))]
-    CompoundOnlyFlag,
-
-    #[strum(to_string = "COMPOUNDPERMITFLAG", props(dtype = "str"))]
-    CompoundPermitFlag,
-
-    #[strum(to_string = "COMPOUNDFORBIDFLAG", props(dtype = "str"))]
-    CompoundForbidFlag,
-
-    #[strum(to_string = "COMPOUNDMORESUFFIXES", props(dtype = "bool"))]
-    CompoundMoreSuffixes,
-
-    #[strum(to_string = "COMPOUNDROOT", props(dtype = "str"))]
-    CompoundRoot,
-
-    #[strum(to_string = "COMPOUNDWORDMAX", props(dtype = "int"))]
-    CompoundWordMax,
-
-    #[strum(to_string = "CHECKCOMPOUNDDUP", props(dtype = "bool"))]
-    CompoundForbidDuplication,
-
-    #[strum(to_string = "CHECKCOMPOUNDREP", props(dtype = "bool"))]
-    CompoundForbidRepeat,
-
-    #[strum(to_string = "CHECKCOMPOUNDCASE", props(dtype = "bool"))]
-    CompoundForbidUpperBoundary,
-
-    #[strum(to_string = "CHECKCOMPOUNDTRIPLE", props(dtype = "bool"))]
-    CompoundForbidTriple,
-
-    #[strum(to_string = "SIMPLIFIEDTRIPLE", props(dtype = "bool"))]
-    CompoundSimplifyTriple,
-
-    #[strum(to_string = "CHECKCOMPOUNDPATTERN", props(dtype = "table"))]
-    CompoundForbidPatterns,
-
-    #[strum(to_string = "FORCEUCASE", props(dtype = "str"))]
-    CompoundForceUpper,
-
-    #[strum(to_string = "COMPOUNDSYLLABLE", props(dtype = "str"))]
-    CompoundForceSyllable,
-
-    #[strum(to_string = "SYLLABLENUM", props(dtype = "str"))]
-    CompoundSyllableNumber,
-
-    // Affix-related
-    #[strum(to_string = "PFX", props(dtype = "table"))]
-    Prefix,
-
-    #[strum(to_string = "SFX", props(dtype = "table"))]
-    Suffix,
-
-    #[strum(to_string = "CIRCUMFIX", props(dtype = "str"))]
-    AffixCircumfixFlag,
-
-    #[strum(to_string = "FORBIDDENWORD", props(dtype = "str"))]
-    AffixForbiddenWordFlag,
-
-    #[strum(to_string = "FULLSTRIP", props(dtype = "bool"))]
-    AffixFullStrip,
-
-    #[strum(to_string = "KEEPCASE", props(dtype = "str"))]
-    AffixKeepCase,
-
-    #[strum(to_string = "ICONV", props(dtype = "table"))]
-    AffixInputConversion,
-
-    #[strum(to_string = "OCONV", props(dtype = "table"))]
-    AffixOutputConversion,
-
-    #[strum(to_string = "LEMMA_PRESENT", props(dtype = "str"))]
-    AffixLemmaPresentDeprecated,
-
-    #[strum(to_string = "NEEDAFFIX", props(dtype = "str"))]
-    AffixNeededFlag,
-
-    #[strum(to_string = "PSEUDOROOT", props(dtype = "str"))]
-    AffixPseudoRootFlagDeprecated,
-
-    #[strum(to_string = "SUBSTANDARD", props(dtype = "str"))]
-    AffixSubstandardFlag,
-
-    #[strum(to_string = "WORDCHARS", props(dtype = "str"))]
-    AffixWordChars,
-
-    #[strum(to_string = "CHECKSHARPS", props(dtype = "bool"))]
-    AffixCheckSharps,
-
-    // Used to indicate start of token stream
-    FileStart,
+lazy_static! {
+    static ref RE_COMPOUND_PATTERN: Regex = Regex::new(
+        r"(?x)
+        ^(?P<endchars>\w+)
+        (?:/(?P<endflags>\w+))?\s+
+        (?P<beginchars>\w+)
+        (?:/(?P<beginflag>\w+))?
+        (?P<replacement>\s\w+)?$"
+    )
+    .unwrap();
 }
 
+/// A possible encoding type
 #[non_exhaustive]
-#[derive(
-    Debug, Eq, PartialEq, EnumString, strum_macros::Display, strum_macros::EnumVariantNames,
-)]
-pub enum EncodingType {
-    #[strum(to_string = "UTF-8")]
-    Utf8, // UTF-8
-    #[strum(to_string = "ISO8859-1")]
-    Iso8859t1, // ISO8859-1
-    #[strum(to_string = "ISO8859-10")]
-    Iso8859t10, // ISO8859-10
-    #[strum(to_string = "ISO8859-13")]
-    Iso8859t13, // ISO8859-13
-    #[strum(to_string = "ISO8859-15")]
-    Iso8859t15, // ISO8859-15
-    #[strum(to_string = "KOI8-R")]
-    Koi8r, // KOI8-R
-    #[strum(to_string = "KOI8-U")]
-    Koi8u, // KOI8-U
-    #[strum(to_string = "cp1251")]
-    Cp1251, // cp1251
-    #[strum(to_string = "ISCII-DEVANAGARI")]
-    IsciiDevanagari, // ISCII-DEVANAGARI
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum Encoding {
+    /// UTF-8 encoding
+    Utf8,
+    /// ISO8859-1 encoding
+    Iso8859t1,
+    /// ISO8859-10 encoding
+    Iso8859t10,
+    /// ISO8859-13 encoding
+    Iso8859t13,
+    /// ISO8859-15 encoding
+    Iso8859t15,
+    /// KOI8-R encoding
+    Koi8R,
+    /// KOI8-U encoding
+    Koi8U,
+    /// cp1251 encoding
+    Cp1251,
+    /// ISCII-DEVANAGARI encoding
+    IsciiDevanagari,
+}
+
+/// A representation of the flag type (the part after `/` in the `.dic` file)
+///
+/// We represent all flag types as a u32 and provide methods of conversion
+#[non_exhaustive]
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum FlagType {
+    /// Single-character ASCII flags (default, single byte)
+    Ascii,
+    /// Single-character UTF8 flags (up to 4 bytes)
+    Utf8,
+    /// Double extended ASCII flags, i.e., two ASCII characters (2 bytes)
+    Long,
+    /// Decimal flag type (we use u32)
+    Number,
+}
+
+impl FlagType {
+    /// Convert a string flag to its u32 representation
+    pub(crate) fn str_to_flag(self, flag: &str) -> Result<u32, ParseErrorKind> {
+        match self {
+            // Single ascii char
+            FlagType::Ascii => Self::parse_as_ascii(flag),
+            // Single unicode character
+            FlagType::Utf8 => Self::parse_as_utf8(flag),
+            // Two asii chars
+            FlagType::Long => Self::parse_as_long(flag),
+            FlagType::Number => Self::parse_as_number(flag),
+        }
+    }
+
+    /// Parse a string to multiple flags as they are defined in the dictionary
+    /// file
+    ///
+    /// ASCII and UTF-8 flags just split by characters. Long splits every two
+    /// characters, numbers split by commas
+    pub(crate) fn parse_str(self, s: &str) -> Result<Vec<u32>, ParseErrorKind> {
+        match self {
+            FlagType::Ascii => s.chars().map(Self::parse_char_ascii).collect(),
+            FlagType::Utf8 => Ok(s.chars().map(Self::parse_char_utf8).collect()),
+            FlagType::Number => s.split(',').map(|flag| self.str_to_flag(flag)).collect(),
+            FlagType::Long => {
+                let mut ret = Vec::with_capacity(s.len() / 2);
+                let mut iter = s.chars();
+                for ch in s.chars() {
+                    let ch_next = iter.next().ok_or(ParseErrorKind::FlagParse(self))?;
+                    ret.push(Self::parse_chars_long([ch, ch_next])?);
+                }
+                Ok(ret)
+            }
+        }
+    }
+
+    fn parse_as_ascii(flag: &str) -> Result<u32, ParseErrorKind> {
+        if flag.len() == 1 {
+            Ok(u32::from(flag.bytes().next().unwrap()))
+        } else {
+            Err(ParseErrorKind::FlagParse(Self::Ascii))
+        }
+    }
+
+    fn parse_as_utf8(flag: &str) -> Result<u32, ParseErrorKind> {
+        if flag.chars().count() == 1 {
+            Ok(flag.chars().next().unwrap() as u32)
+        } else {
+            Err(ParseErrorKind::FlagParse(Self::Utf8))
+        }
+    }
+
+    /// Parse two ascii characters
+    fn parse_as_long(flag: &str) -> Result<u32, ParseErrorKind> {
+        if flag.len() != 2 || flag.chars().any(|c| !c.is_ascii()) {
+            Err(ParseErrorKind::FlagParse(Self::Long))
+        } else {
+            Ok(u32::from(u16::from_ne_bytes(
+                flag[0..=1].as_bytes().try_into().unwrap(),
+            )))
+        }
+    }
+
+    /// Parse as a number
+    fn parse_as_number(flag: &str) -> Result<u32, ParseErrorKind> {
+        flag.parse()
+            .map_err(|_| ParseErrorKind::FlagParse(Self::Number))
+    }
+
+    fn parse_char_ascii(c: char) -> Result<u32, ParseErrorKind> {
+        if c.is_ascii() {
+            Ok(c as u32)
+        } else {
+            Err(ParseErrorKind::FlagParse(Self::Ascii))
+        }
+    }
+
+    fn parse_char_utf8(c: char) -> u32 {
+        c as u32
+    }
+
+    fn parse_chars_long(chars: [char; 2]) -> Result<u32, ParseErrorKind> {
+        if chars.iter().any(|ch| !ch.is_ascii()) {
+            let char_str: String = chars.iter().collect();
+            Err(ParseErrorKind::FlagParse(Self::Long))
+        } else {
+            Ok(u32::from(u16::from_ne_bytes([
+                chars[0] as u8,
+                chars[1] as u8,
+            ])))
+        }
+    }
+
+    /// Given a specified flag type (self), turn the value back into a string
+    pub fn flag_to_str(self, flag: u32) -> String {
+        match self {
+            // Should be OK to unwrap because we created these flags from valid characters
+            FlagType::Ascii | FlagType::Utf8 => char::from_u32(flag).unwrap().to_string(),
+            FlagType::Number => flag.to_string(),
+            FlagType::Long => {
+                let bytes = (u16::try_from(flag).unwrap()).to_ne_bytes();
+                bytes.iter().map(|b| *b as char).collect::<String>()
+            }
+        }
+    }
 }
 
 /// A simple input-to-output conversion mapping.
 ///
 /// This is usually represented in an affix file via `REP`, `ICONV`, and
 /// `OCONV`.
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Clone, Debug, PartialEq, Eq)]
 pub struct Conversion {
     input: String,
     output: String,
     bidirectional: bool,
 }
 
-impl Conversion {
-    /// Perform conversion
-    ///
-    /// # Errors
-    #[inline]
-    pub fn from_processed_token(
-        pt: ProcessedToken,
-        bidirectional: bool,
-    ) -> Result<Vec<Self>, AffixError> {
-        let tab = t_data_unwrap!(pt, Table);
-        let mut iter = tab.iter();
-
-        // First line just contains the row count
-        iter.next().unwrap();
-        let mut ret = Vec::new();
-
-        for row in iter {
-            ret.push(Self {
-                input: match row.first() {
-                    Some(v) => (*v).to_owned(),
-                    None => return Err(AffixError::NoConversionInput),
-                },
-                output: match row.get(1) {
-                    Some(v) => (*v).to_owned(),
-                    None => return Err(AffixError::NoConversionOutput),
-                },
-                bidirectional,
-            });
-        }
-        Ok(ret)
-    }
+#[derive(Clone, Debug, PartialEq, Eq, Default)]
+pub struct CompoundSyllable {
+    count: u16,
+    vowels: String,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Hash)]
 pub enum RuleType {
     Prefix,
     Suffix,
 }
 
-#[derive(Debug)]
-pub struct AffixRuleDef {
-    atype: RuleType,
-    stripping_chars: Option<String>,
-    affix: String,
-    /// Regex-based rule for when this rule is true
-    condition: String,
-    morph_info: Vec<String>, // Eventually may need its own type
-    /// Compiled version of condition
-    condition_re: Option<Regex>,
-    /// Shortcut regex checks if this is true
-    condition_always_true: bool,
+/// Representation of a part of speech
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum PartOfSpeech {
+    Noun,
+    Verb,
+    Adjective,
+    Determiner,
+    Adverb,
+    Pronoun,
+    Preposition,
+    Conjunction,
+    Interjection,
 }
 
-// Can't derive because we hold the re_pattern
-impl PartialEq for AffixRuleDef {
-    fn eq(&self, other: &Self) -> bool {
-        self.atype == other.atype
-            && self.stripping_chars == other.stripping_chars
-            && self.affix == other.affix
-            && self.condition == other.condition
-            && self.morph_info == other.morph_info
-    }
+/// Representation of the `PHONE` rule
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct Phonetic {
+    pattern: String,
+    replace: String,
 }
 
-// Just need to indicate the `Eq` relation applies
-impl Eq for AffixRuleDef {}
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct CompoundPattern {
+    endchars: String,
+    endflag: Option<String>,
+    beginchars: String,
+    beginflag: Option<String>,
+    replacement: Option<String>,
+}
 
-impl AffixRuleDef {
-    /// Create from the information we would expect to have in a table
-    pub fn from_table_creation(
-        atype: RuleType,
-        strip_text: &str,
-        affix_text: &str,
-        condition_text: &str,
-        morph_info: Vec<String>,
-    ) -> Self {
-        let mut ruledef = Self {
-            atype,
-            stripping_chars: match strip_text {
-                "" => None,
-                "0" => None,
-                _ => Some(strip_text.to_owned()),
-            },
-            affix: affix_text.to_owned(),
-            condition: condition_text.to_owned(),
-            morph_info,
-            condition_re: None,
-            condition_always_true: false,
-        };
+/* Method implementations */
 
-        ruledef.compile_re();
-
-        ruledef
-    }
-
-    /// Compile the regex if not yet available
-    fn compile_re(&mut self) {
-        if &self.condition == "." {
-            self.condition_always_true = true;
-            return;
-        }
-        self.condition_always_true = false;
-
-        // Position at start
-        let mut re_pattern = String::with_capacity(self.condition.len() + 4);
-
-        re_pattern.push('^');
-
-        // Build the rest of the pattern
-        match self.atype {
-            RuleType::Prefix => {
-                re_pattern.push_str(self.condition.clone().as_str());
-                re_pattern.push_str(".*");
-            }
-            RuleType::Suffix => {
-                re_pattern.push_str(".*");
-                re_pattern.push_str(self.condition.clone().as_str());
-            }
-        };
-
-        // Position at end
-        re_pattern.push('$');
-        self.condition_re = Some(Regex::new(re_pattern.as_str()).unwrap());
-    }
-
-    /// See whether the "condition" here is applicable
-    pub fn check_condition(&self, s: &str) -> bool {
-        if self.condition_always_true {
-            return true;
-        }
-        self.condition_re.as_ref().unwrap().is_match(s)
-    }
-
-    // Verify the match condition and apply this rule
-    pub fn apply_pattern(&self, s: &str) -> Option<String> {
-        // No return if condition doesn't match
-        if !self.check_condition(s) {
-            return None;
-        }
-
-        let mut working = s;
-
-        match self.atype {
-            RuleType::Prefix => {
-                // If stripping chars exist, strip them from the prefix
-                // If not or if no prefix to strip, working is unchanged
-                working = self.stripping_chars.as_ref().map_or(working, |sc| {
-                    working.strip_prefix(sc).map_or(working, |w| w)
-                });
-
-                let mut w_s = self.affix.clone();
-                w_s.push_str(working);
-                Some(w_s)
-            }
-            RuleType::Suffix => {
-                // Same logic as above
-
-                working = self
-                    .stripping_chars
-                    .as_ref()
-                    .map_or(working, |sc| working.strip_suffix(sc).unwrap_or(working));
-                let mut w_s = working.to_owned();
-                w_s.push_str(&self.affix);
-                Some(w_s)
-            }
+impl Phonetic {
+    pub(crate) fn new(pattern: &str, replace: &str) -> Self {
+        Self {
+            pattern: pattern.to_owned(),
+            replace: replace.to_owned(),
         }
     }
 }
 
-/// A simple prefix or suffix rule
-///
-/// This struct represents a prefix or suffix option that may be applied to any
-/// base word. It contains multiple possible rule definitions that describe how
-/// to apply the rule.
-#[derive(Debug, PartialEq, Eq)]
-pub struct Rule {
-    /// Character identifier for this specific affix, usually any uppercase
-    /// letter
-    pub key: String,
-    /// Prefix or suffix
-    pub atype: RuleType,
-    /// Whether or not this can be combined with the opposite affix
-    pub combine_pfx_sfx: bool,
-    /// Actual rules for replacing
-    rules: Vec<AffixRuleDef>,
-}
-
-impl Rule {
-    /// Load the affix rule from a processed token
-    ///
-    /// # Errors
-    ///
-    /// Error if unable to load token in
-    #[inline]
-    pub fn from_processed_token(pt: ProcessedToken) -> Result<Self, AffixError> {
-        let tab = t_data_unwrap!(pt, Table);
-        let mut iter = tab.iter();
-
-        // First line contains general info about the rule
-        let start = iter.next().unwrap();
-
-        let mut ruledefs = Vec::new();
-
-        let atype = match pt.ttype {
-            TokenType::Prefix => RuleType::Prefix,
-            TokenType::Suffix => RuleType::Suffix,
-            _ => return Err(AffixError::BadTokenType),
-        };
-
-        // Create rule definitions for that identifier
-        for rule in iter {
-            let strip_text = rule
-                .get(1)
-                .ok_or_else(|| AffixError::Syntax(rule.join("")))?;
-            let affix_text = rule
-                .get(2)
-                .ok_or_else(|| AffixError::Syntax(rule.join("")))?;
-            let condition = rule
-                .get(3)
-                .ok_or_else(|| AffixError::Syntax(rule.join("")))?;
-
-            ruledefs.push(AffixRuleDef::from_table_creation(
-                atype.clone(),
-                strip_text,
-                affix_text,
-                condition,
-                rule.as_slice()
-                    .get(4..)
-                    .expect("Error processing token")
-                    .iter()
-                    .map(ToString::to_string)
-                    .collect(),
-            ));
+impl Conversion {
+    pub(crate) fn new(input: &str, output: &str, bidirectional: bool) -> Self {
+        Self {
+            input: input.to_owned(),
+            output: output.to_owned(),
+            bidirectional,
         }
-
-        // Populate with information from the first line
+    }
+    /// Create a `Conversion` from a string. Splits on whitespace
+    pub fn from_str(value: &str, bidirectional: bool) -> Result<Self, ParseErrorKind> {
+        let split: Vec<_> = value.split_whitespace().collect();
+        if split.len() != 2 {
+            return Err(ParseErrorKind::ConversionSplit(split.len()));
+        }
         Ok(Self {
-            atype,
-            key: (*start.first().ok_or(AffixError::MissingIdentifier)?).to_owned(),
-            combine_pfx_sfx: match *start.get(1).ok_or(AffixError::BadCrossProduct)? {
-                "Y" => true,
-                "N" => false,
-                _ => return Err(AffixError::BadCrossProduct),
-            },
-            rules: ruledefs,
+            input: split[0].to_owned(),
+            output: split[1].to_owned(),
+            bidirectional,
         })
     }
+}
 
-    /// Apply this rule to a root string
-    ///
-    /// Does not pay attention to prf/sfx combinations, that must be done
-    /// earlier.
-    #[inline]
-    pub fn apply(&self, rootword: &str) -> Option<String> {
-        for rule in &self.rules {
-            if let Some(applied) = rule.apply_pattern(rootword) {
-                return Some(applied);
-            }
+/* Trait implementations */
+
+impl TryFrom<&str> for Encoding {
+    type Error = ParseErrorKind;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        match value.to_ascii_lowercase().as_str() {
+            "utf-8" => Ok(Self::Utf8),
+            "iso8859-1" => Ok(Self::Iso8859t1),
+            "iso8859-10" => Ok(Self::Iso8859t10),
+            "iso8859-13" => Ok(Self::Iso8859t13),
+            "iso8859-15" => Ok(Self::Iso8859t15),
+            "koi8-r" => Ok(Self::Koi8R),
+            "koi8-u" => Ok(Self::Koi8U),
+            "cp1251" => Ok(Self::Cp1251),
+            "iscii-devanagari" => Ok(Self::IsciiDevanagari),
+            _ => Err(ParseErrorKind::Encoding),
         }
-
-        None
     }
 }
 
-#[cfg(test)]
-mod tests {
-    use std::convert::TryFrom;
-
-    use strum::{EnumProperty, VariantNames};
-
-    use super::*;
-
-    // Spot check deserialization of encoding
-    #[test]
-    fn test_encoding_deser() {
-        assert_eq!(EncodingType::try_from("UTF-8").unwrap(), EncodingType::Utf8);
-        assert_eq!(
-            EncodingType::try_from("ISCII-DEVANAGARI").unwrap(),
-            EncodingType::IsciiDevanagari
-        );
+impl From<Encoding> for &str {
+    #[inline]
+    fn from(val: Encoding) -> Self {
+        match val {
+            Encoding::Utf8 => "UTF-8",
+            Encoding::Iso8859t1 => "ISO8859-1",
+            Encoding::Iso8859t10 => "ISO8859-10",
+            Encoding::Iso8859t13 => "ISO8859-13",
+            Encoding::Iso8859t15 => "ISO8859-15",
+            Encoding::Koi8R => "KOI8-R",
+            Encoding::Koi8U => "KOI8-U",
+            Encoding::Cp1251 => "cp1251",
+            Encoding::IsciiDevanagari => "ISCII-DEVANAGARI",
+        }
     }
+}
 
-    // Spot check serializatino of encoding
-    #[test]
-    fn test_encoding_ser() {
-        assert_eq!(EncodingType::Utf8.to_string(), "UTF-8");
-        assert_eq!(EncodingType::Iso8859t15.to_string(), "ISO8859-15");
+impl TryFrom<&str> for FlagType {
+    type Error = ParseErrorKind;
+
+    fn try_from(value: &str) -> Result<Self, ParseErrorKind> {
+        match value.to_ascii_lowercase().as_str() {
+            "ascii" => Ok(Self::Ascii),
+            "utf-8" => Ok(Self::Utf8),
+            "long" => Ok(Self::Long),
+            "num" => Ok(Self::Number),
+            _ => Err(ParseErrorKind::FlagType),
+        }
     }
+}
 
-    // Spot check deserialization of tokens
-    #[test]
-    fn test_token_deser() {
-        assert_eq!(TokenType::try_from("PFX").unwrap(), TokenType::Prefix);
-        assert_eq!(
-            TokenType::try_from("KEEPCASE").unwrap(),
-            TokenType::AffixKeepCase
-        );
+impl Display for FlagType {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let s: &str = self.into();
+        write!(f, "{s}")?;
+        Ok(())
     }
+}
 
-    // Spot check serialization of tokens
-    #[test]
-    fn test_token_ser() {
-        assert_eq!(TokenType::IgnoreChars.to_string(), "IGNORE");
-        assert_eq!(TokenType::MorphAlias.to_string(), "AM");
-        println!("{:?}", TokenType::VARIANTS);
+impl From<&FlagType> for &str {
+    #[inline]
+    fn from(val: &FlagType) -> Self {
+        match val {
+            FlagType::Ascii => "ASCII",
+            FlagType::Utf8 => "UTF-8",
+            FlagType::Long => "long",
+            FlagType::Number => "num",
+        }
     }
+}
 
-    // Spot check deserialization of tokens
-    #[test]
-    fn test_token_props() {
-        assert_eq!(TokenType::Encoding.get_str("dtype"), Some("str"));
+impl TryFrom<&str> for Phonetic {
+    type Error = ParseErrorKind;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        let mut split: Vec<_> = value.split_whitespace().collect();
+        if split.len() != 2 {
+            return Err(ParseErrorKind::Phonetic(split.len()));
+        }
+        Ok(Self {
+            pattern: split[0].to_owned(),
+            replace: split[1].to_owned(),
+        })
     }
+}
 
-    #[test]
-    fn test_rule_def_condition() {
-        let mut ard = AffixRuleDef {
-            atype: RuleType::Suffix,
-            stripping_chars: None,
-            affix: String::new(),
-            condition: "[^aeiou]y".into(),
-            morph_info: Vec::new(),
-            condition_re: None,
-            condition_always_true: false,
+impl TryFrom<&str> for CompoundPattern {
+    type Error = ParseErrorKind;
+
+    fn try_from(value: &str) -> Result<Self, ParseErrorKind> {
+        let caps = RE_COMPOUND_PATTERN
+            .captures(value)
+            .ok_or(ParseErrorKind::CompoundPattern)?;
+        Ok(Self {
+            endchars: caps.name("endchars").unwrap().as_str().to_owned(),
+            endflag: caps.name("endflag").map(|m| m.as_str().to_owned()),
+            beginchars: caps.name("beginchars").unwrap().as_str().to_owned(),
+            beginflag: caps.name("beginflag").map(|m| m.as_str().to_owned()),
+            replacement: caps.name("replacement").map(|m| m.as_str().to_owned()),
+        })
+    }
+}
+
+impl TryFrom<&str> for CompoundSyllable {
+    type Error = ParseErrorKind;
+
+    /// Format: `COMPOUNDSYLLABLE count vowels`
+    fn try_from(value: &str) -> Result<Self, ParseErrorKind> {
+        let mut split: Vec<_> = value.split_whitespace().collect();
+        if split.len() != 2 {
+            return Err(ParseErrorKind::CompoundSyllableCount(split.len()));
+        }
+        let to_parse = split[0];
+        let count: u16 = to_parse
+            .parse()
+            .map_err(ParseErrorKind::CompoundSyllableParse)?;
+        Ok(Self {
+            count,
+            vowels: split[1].to_owned(),
+        })
+    }
+}
+
+impl TryFrom<&str> for PartOfSpeech {
+    type Error = ParseErrorKind;
+
+    #[inline]
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        let ret = match value.to_lowercase().as_str() {
+            "noun" => Self::Noun,
+            "verb" => Self::Verb,
+            "adjective" => Self::Adjective,
+            "determiner" => Self::Determiner,
+            "adverb" => Self::Adverb,
+            "pronoun" => Self::Pronoun,
+            "preposition" => Self::Preposition,
+            "conjunction" => Self::Conjunction,
+            "interjection" => Self::Interjection,
+            _ => return Err(ParseErrorKind::PartOfSpeech(value.to_owned())),
         };
-        ard.compile_re();
-
-        // General tests, including with pattern in the middle
-        assert!(ard.check_condition("xxxy"));
-        assert!(!ard.check_condition("xxxay"));
-        assert!(!ard.check_condition("xxxyxx"));
-
-        // Test with prefix
-        ard.condition = "y[^aeiou]".into();
-        ard.atype = RuleType::Prefix;
-        ard.compile_re();
-        assert!(ard.check_condition("yxxx"));
-        assert!(!ard.check_condition("yaxxx"));
-        assert!(!ard.check_condition("xxxyxxx"));
-
-        // Test other real rules
-        ard.condition = "[sxzh]".into();
-        ard.atype = RuleType::Suffix;
-        ard.compile_re();
-        assert!(ard.check_condition("access"));
-        assert!(ard.check_condition("abyss"));
-        assert!(!ard.check_condition("accomplishment"));
-        assert!(ard.check_condition("mmms"));
-        assert!(!ard.check_condition("mmsmm"));
-
-        // Check with default condition
-        ard.condition = ".".into();
-        ard.compile_re();
-        assert!(ard.check_condition("xxx"));
+        Ok(ret)
     }
+}
 
-    #[test]
-    fn test_rule_apply() {
-        let mut ard = AffixRuleDef {
-            atype: RuleType::Suffix,
-            stripping_chars: Some("y".into()),
-            affix: "zzz".into(),
-            condition: "[^aeiou]y".into(),
-            morph_info: Vec::new(),
-            condition_re: None,
-            condition_always_true: false,
+impl TryFrom<&str> for RuleType {
+    type Error = String;
+
+    fn try_from(value: &str) -> Result<Self, Self::Error> {
+        let ret = match value.to_lowercase().as_str() {
+            "pfx" => Self::Prefix,
+            "sfx" => Self::Suffix,
+            _ => return Err(format!("unrecognized RuleType value '{value}'")),
         };
-        ard.compile_re();
-
-        assert_eq!(ard.apply_pattern("xxxy"), Some("xxxzzz".to_owned()));
-
-        ard.atype = RuleType::Prefix;
-        ard.condition = "y[^aeiou]".into();
-        ard.compile_re();
-        assert_eq!(ard.apply_pattern("yxxx"), Some("zzzxxx".to_owned()));
-
-        ard.atype = RuleType::Suffix;
-        ard.condition = ".".into();
-        ard.compile_re();
-        assert_eq!(ard.apply_pattern("xxx"), Some("xxxzzz".to_owned()));
+        Ok(ret)
     }
+}
 
-    #[test]
-    fn test_affix_rule_apply_words() {
-        let ar = Rule {
-            atype: RuleType::Suffix,
-            key: "A".into(),
-            combine_pfx_sfx: true,
-            rules: vec![
-                AffixRuleDef::from_table_creation(
-                    RuleType::Suffix,
-                    "y",
-                    "iness",
-                    "[^aeiou]y",
-                    Vec::new(),
-                ),
-                AffixRuleDef::from_table_creation(
-                    RuleType::Suffix,
-                    "0",
-                    "ness",
-                    "[aeiou]y",
-                    Vec::new(),
-                ),
-                AffixRuleDef::from_table_creation(
-                    RuleType::Suffix,
-                    "0",
-                    "ness",
-                    "[^y]",
-                    Vec::new(),
-                ),
-            ],
-        };
+impl Default for Encoding {
+    fn default() -> Self {
+        Self::Utf8
+    }
+}
 
-        assert_eq!(ar.apply("blurry"), Some("blurriness".to_owned()));
-        assert_eq!(ar.apply("coy"), Some("coyness".to_owned()));
-        assert_eq!(ar.apply("acute"), Some("acuteness".to_owned()));
+impl Default for FlagType {
+    fn default() -> Self {
+        Self::Utf8
     }
 }

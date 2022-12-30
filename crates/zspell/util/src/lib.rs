@@ -1,106 +1,64 @@
-/// Utilities intended to help with test collection
+//! Utilities intended to help with test collection
+#![allow(unused)]
+
 use std::fs;
 
-use zspell::Dictionary;
+use pretty_assertions::{assert_eq, assert_str_eq};
+use zspell::{DictBuilder, Dictionary, MorphInfo};
 
-/// A collection from a .test file that we can easily validate
-#[derive(Debug)]
-pub struct TestCollection {
+/// A collection from a `.test` file that we can easily validate
+///
+/// See `0_example.test`  for descriptions of what this file should look like
+#[derive(Clone, Debug, Default)]
+pub struct TestManager {
     /// The affix file as a string
-    pub afx_str: String,
+    afx_str: String,
     /// The dictionary file as a string
-    pub dic_str: String,
-    /// These words will be checked with the check algorithm
-    pub check_valid: Option<Vec<String>>,
-    pub check_invalid: Option<Vec<String>>,
-    pub wordlist: Option<Vec<String>>,
-    pub wordlist_nosuggest: Option<Vec<String>>,
-    pub wordlist_forbidden: Option<Vec<String>>,
-    pub suggestions: Option<Vec<(String, Vec<String>)>>,
+    dic_str: String,
+    /// Personal dictionary file
+    personal_str: Option<String>,
+    /// These words/sentences will be checked with the check algorithm
+    check_valid: Vec<String>,
+    /// These words/sentences will be checked
+    check_invalid: Vec<String>,
+    wordlist: Option<Vec<String>>,
+    wordlist_nosuggest: Option<Vec<String>>,
+    wordlist_forbidden: Option<Vec<String>>,
+    suggestions: Option<Vec<(String, Vec<String>)>>,
+    stems: Option<Vec<(String, String)>>,
+    morphs: Option<Vec<(String, Vec<MorphInfo>)>>,
 }
 
-impl TestCollection {
-    pub fn load(fname: &str) -> Self {
-        let mut ret = Self {
-            afx_str: String::new(),
-            dic_str: String::new(),
-            check_valid: None,
-            check_invalid: None,
-            wordlist: None,
-            wordlist_nosuggest: None,
-            wordlist_forbidden: None,
-            suggestions: None,
-        };
-
-        let fname_new = format!("tests/files/{fname}");
-
-        let f_content = fs::read_to_string(fname_new.clone())
-            .unwrap_or_else(|_| panic!("error reading file '{fname_new}'"));
-
-        let mut content_iter = f_content.trim().split("====").filter(|&x| !x.is_empty());
+impl TestManager {
+    /// Load a `TestManager` from a string
+    pub fn load_str(input: &str) -> Self {
+        let mut ret = Self::default();
+        let mut content_iter = input.trim().split("====");
 
         while let Some(s_title) = content_iter.next() {
             let sec_title = s_title.trim();
-            let sec_content = match content_iter.next() {
-                Some(s) => s,
-                None => panic!("Section title with no content"),
-            };
+            let sec_content = content_iter.next().expect("Section title with no content");
+            let lines_content: Vec<_> = sec_content
+                .trim()
+                .lines()
+                .filter(|line| !line.starts_with('#'))
+                .map(|line| line.to_owned())
+                .collect();
 
             match sec_title {
                 "afx_str" => ret.afx_str = sec_content.to_owned(),
                 "dic_str" => ret.dic_str = sec_content.to_owned(),
-                "check_valid" => {
-                    ret.check_valid = Some(
-                        sec_content
-                            .trim()
-                            .split('\n')
-                            .map(|s| s.to_owned())
-                            .collect::<Vec<_>>(),
-                    )
-                }
-                "check_invalid" => {
-                    ret.check_invalid = Some(
-                        sec_content
-                            .trim()
-                            .split('\n')
-                            .map(|s| s.to_owned())
-                            .collect::<Vec<_>>(),
-                    )
-                }
-                "wordlist" => {
-                    ret.wordlist = Some(
-                        sec_content
-                            .trim()
-                            .split('\n')
-                            .map(|s| s.to_owned())
-                            .collect::<Vec<_>>(),
-                    )
-                }
-                "wordlist_nosuggest" => {
-                    ret.wordlist_nosuggest = Some(
-                        sec_content
-                            .trim()
-                            .split('\n')
-                            .map(|s| s.to_owned())
-                            .collect::<Vec<_>>(),
-                    )
-                }
-                "wordlist_forbidden" => {
-                    ret.wordlist_forbidden = Some(
-                        sec_content
-                            .trim()
-                            .split('\n')
-                            .map(|s| s.to_owned())
-                            .collect::<Vec<_>>(),
-                    )
-                }
+                "personal_str" => ret.personal_str = Some(sec_content.to_owned()),
+                "check_valid" => ret.check_valid = lines_content,
+                "check_invalid" => ret.check_invalid = lines_content,
+                "wordlist" => ret.wordlist = Some(lines_content),
+                "wordlist_nosuggest" => ret.wordlist_nosuggest = Some(lines_content),
+                "wordlist_forbidden" => ret.wordlist_forbidden = Some(lines_content),
                 "suggestions" => {
                     // Suggestions look like "appl > apple | Apfel | app"
                     // Turn into ("appl", ["apple", "Apfel", "app"])
                     let mut tmp_ret: Vec<_> = Vec::new();
-
-                    let sug_split = sec_content.split_terminator('\n');
-                    for suggestion in sug_split {
+                    for suggestion in lines_content {
                         let tmp = suggestion.split_once('>').expect("Bad suggestion");
                         tmp_ret.push((
                             tmp.0.to_owned(),
@@ -116,97 +74,141 @@ impl TestCollection {
 
         ret
     }
+    /// Load a `TestManager` from a given file name
+    pub fn load_file(fname: &str) -> Self {
+        let fname_new = format!("tests/files/{fname}");
+        let f_content = fs::read_to_string(fname_new.clone())
+            .unwrap_or_else(|_| panic!("error reading file '{fname_new}'"));
+
+        Self::load_str(&f_content)
+    }
+
+    /// Build the dictionary based on given input
+    pub fn build_dict(&self) -> Dictionary {
+        let mut builder = DictBuilder::new()
+            .config_str(&self.afx_str)
+            .dict_str(&self.dic_str);
+
+        if let Some(personal) = &self.personal_str {
+            builder = builder.personal_str(personal.as_str());
+        }
+
+        builder.build().expect("error building dictionary")
+    }
+
+    /// Check everything in the file against our dictionary
+    ///
+    /// Panics with a message if there are any failures
+    pub fn check_all(&self, dict: &Dictionary) {
+        self.run_check_valid_invalid(dict);
+        self.check_wordlists(dict)
+    }
 
     /// Validate all expected checks are correct
-    fn run_check_valid_invalid(&self, dic: &Dictionary) {
-        match &self.check_valid {
-            Some(v) => {
-                for item in v {
-                    let res = dic.check(item).expect("Dictionary error");
-                    assert!(res, "{item} failed check (expected true)");
-                }
-                println!("Validated {} items as true", v.len());
-            }
-            None => println!("Skipped check_valid testing"),
-        };
-        match &self.check_invalid {
-            Some(v) => {
-                for item in v {
-                    let res = dic.check(item).expect("Dictionary error");
-                    assert!(!res, "{item} failed check (expected false)")
-                }
-                println!("Validated {} items as false", v.len());
-            }
-            None => println!("Skipped check_invalid testing"),
-        };
+    fn run_check_valid_invalid(&self, dict: &Dictionary) {
+        for item in &self.check_valid {
+            assert!(dict.check(item), "{item} failed check (expected true)");
+        }
+
+        if self.check_valid.is_empty() {
+            eprintln!("Skipped check_valid testing")
+        } else {
+            eprintln!("Validated {} items as true", self.check_valid.len());
+        }
+
+        for item in &self.check_invalid {
+            assert!(!dict.check(item), "{item} failed check (expected false)");
+        }
+
+        if self.check_invalid.is_empty() {
+            eprintln!("Skipped check_invalid testing")
+        } else {
+            eprintln!("Validated {} items as false", self.check_invalid.len());
+        }
     }
 
     /// Validate all our word lists are equal
-    fn check_wordlists(&self, dic: &Dictionary) {
-        let mut wordlist_v: Vec<_> = dic
-            .iter_wordlist_items()
-            .expect("Error getting wordlist")
-            .map(|s| s.to_owned())
-            .collect();
-        wordlist_v.sort_unstable();
+    fn check_wordlists(&self, dict: &Dictionary) {
+        let check_lists = [
+            ("wordlist", &self.wordlist, dict.wordlist()),
+            (
+                "wordlist_nosuggest",
+                &self.wordlist_nosuggest,
+                dict.wordlist_nosuggest(),
+            ),
+            (
+                "wordlist_forbidden",
+                &self.wordlist_forbidden,
+                dict.wordlist_forbidden(),
+            ),
+        ];
 
-        let mut wordlist_ns_v: Vec<_> = dic
-            .iter_wordlist_items()
-            .expect("Error getting nosuggest wordlist")
-            .map(|s| s.to_owned())
-            .collect();
-        wordlist_ns_v.sort_unstable();
+        for (name, expected, actual) in check_lists {
+            let Some (wordlist) = expected else {
+                eprintln!("skipped testing for {name}");
+                continue;
+            };
+            let map = actual.inner();
+            let mut keys: Vec<String> = map.keys().cloned().collect();
+            keys.sort_unstable();
+            assert_eq!(wordlist, &keys);
+            eprintln!("testing for {name} succeeded");
+        }
+    }
 
-        let mut wordlist_f_v: Vec<_> = dic
-            .iter_wordlist_items()
-            .expect("Error getting forbidden wordlist")
-            .map(|s| s.to_owned())
-            .collect();
-        wordlist_f_v.sort_unstable();
-
-        match &self.wordlist {
-            Some(v) => {
-                assert_eq!(*v, wordlist_v);
-                println!("Validated wordlist against {} items", v.len());
-            }
-            None => println!("Skipped wordlist testing"),
+    /// Check all provided suggestions
+    fn check_suggestions(&self, dict: &Dictionary) {
+        let Some(ref suggestion) = self.suggestions else {
+            eprintln!("skipped suggestion testing");
+            return;
         };
 
-        match &self.wordlist_nosuggest {
-            Some(v) => {
-                assert_eq!(*v, wordlist_ns_v);
-                println!("Validated wordlist_nosuggest against {} items", v.len());
-            }
-            None => println!("Skipped wordlist_nosuggest testing"),
-        };
+        for (input, expected) in suggestion {
+            let mut sug_dict = dict.suggest_word(input).unwrap_err();
+            let mut sug_exp: Vec<&str> = expected.iter().map(|s| s.as_str()).collect();
+            sug_dict.sort_unstable();
+            sug_exp.sort_unstable();
+            assert_eq!(sug_dict, sug_exp);
+        }
+        eprintln!("all suggestions passed");
+    }
 
-        match &self.wordlist_forbidden {
-            Some(v) => {
-                assert_eq!(*v, wordlist_f_v);
-                println!("Validated wordlist_forbidden against {} items", v.len());
-            }
-            None => println!("Skipped wordlist_forbidden testing"),
+    fn check_stems(&self, dict: &Dictionary) {
+        let Some(ref stems) = self.stems else {
+            eprintln!("skipped stem testing");
+            return;
         };
     }
 
-    fn check_suggestions(&self, _dic: &Dictionary) {
-        println!("Skpped suggestion testing");
+    fn check_morphs(&self, dict: &Dictionary) {
+        let Some(ref morphs) = self.stems else {
+            eprintln!("skipped stem testing");
+            return;
+        };
     }
 
-    pub fn validate(&self) {
-        let mut dic = Dictionary::new();
-
-        // Validate we can load the dictionary
-        dic.config
-            .load_from_str(self.afx_str.as_str())
-            .expect("config loading failure");
-        dic.load_dict_from_str(self.dic_str.as_str())
-            .expect("loading failure");
-        dic.compile().expect("compiling failure");
-
-        // Now check everything we can
-        self.run_check_valid_invalid(&dic);
-        self.check_wordlists(&dic);
-        self.check_suggestions(&dic);
+    pub fn afx_str(&self) -> &str {
+        self.afx_str.as_str()
+    }
+    pub fn dic_str(&self) -> &str {
+        self.dic_str.as_str()
+    }
+    pub fn check_valid(&self) -> &Vec<String> {
+        &self.check_valid
+    }
+    pub fn check_invalid(&self) -> &Vec<String> {
+        &self.check_invalid
+    }
+    pub fn wordlist(&self) -> Option<&Vec<String>> {
+        self.wordlist.as_ref()
+    }
+    pub fn wordlist_nosuggest(&self) -> Option<&Vec<String>> {
+        self.wordlist_nosuggest.as_ref()
+    }
+    pub fn wordlist_forbidden(&self) -> Option<&Vec<String>> {
+        self.wordlist_forbidden.as_ref()
+    }
+    pub fn suggestions(&self) -> Option<&Vec<(String, Vec<String>)>> {
+        self.suggestions.as_ref()
     }
 }

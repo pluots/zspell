@@ -197,3 +197,11 @@ jobs:
           curl -sSL https://github.com/rust-lang/mdBook/releases/download/v0.4.21/mdbook-v0.4.21-x86_64-unknown-linux-gnu.tar.gz \
           | tar -xz --directory=$(echo ~)/mdbook
       - run: ~/mdbook/mdbook test
+
+  # Make sure we turned the clippy lint off
+  verify_fixme_critical:
+    name: "Verify critical fixmes"
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - run: grep -r "FIXME:CRIT" --exclude-dir="target" --exclude-dir=".git" --exclude="validation-rust.yaml" && return 1 || return 0

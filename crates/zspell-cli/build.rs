@@ -1,7 +1,8 @@
 use std::env;
 use std::fs::File;
 use std::io::Error;
-use std::path::{Path, PathBuf};
+// Need to rename PathBuf because of the `include!` macro
+use std::path::{self, Path};
 
 use clap::{Command, CommandFactory};
 use clap_complete::generate_to;
@@ -9,7 +10,7 @@ use clap_complete::shells::Shell;
 
 include!("src/cli/mod.rs");
 
-fn build_shell_completion(cmd: &mut Command, outdir: &PathBuf) -> Result<(), Error> {
+fn build_shell_completion(cmd: &mut Command, outdir: &path::PathBuf) -> Result<(), Error> {
     // Generate shell completion scripts for our
     for shell in [
         Shell::Bash,

@@ -1,12 +1,10 @@
 //! Helpers for CLI spelling features
-//!
-//! This is a mod.rs so that we can expand this directory at some point
 
 use std::io::{self, BufRead, Write};
 use std::process::ExitCode;
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Instant, SystemTime, UNIX_EPOCH};
 
-use zspell::errors::DictError;
+use zspell::error::Error;
 use zspell::system::{create_dict_from_path, PKG_NAME, PKG_VERSION};
 use zspell::Dictionary;
 
@@ -25,41 +23,8 @@ const SALUTATIONS: [&str; 9] = [
     "abyssinia",
 ];
 
-#[inline]
-pub fn spellcheck_stdin_runner(dic: &Dictionary) -> ExitCode {
-    println!("started session");
-    let stdin = io::stdin();
-
-    // This is a false positive, see clippy #9135
-    #[allow(clippy::significant_drop_in_scrutinee)]
-    for line in stdin.lock().lines() {
-        let unwrapped = match line {
-            Ok(v) => v,
-            Err(e) => {
-                eprintln!("Input error: {e}");
-                return ExitCode::FAILURE;
-            }
-        };
-
-        for word in dic.check_returning_list(unwrapped).unwrap() {
-            println!("{}", &word)
-        }
-    }
-
-    // Quick RNG without external crates
-    let bye = SALUTATIONS[SystemTime::now()
-        .duration_since(UNIX_EPOCH)
-        .unwrap()
-        .as_micros() as usize
-        % SALUTATIONS.len()];
-
-    println!("\n\nsession ended, {bye}");
-
-    ExitCode::SUCCESS
-}
-
 pub fn spellcheck_cli(cli: &Cli) -> ExitCode {
-    print!("{PKG_NAME} {PKG_VERSION} loading dictionaries... ");
+    eprint!("{PKG_NAME} {PKG_VERSION} loading dictionaries... ");
 
     io::stdout().flush().unwrap();
 
@@ -70,26 +35,63 @@ pub fn spellcheck_cli(cli: &Cli) -> ExitCode {
         return ExitCode::FAILURE;
     };
 
-    let dic = match create_dict_from_path(dict_path) {
+    let load_start = Instant::now();
+    let dict = match create_dict_from_path(dict_path) {
         Ok(v) => v,
         Err(e) => {
             match e {
-                DictError::FileError { fname, e } => {
-                    eprintln!("Error opening '{fname}'; {e}")
-                }
-                _ => todo!(),
+                Error::Io(e) => eprintln!("IO error: {e}"),
+                Error::Parse(e) => eprintln!("Error parsing: {e}"),
+                Error::Build(e) => eprintln!("Error building: {e}"),
+                Error::Regex(e) => eprintln!("Regex error: {e}"),
+                _ => unreachable!(),
             };
             return ExitCode::FAILURE;
         }
     };
+    let load_time = load_start.elapsed().as_secs_f32();
+    eprintln!("loaded in {load_time:.2}s. started session");
 
     if cli.generate_wordlist {
-        for item in dic.iter_wordlist_items().unwrap() {
-            println!("{item}");
-        }
+        todo!();
+        // for item in dic.iter_wordlist_items().unwrap() {
+        //     println!("{item}");
+        // }
+    } else if cli.morph_analysis {
+        runner_morph(&dict);
     } else {
-        return spellcheck_stdin_runner(&dic);
+        runner_interactive(&dict);
     }
 
+    // Quick RNG without external crates
+    let bye = SALUTATIONS[SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap()
+        .as_micros() as usize
+        % SALUTATIONS.len()];
+
+    eprintln!("\n\nsession ended, {bye}");
+
     ExitCode::SUCCESS
+}
+
+fn runner_interactive(dict: &Dictionary) {
+    let stdin = io::stdin();
+    // This is a false positive, see clippy #9135
+    // #[allow(clippy::significant_drop_in_scrutinee)]
+    for line in stdin.lock().lines() {
+        let line_val = line.expect("IO error");
+
+        // FIXME: if not a tty, lock output once before writing
+        // for (start, end, suggestions) in dict.suggest_indices(&line_val) {
+        //     println!("HERE: {}, {:?} END", &line_val[start..end], suggestions)
+        // }
+        for (_, misspelled) in dict.check_indices(&line_val) {
+            println!("{misspelled}");
+        }
+    }
+}
+
+fn runner_morph(_dict: &Dictionary) {
+    todo!()
 }
