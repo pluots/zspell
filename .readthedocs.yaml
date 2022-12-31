@@ -10,6 +10,10 @@ build:
    tools:
       # Use the latest stable
       python: "3.11"
+      rust: "1.61"
+   jobs:
+      pre_build:
+         - maturin develop --manifest-path crates/zspell-py/Cargo.toml
 
 python:
    install:
