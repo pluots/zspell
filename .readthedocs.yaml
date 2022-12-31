@@ -5,6 +5,11 @@
 # Required
 version: 2
 
+build:
+   os: ubuntu-22.04
+   tools:
+      # Use the latest stable
+      python: "3.11"
 
 python:
    install:
