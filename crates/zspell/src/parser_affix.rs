@@ -711,6 +711,8 @@ const ALL_PARSERS: [for<'a> fn(&'a str) -> ParseResult; 61] = [
 ];
 
 /// Main parser entrypoint
+#[inline]
+#[allow(clippy::missing_errors_doc)]
 pub fn parse_affix(s: &str) -> Result<Vec<AffixNode>, ParseError> {
     let mut working = s;
     let mut ret: Vec<AffixNode> = Vec::new();

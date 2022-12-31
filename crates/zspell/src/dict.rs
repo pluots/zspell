@@ -16,8 +16,8 @@ use unicode_segmentation::UnicodeSegmentation;
 
 pub use self::flags::FlagValue;
 use self::helpers::{create_affixed_word_map, word_splitter};
-pub use self::parser::DictEntry;
-use self::parser::{parse_dict, parse_personal_dict, PersonalEntry};
+pub use self::parser::{parse_dict, DictEntry};
+use self::parser::{parse_personal_dict, PersonalEntry};
 pub use self::rule::AfxRule;
 use self::types::{Meta, PersonalMeta, Source};
 use crate::affix::FlagType;
