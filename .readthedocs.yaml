@@ -13,8 +13,10 @@ build:
       rust: "1.61"
    jobs:
       pre_build:
-         - env VIRTUAL_ENV=$(python3 -c 'import sys; print(sys.base_prefix)') maturin develop --manifest-path crates/zspell-py/Cargo.toml
+         - maturin develop --manifest-path crates/zspell-py/Cargo.toml
 
 python:
    install:
    - requirements: crates/zspell-py/docs/requirements.txt
+   - method: pip
+     path: .
