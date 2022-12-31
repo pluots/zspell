@@ -53,6 +53,7 @@ unstable-suggestions = []
 unstable-analysis = []
 unstable-stem = []
 unstable-system = []
+benchmarking = []
 zspell-unstable = ["unstable-suggestions", "unstable-analysis", "unstable-stem", "unstable-system"]
 
 [[bench]]

@@ -1,0 +1,601 @@
+v0.3.1-12-g0d89be1_2022-12-31_0726.bench
+
+Benchmark from 2022-12-31_0726 on commit v0.3.1-12-g0d89be1
+rustc 1.68.0-nightly (b569c9dc5 2022-12-21)
+
+CPU Information:
+Intel(R) Core(TM) i5-5257U CPU @ 2.70GHz
+
+Running: 'cargo bench --features benchmarking'
+
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 29 tests
+test affix::tests::test_flagtype_convert_ok ... ignored
+test dict::helpers::tests::test_create_words ... ignored
+test dict::helpers::tests::test_word_splitter ... ignored
+test dict::rule::tests::test_apply_pattern ... ignored
+test dict::rule::tests::test_check_condition ... ignored
+test dict::tests::test_builder ... ignored
+test dict::tests::test_builder_large_file ... ignored
+test dict::tests::test_dict_entry_ok ... ignored
+test dict::tests::test_personal_entry_ok ... ignored
+test dict::tests::test_update_personal ... ignored
+test morph::tests::morph_single_ok ... ignored
+test morph::tests::morph_string_ok ... ignored
+test parser_affix::tests::test_afx_table_parser_err ... ignored
+test parser_affix::tests::test_bool_parser_err ... ignored
+test parser_affix::tests::test_bool_parser_ok ... ignored
+test parser_affix::tests::test_full_parse ... ignored
+test parser_affix::tests::test_large_file_parse ... ignored
+test parser_affix::tests::test_line_key_parser ... ignored
+test parser_affix::tests::test_line_key_parser_err ... ignored
+test parser_affix::tests::test_line_key_parser_none ... ignored
+test parser_affix::tests::test_line_key_parser_some ... ignored
+test parser_affix::tests::test_line_splitter_none ... ignored
+test parser_affix::tests::test_line_splitter_some ... ignored
+test parser_affix::tests::test_munch_newline_cmt ... ignored
+test parser_affix::tests::test_munch_newline_err ... ignored
+test parser_affix::tests::test_munch_newline_none ... ignored
+test parser_affix::tests::test_munch_newline_some ... ignored
+test parser_affix::tests::test_parse_neighbor_keys ... ignored
+test parser_affix::tests::test_table_parser_ok ... ignored
+
+test result: ok. 0 passed; 0 failed; 29 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+Vec contains true       time:   [527.19 µs 530.46 µs 534.24 µs]
+                        change: [+2.1915% +3.4663% +4.9698%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 7 outliers among 100 measurements (7.00%)
+  5 (5.00%) high mild
+  2 (2.00%) high severe
+
+Vec contains false      time:   [1.7553 ms 1.7625 ms 1.7700 ms]
+                        change: [-6.2869% +0.7060% +5.4805%] (p = 0.87 > 0.05)
+                        No change in performance detected.
+Found 7 outliers among 100 measurements (7.00%)
+  3 (3.00%) high mild
+  4 (4.00%) high severe
+
+BTree contains true     time:   [1.9676 µs 1.9725 µs 1.9776 µs]
+                        change: [-2.0960% -1.6698% -1.2043%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 8 outliers among 100 measurements (8.00%)
+  5 (5.00%) high mild
+  3 (3.00%) high severe
+
+BTree contains false    time:   [2.2345 µs 2.2419 µs 2.2492 µs]
+                        change: [-0.3432% +0.2956% +0.9288%] (p = 0.39 > 0.05)
+                        No change in performance detected.
+Found 5 outliers among 100 measurements (5.00%)
+  1 (1.00%) high mild
+  4 (4.00%) high severe
+
+HashSet contains true   time:   [495.91 ns 496.63 ns 497.49 ns]
+                        change: [-0.5871% +0.7149% +1.7123%] (p = 0.25 > 0.05)
+                        No change in performance detected.
+Found 10 outliers among 100 measurements (10.00%)
+  2 (2.00%) high mild
+  8 (8.00%) high severe
+
+HashSet contains false  time:   [381.19 ns 392.35 ns 417.43 ns]
+                        change: [-22.191% -12.232% -2.4886%] (p = 0.02 < 0.05)
+                        Performance has improved.
+Found 11 outliers among 100 measurements (11.00%)
+  3 (3.00%) high mild
+  8 (8.00%) high severe
+
+HashBrownSet contains true
+                        time:   [287.78 ns 288.27 ns 288.90 ns]
+                        change: [-9.6057% -6.7939% -4.3468%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 10 outliers among 100 measurements (10.00%)
+  4 (4.00%) high mild
+  6 (6.00%) high severe
+
+HashBrownSet contains false
+                        time:   [172.62 ns 172.75 ns 172.89 ns]
+                        change: [-27.886% -22.469% -17.126%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 11 outliers among 100 measurements (11.00%)
+  5 (5.00%) high mild
+  6 (6.00%) high severe
+
+VecMap contains true    time:   [720.26 µs 726.63 µs 733.19 µs]
+                        change: [-43.714% -35.330% -27.390%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 5 outliers among 100 measurements (5.00%)
+  5 (5.00%) high severe
+
+VecMap contains false   time:   [5.2983 ms 5.7773 ms 6.3749 ms]
+                        change: [+84.849% +104.25% +126.70%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 7 outliers among 100 measurements (7.00%)
+  3 (3.00%) high mild
+  4 (4.00%) high severe
+
+VecMap get true         time:   [1.2002 ms 1.2384 ms 1.2801 ms]
+                        change: [+10.502% +28.329% +48.503%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 7 outliers among 100 measurements (7.00%)
+  5 (5.00%) high mild
+  2 (2.00%) high severe
+
+VecMap get false        time:   [4.4584 ms 4.5894 ms 4.7349 ms]
+                        change: [+23.373% +38.286% +54.428%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 2 outliers among 100 measurements (2.00%)
+  1 (1.00%) high mild
+  1 (1.00%) high severe
+
+BTreeMap contains true  time:   [2.2799 µs 2.6241 µs 3.0908 µs]
+                        change: [+8.7988% +15.192% +24.402%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 14 outliers among 100 measurements (14.00%)
+  4 (4.00%) high mild
+  10 (10.00%) high severe
+
+BTreeMap contains false time:   [2.2242 µs 2.2372 µs 2.2541 µs]
+                        change: [-14.512% -11.133% -7.7740%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 15 outliers among 100 measurements (15.00%)
+  2 (2.00%) low mild
+  3 (3.00%) high mild
+  10 (10.00%) high severe
+
+BTreeMap get true       time:   [1.9974 µs 2.0028 µs 2.0083 µs]
+                        change: [-3.2077% -2.5018% -1.8053%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 6 outliers among 100 measurements (6.00%)
+  3 (3.00%) high mild
+  3 (3.00%) high severe
+
+BTreeMap get false      time:   [2.2749 µs 2.2909 µs 2.3100 µs]
+                        change: [-1.6155% -0.6992% +0.1555%] (p = 0.14 > 0.05)
+                        No change in performance detected.
+Found 14 outliers among 100 measurements (14.00%)
+  2 (2.00%) high mild
+  12 (12.00%) high severe
+
+HashMap contains true   time:   [494.66 ns 495.60 ns 496.71 ns]
+                        change: [-0.9672% -0.4785% -0.0092%] (p = 0.05 > 0.05)
+                        No change in performance detected.
+Found 15 outliers among 100 measurements (15.00%)
+  6 (6.00%) high mild
+  9 (9.00%) high severe
+
+HashMap contains false  time:   [382.15 ns 383.25 ns 384.72 ns]
+                        change: [-4.6026% -4.1990% -3.8003%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 11 outliers among 100 measurements (11.00%)
+  3 (3.00%) high mild
+  8 (8.00%) high severe
+
+HashMap get true        time:   [498.13 ns 499.54 ns 501.27 ns]
+                        change: [-12.707% -6.9859% -1.5992%] (p = 0.01 < 0.05)
+                        Performance has improved.
+Found 12 outliers among 100 measurements (12.00%)
+  7 (7.00%) high mild
+  5 (5.00%) high severe
+
+HashMap get false       time:   [384.52 ns 385.28 ns 386.19 ns]
+                        change: [-34.221% -24.418% -14.481%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 15 outliers among 100 measurements (15.00%)
+  3 (3.00%) high mild
+  12 (12.00%) high severe
+
+HashBrownMap contains true
+                        time:   [294.93 ns 295.59 ns 296.35 ns]
+                        change: [-25.428% -19.245% -13.610%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 12 outliers among 100 measurements (12.00%)
+  8 (8.00%) high mild
+  4 (4.00%) high severe
+
+HashBrownMap contains false
+                        time:   [173.44 ns 173.75 ns 174.14 ns]
+                        change: [-0.1830% +0.6052% +1.5465%] (p = 0.26 > 0.05)
+                        No change in performance detected.
+Found 16 outliers among 100 measurements (16.00%)
+  5 (5.00%) high mild
+  11 (11.00%) high severe
+
+HashBrownMap get true   time:   [295.95 ns 296.53 ns 297.29 ns]
+                        change: [+1.9002% +2.3742% +2.8485%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 11 outliers among 100 measurements (11.00%)
+  4 (4.00%) high mild
+  7 (7.00%) high severe
+
+HashBrownMap get false  time:   [174.23 ns 175.11 ns 176.80 ns]
+                        change: [-0.0785% +0.3942% +1.1255%] (p = 0.22 > 0.05)
+                        No change in performance detected.
+Found 11 outliers among 100 measurements (11.00%)
+  5 (5.00%) high mild
+  6 (6.00%) high severe
+
+Parse affix file        time:   [1.7372 ms 1.7405 ms 1.7438 ms]
+                        change: [-0.6450% +0.2687% +1.0458%] (p = 0.56 > 0.05)
+                        No change in performance detected.
+Found 8 outliers among 100 measurements (8.00%)
+  3 (3.00%) high mild
+  5 (5.00%) high severe
+
+Parse dict file         time:   [69.801 ms 70.082 ms 70.383 ms]
+                        change: [+0.7646% +2.4105% +3.6317%] (p = 0.00 < 0.05)
+                        Change within noise threshold.
+Found 10 outliers among 100 measurements (10.00%)
+  10 (10.00%) high mild
+
+Spellcheck: compile dictionary
+                        time:   [284.60 ms 285.25 ms 285.92 ms]
+                        change: [-13.926% -10.167% -6.8111%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 3 outliers among 100 measurements (3.00%)
+  3 (3.00%) high mild
+
+Spellcheck: 1 correct word
+                        time:   [180.32 ns 188.32 ns 201.49 ns]
+                        change: [-0.6133% +1.3488% +4.3081%] (p = 0.40 > 0.05)
+                        No change in performance detected.
+Found 15 outliers among 100 measurements (15.00%)
+  3 (3.00%) high mild
+  12 (12.00%) high severe
+
+Spellcheck: 1 incorrect word
+                        time:   [204.18 ns 204.49 ns 204.83 ns]
+                        change: [-20.267% -14.847% -9.7261%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 11 outliers among 100 measurements (11.00%)
+  8 (8.00%) high mild
+  3 (3.00%) high severe
+
+Spellcheck: 15 correct words
+                        time:   [5.7522 µs 5.7613 µs 5.7717 µs]
+                        change: [-22.982% -16.721% -10.944%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 9 outliers among 100 measurements (9.00%)
+  3 (3.00%) high mild
+  6 (6.00%) high severe
+
+Spellcheck: 15 incorrect words
+                        time:   [6.6906 µs 6.7001 µs 6.7123 µs]
+                        change: [-2.5668% -2.0031% -1.4620%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 13 outliers among 100 measurements (13.00%)
+  4 (4.00%) high mild
+  9 (9.00%) high severe
+
+Spellcheck: 188 word paragraph
+                        time:   [1.0398 µs 1.0417 µs 1.0437 µs]
+                        change: [-6.5312% -4.4101% -2.6552%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 12 outliers among 100 measurements (12.00%)
+  4 (4.00%) high mild
+  8 (8.00%) high severe
+
+Empty: `contains`       time:   [969.97 ps 970.78 ps 971.67 ps]
+                        change: [-28.318% -20.537% -14.121%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 13 outliers among 100 measurements (13.00%)
+  4 (4.00%) high mild
+  9 (9.00%) high severe
+
+Empty: `binary_search`  time:   [969.99 ps 970.84 ps 971.80 ps]
+                        change: [-8.7634% -5.8526% -3.1659%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 10 outliers among 100 measurements (10.00%)
+  4 (4.00%) high mild
+  6 (6.00%) high severe
+
+1x: `contains`          time:   [4.5320 ns 4.5360 ns 4.5400 ns]
+                        change: [-3.2899% -2.3812% -1.5654%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 7 outliers among 100 measurements (7.00%)
+  3 (3.00%) high mild
+  4 (4.00%) high severe
+
+1x: `binary_search`     time:   [5.8238 ns 5.8317 ns 5.8417 ns]
+                        change: [-3.2872% -2.2219% -1.2590%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 11 outliers among 100 measurements (11.00%)
+  3 (3.00%) high mild
+  8 (8.00%) high severe
+
+3 sorted: `contains`    time:   [10.016 ns 10.069 ns 10.146 ns]
+                        change: [-2.8531% -1.8258% -0.8069%] (p = 0.00 < 0.05)
+                        Change within noise threshold.
+Found 27 outliers among 100 measurements (27.00%)
+  4 (4.00%) low severe
+  12 (12.00%) low mild
+  2 (2.00%) high mild
+  9 (9.00%) high severe
+
+3 sorted: `binary_search`
+                        time:   [6.4764 ns 6.4893 ns 6.5066 ns]
+                        change: [-4.8578% -2.7917% -1.0778%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 10 outliers among 100 measurements (10.00%)
+  4 (4.00%) high mild
+  6 (6.00%) high severe
+
+10 sorted: `contains` early
+                        time:   [13.661 ns 13.687 ns 13.715 ns]
+                        change: [-0.0431% +1.5263% +3.2573%] (p = 0.08 > 0.05)
+                        No change in performance detected.
+Found 9 outliers among 100 measurements (9.00%)
+  3 (3.00%) high mild
+  6 (6.00%) high severe
+
+10 sorted: `binary_search` early
+                        time:   [21.355 ns 21.410 ns 21.492 ns]
+                        change: [-1.0296% -0.0564% +0.6181%] (p = 0.92 > 0.05)
+                        No change in performance detected.
+Found 12 outliers among 100 measurements (12.00%)
+  4 (4.00%) high mild
+  8 (8.00%) high severe
+
+10 sorted: `contains` mid
+                        time:   [35.176 ns 38.983 ns 46.381 ns]
+                        change: [+3.5801% +8.6124% +16.401%] (p = 0.01 < 0.05)
+                        Performance has regressed.
+Found 8 outliers among 100 measurements (8.00%)
+  2 (2.00%) high mild
+  6 (6.00%) high severe
+
+10 sorted: `binary_search` mid
+                        time:   [28.574 ns 29.068 ns 29.654 ns]
+                        change: [+1.1062% +5.8638% +10.967%] (p = 0.01 < 0.05)
+                        Performance has regressed.
+Found 8 outliers among 100 measurements (8.00%)
+  2 (2.00%) high mild
+  6 (6.00%) high severe
+
+10 sorted: `contains` late
+                        time:   [47.596 ns 51.414 ns 58.443 ns]
+                        change: [-20.468% -8.0668% +2.4713%] (p = 0.27 > 0.05)
+                        No change in performance detected.
+Found 12 outliers among 100 measurements (12.00%)
+  5 (5.00%) high mild
+  7 (7.00%) high severe
+
+10 sorted: `binary_search` late
+                        time:   [21.893 ns 22.243 ns 22.628 ns]
+                        change: [-20.861% +1.7769% +44.797%] (p = 0.93 > 0.05)
+                        No change in performance detected.
+Found 10 outliers among 100 measurements (10.00%)
+  4 (4.00%) high mild
+  6 (6.00%) high severe
+
+3 unsorted: `contains`  time:   [10.276 ns 10.348 ns 10.427 ns]
+                        change: [-31.519% -25.107% -18.331%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 5 outliers among 100 measurements (5.00%)
+  4 (4.00%) high mild
+  1 (1.00%) high severe
+
+3 unsorted: `binary_search`
+                        time:   [38.265 ns 40.233 ns 42.507 ns]
+                        change: [-2.1685% +2.6337% +8.0633%] (p = 0.32 > 0.05)
+                        No change in performance detected.
+Found 2 outliers among 100 measurements (2.00%)
+  1 (1.00%) high mild
+  1 (1.00%) high severe
+
+10 unsorted: `contains` time:   [34.687 ns 35.167 ns 35.775 ns]
+                        change: [+1.7722% +3.9914% +6.5887%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 16 outliers among 100 measurements (16.00%)
+  5 (5.00%) high mild
+  11 (11.00%) high severe
+
+10 unsorted: `binary_search`
+                        time:   [172.13 ns 173.65 ns 175.68 ns]
+                        change: [+0.9382% +2.0326% +3.1574%] (p = 0.00 < 0.05)
+                        Change within noise threshold.
+Found 13 outliers among 100 measurements (13.00%)
+  5 (5.00%) high mild
+  8 (8.00%) high severe
+
+Vec short get           time:   [16.572 ns 16.650 ns 16.734 ns]
+                        change: [+1.2423% +1.7485% +2.2722%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 7 outliers among 100 measurements (7.00%)
+  5 (5.00%) high mild
+  2 (2.00%) high severe
+
+Vec med get             time:   [40.110 ns 41.117 ns 42.524 ns]
+                        change: [-41.832% -29.044% -13.823%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 7 outliers among 100 measurements (7.00%)
+  7 (7.00%) high severe
+
+Vec long get            time:   [119.47 ns 121.83 ns 125.75 ns]
+                        change: [+1.4110% +5.1552% +12.054%] (p = 0.02 < 0.05)
+                        Performance has regressed.
+Found 14 outliers among 100 measurements (14.00%)
+  5 (5.00%) high mild
+  9 (9.00%) high severe
+
+Vec xlong get           time:   [445.83 ns 448.81 ns 452.10 ns]
+                        change: [-11.090% -5.2210% -1.0996%] (p = 0.04 < 0.05)
+                        Performance has improved.
+Found 8 outliers among 100 measurements (8.00%)
+  6 (6.00%) high mild
+  2 (2.00%) high severe
+
+Vec short binsearch     time:   [29.497 ns 29.658 ns 29.854 ns]
+                        change: [-1.6872% -0.2965% +1.0018%] (p = 0.68 > 0.05)
+                        No change in performance detected.
+Found 9 outliers among 100 measurements (9.00%)
+  2 (2.00%) high mild
+  7 (7.00%) high severe
+
+Vec med binsearch       time:   [41.209 ns 41.712 ns 42.317 ns]
+                        change: [+1.3896% +2.1816% +2.9779%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 10 outliers among 100 measurements (10.00%)
+  3 (3.00%) high mild
+  7 (7.00%) high severe
+
+Vec long binsearch      time:   [52.842 ns 53.413 ns 54.096 ns]
+                        change: [+1.6759% +3.0845% +4.6402%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 11 outliers among 100 measurements (11.00%)
+  5 (5.00%) high mild
+  6 (6.00%) high severe
+
+Vec xlong binsearch     time:   [65.896 ns 66.997 ns 68.230 ns]
+                        change: [-5.3676% -1.7171% +1.3912%] (p = 0.37 > 0.05)
+                        No change in performance detected.
+Found 17 outliers among 100 measurements (17.00%)
+  5 (5.00%) high mild
+  12 (12.00%) high severe
+
+HashMap short get       time:   [70.325 ns 71.348 ns 72.616 ns]
+                        change: [-25.264% -18.099% -11.575%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 11 outliers among 100 measurements (11.00%)
+  7 (7.00%) high mild
+  4 (4.00%) high severe
+
+HashMap med get         time:   [74.226 ns 74.987 ns 75.864 ns]
+                        change: [-18.372% -13.015% -7.9411%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 13 outliers among 100 measurements (13.00%)
+  9 (9.00%) high mild
+  4 (4.00%) high severe
+
+HashMap long get        time:   [70.246 ns 70.779 ns 71.405 ns]
+                        change: [-0.2536% +1.1635% +2.4669%] (p = 0.09 > 0.05)
+                        No change in performance detected.
+Found 9 outliers among 100 measurements (9.00%)
+  5 (5.00%) high mild
+  4 (4.00%) high severe
+
+HashMap xlong get       time:   [74.887 ns 75.765 ns 77.006 ns]
+                        change: [+8.5413% +10.573% +12.639%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 11 outliers among 100 measurements (11.00%)
+  3 (3.00%) high mild
+  8 (8.00%) high severe
+
+HashBrownMap short get  time:   [31.546 ns 32.134 ns 32.837 ns]
+                        change: [-2.4132% -0.8334% +0.8250%] (p = 0.32 > 0.05)
+                        No change in performance detected.
+Found 6 outliers among 100 measurements (6.00%)
+  3 (3.00%) high mild
+  3 (3.00%) high severe
+
+HashBrownMap med get    time:   [31.281 ns 31.720 ns 32.259 ns]
+                        change: [+2.4479% +4.2914% +6.8748%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 12 outliers among 100 measurements (12.00%)
+  5 (5.00%) high mild
+  7 (7.00%) high severe
+
+HashBrownMap long get   time:   [31.712 ns 32.354 ns 33.172 ns]
+                        change: [-5.5495% -2.5879% +0.2573%] (p = 0.09 > 0.05)
+                        No change in performance detected.
+Found 9 outliers among 100 measurements (9.00%)
+  4 (4.00%) high mild
+  5 (5.00%) high severe
+
+HashBrownMap xlong get  time:   [70.908 ns 71.958 ns 73.273 ns]
+                        change: [-1.7076% +1.0836% +5.2330%] (p = 0.61 > 0.05)
+                        No change in performance detected.
+Found 11 outliers among 100 measurements (11.00%)
+  6 (6.00%) high mild
+  5 (5.00%) high severe
+
+BTreeMap short get      time:   [22.893 ns 23.846 ns 25.147 ns]
+                        change: [-62.492% -46.687% -27.365%] (p = 0.00 < 0.05)
+                        Performance has improved.
+Found 12 outliers among 100 measurements (12.00%)
+  5 (5.00%) high mild
+  7 (7.00%) high severe
+
+BTreeMap med get        time:   [39.877 ns 41.617 ns 43.487 ns]
+                        change: [+2.4647% +4.5696% +6.8538%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 11 outliers among 100 measurements (11.00%)
+  3 (3.00%) high mild
+  8 (8.00%) high severe
+
+BTreeMap long get       time:   [54.751 ns 59.624 ns 65.615 ns]
+                        change: [+26.014% +35.208% +45.034%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 7 outliers among 100 measurements (7.00%)
+  2 (2.00%) high mild
+  5 (5.00%) high severe
+
+BTreeMap xlong get      time:   [81.490 ns 87.995 ns 96.329 ns]
+                        change: [+21.975% +39.180% +62.384%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 11 outliers among 100 measurements (11.00%)
+  2 (2.00%) high mild
+  9 (9.00%) high severe
+
+Split whitespace        time:   [12.093 ns 12.308 ns 12.562 ns]
+                        change: [-8.0541% -3.2779% +1.1025%] (p = 0.18 > 0.05)
+                        No change in performance detected.
+Found 3 outliers among 100 measurements (3.00%)
+  2 (2.00%) high mild
+  1 (1.00%) high severe
+
+Split ascii whitespace  time:   [4.6805 ns 4.9168 ns 5.2009 ns]
+                        change: [+9.3766% +12.346% +15.671%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 8 outliers among 100 measurements (8.00%)
+  5 (5.00%) high mild
+  3 (3.00%) high severe
+
+Simple segmentation     time:   [2.5955 µs 2.7006 µs 2.8327 µs]
+                        change: [+13.163% +21.342% +33.979%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 11 outliers among 100 measurements (11.00%)
+  4 (4.00%) high mild
+  7 (7.00%) high severe
+
+Skip whitespace using all
+                        time:   [3.0242 µs 3.3951 µs 3.8322 µs]
+                        change: [+12.365% +24.007% +40.137%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 12 outliers among 100 measurements (12.00%)
+  5 (5.00%) high mild
+  7 (7.00%) high severe
+
+Skip whitespace using first
+                        time:   [2.4679 µs 2.4881 µs 2.5132 µs]
+                        change: [-29.797% -14.016% -1.2730%] (p = 0.14 > 0.05)
+                        No change in performance detected.
+Found 7 outliers among 100 measurements (7.00%)
+  2 (2.00%) high mild
+  5 (5.00%) high severe
+
+Skip whitespace using first nohyphen
+                        time:   [2.8906 µs 3.0720 µs 3.2944 µs]
+                        change: [+10.062% +19.878% +32.184%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 8 outliers among 100 measurements (8.00%)
+  2 (2.00%) high mild
+  6 (6.00%) high severe
+
+
+running 3 tests
+test download::tests::calculate_git_hash_ok ... ignored
+test download::tests::download_dict_ok ... ignored
+test download::tests::retreive_urls_ok ... ignored
+
+test result: ok. 0 passed; 0 failed; 3 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s

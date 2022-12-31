@@ -7,6 +7,7 @@ file.
 import platform
 import subprocess as sp
 import sys
+import time
 from datetime import datetime
 from inspect import cleandoc
 from pathlib import Path
@@ -56,12 +57,13 @@ def get_cpu_info() -> str:
 
 
 def main():
+    start_time = time.time()
     dtime = get_dtime()
     describe = git_describe()
     fname, fpath = get_fpath(dtime, describe)
     version = rustc_version()
     cpu_info = get_cpu_info()
-    cmd = ["cargo", "bench"]
+    cmd = ["cargo", "bench", "--features", "benchmarking"]
     cmd += sys.argv[1:]
 
     header_str = (
@@ -93,6 +95,11 @@ def main():
         print("\nCommand did not complete successfully")
         exit(p.returncode)
 
+    end_time = time.time()
+    elapsed_time = end_time - start_time
+    time_str = f"\nTotal execution time: {time.strftime('%H:%M:%S', time.gmtime(elapsed_time))}"
+    output += time_str
+    print(time_str)
     print("\nWriting file...", end="")
 
     with open(fpath, "w") as f:

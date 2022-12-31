@@ -183,7 +183,12 @@ impl ParsedPersonalMeta {
 }
 
 /// Parse a complete dictionary file (usually `.dic`)
-#[allow(clippy::single_match_else, clippy::option_if_let_else)]
+#[inline]
+#[allow(
+    clippy::single_match_else,
+    clippy::option_if_let_else,
+    clippy::missing_errors_doc
+)]
 pub fn parse_dict(s: &str, flag_type: FlagType) -> Result<Vec<DictEntry>, ParseError> {
     // Ignore empty lines and
     let mut lines_iter = s

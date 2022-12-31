@@ -153,6 +153,7 @@ impl FlagType {
     }
 
     /// Given a specified flag type (self), turn the value back into a string
+    #[inline]
     pub fn flag_to_str(self, flag: u32) -> String {
         match self {
             // Should be OK to unwrap because we created these flags from valid characters
@@ -293,6 +294,7 @@ impl From<Encoding> for &str {
 impl TryFrom<&str> for FlagType {
     type Error = ParseErrorKind;
 
+    #[inline]
     fn try_from(value: &str) -> Result<Self, ParseErrorKind> {
         match value.to_ascii_lowercase().as_str() {
             "ascii" => Ok(Self::Ascii),
@@ -305,6 +307,7 @@ impl TryFrom<&str> for FlagType {
 }
 
 impl Display for FlagType {
+    #[inline]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let s: &str = self.into();
         write!(f, "{s}")?;
@@ -417,6 +420,7 @@ impl Default for Encoding {
 }
 
 impl Default for FlagType {
+    #[inline]
     fn default() -> Self {
         Self::Utf8
     }
