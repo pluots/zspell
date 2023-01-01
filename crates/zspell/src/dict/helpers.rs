@@ -26,37 +26,46 @@ pub(super) fn create_affixed_word_map(
     }
 
     // Store words with prefixes that can also have suffixes
-    let mut prefixed_words: Vec<(String, &Arc<AfxRule>)> = Vec::new();
+    let mut prefixed_words: Vec<(String, &Arc<AfxRule>, usize)> = Vec::new();
+    let mut rule_found = false;
 
     for &rule in prefix_rules.iter() {
-        let result = rule.apply_pattern(stem).ok_or(())?;
-        let meta = Meta::new(stem_rc.clone(), Source::Affix(rule.clone()));
-        let meta_vec = dest.0.entry_ref(&result).or_insert_with(Vec::new);
-        meta_vec.push(meta);
+        for (idx, result) in rule.apply_patterns(stem) {
+            let meta = Meta::new(stem_rc.clone(), Source::Affix(rule.clone()));
+            let meta_vec = dest.0.entry_ref(&result).or_insert_with(Vec::new);
+            meta_vec.push(meta);
+            rule_found = true;
 
-        if rule.can_combine() {
-            prefixed_words.push((result, rule));
+            if rule.can_combine() {
+                prefixed_words.push((result, rule, idx));
+            }
         }
     }
 
     for &rule in suffix_rules.iter() {
-        let result = rule.apply_pattern(stem).ok_or(())?;
-        let meta = Meta::new(stem_rc.clone(), Source::Affix(rule.clone()));
-        let meta_vec = dest.0.entry_ref(&result).or_insert_with(Vec::new);
-        meta_vec.push(meta);
+        for (idx, result) in rule.apply_patterns(stem) {
+            let meta = Meta::new(stem_rc.clone(), Source::Affix(rule.clone()));
+            let meta_vec = dest.0.entry_ref(&result).or_insert_with(Vec::new);
+            meta_vec.push(meta);
+            rule_found = true;
 
-        if rule.can_combine() {
-            let words_iter = prefixed_words.iter().filter_map(|(tmp_res, pfx_rule)| {
-                rule.apply_pattern(tmp_res)
-                    .map(|newword| (newword, pfx_rule))
-            });
+            if rule.can_combine() {
+                // Find words where there's both a prefix and suffix applicable
+                let words_iter = prefixed_words
+                    .iter()
+                    .map(|(tmp_res, pfx_rule, idx_pfx)| {
+                        rule.apply_patterns(tmp_res)
+                            .map(move |(idx_sfx, newword)| (newword, pfx_rule, idx_pfx, idx_sfx))
+                    })
+                    .flatten();
 
-            for (newword, &pfx_rule) in words_iter {
-                let meta_vec = dest.0.entry_ref(&newword).or_insert_with(Vec::new);
-                let meta1 = Meta::new(stem_rc.clone(), Source::Affix(rule.clone()));
-                let meta2 = Meta::new(stem_rc.clone(), Source::Affix(pfx_rule.clone()));
-                meta_vec.push(meta1);
-                meta_vec.push(meta2);
+                for (newword, &pfx_rule, _idx_pfx, _idx_sfx) in words_iter {
+                    let meta_vec = dest.0.entry_ref(&newword).or_insert_with(Vec::new);
+                    let meta1 = Meta::new(stem_rc.clone(), Source::Affix(rule.clone()));
+                    let meta2 = Meta::new(stem_rc.clone(), Source::Affix(pfx_rule.clone()));
+                    meta_vec.push(meta1);
+                    meta_vec.push(meta2);
+                }
             }
         }
     }

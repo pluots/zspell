@@ -31,9 +31,9 @@ use crate::{suggestions, ParsedCfg};
 /// Internally, this is represented as the following:
 ///
 /// - A main wordlist
-/// - A list of words to accept byt never suggest
+/// - A list of words to accept but never suggest, from the `NOSUGGEST` flag
 /// - A list of words that are usually allowed but are forbidden by a personal
-///   dictionary
+///   dictionary or the `FORBIDDENWORD` flag
 /// - A list of stem words and source information
 /// - Configuration information
 ///
