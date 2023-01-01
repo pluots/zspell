@@ -8,6 +8,8 @@
 
 ### Changed
 
+- `.dic` parser now ignores lines that start with a tab (sometimes used for comments)
+
 ### Removed
 
 
