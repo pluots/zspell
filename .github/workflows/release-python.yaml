@@ -16,7 +16,7 @@ jobs:
         manylinux: auto
         command: build
         # container default is manylinux
-        args: --release -o dist --manifest-path crates/zspell-py/Cargo.toml
+        args: --release -o dist -i 3.7 3.8 3.9 3.10 3.11 --manifest-path crates/zspell-py/Cargo.toml
     - name: Build musl wheels
       uses: messense/maturin-action@v1
       with:
@@ -37,7 +37,7 @@ jobs:
     - uses: messense/maturin-action@v1
       with:
         command: build
-        args: --release --no-sdist -o dist -i 3.7 3.8 3.9 3.10 3.11 --manifest-path crates/zspell-py/Cargo.toml
+        args: --release -o dist -i 3.7 3.8 3.9 3.10 3.11 --manifest-path crates/zspell-py/Cargo.toml
     - name: Upload wheels
       uses: actions/upload-artifact@v2
       with:
@@ -51,7 +51,7 @@ jobs:
     - uses: messense/maturin-action@v1
       with:
         command: build
-        args: --release --no-sdist -o dist --universal2 --manifest-path crates/zspell-py/Cargo.toml
+        args: --release -o dist -i 3.7 3.8 3.9 3.10 3.11 --universal2 --manifest-path crates/zspell-py/Cargo.toml
     - name: Upload wheels
       uses: actions/upload-artifact@v2
       with:

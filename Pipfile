@@ -4,7 +4,7 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-maturin = "0.14"
+maturin = "0.14.8"
 sphinx = "6.0"
 furo = "2022.12"
 

@@ -4,12 +4,9 @@
 
 ## [Unreleased] - ReleaseDate
 
-### Added
-
 ### Changed
 
-### Removed
-
+- [build] update python release workflow
 
 
 ## [0.3.2] - 2023-01-01
