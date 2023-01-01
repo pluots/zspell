@@ -1,45 +1,82 @@
+#!/usr/bin/env python3
+
+"""This script downloads files from the github `wooorm/dictionaries` repository.
+
+Be sure to obey licensing.
+"""
+
+import argparse
 import base64
 import json
 import os
 import urllib.request
 from dataclasses import dataclass
+from typing import Any
 
 # Path to directory with all dictionaries
-GH_URL = "https://api.github.com/repos/wooorm/dictionaries/contents/dictionaries"
-USERNAME = os.environ.get("GH_USERNAME")
-TOKEN = os.environ.get("GH_TOKEN")
-
-if USERNAME is None or TOKEN is None:
-    print("Not using tokens")
-else:
-    print("Using token")
+ROOT_GH_URL = "https://api.github.com/repos/wooorm/dictionaries/contents/dictionaries"
 
 
-def make_req(url: str):
-    if USERNAME is None or TOKEN is None:
-        return url
+@dataclass
+class AuthInfo:
+    """Login information"""
 
-    auth = base64.b64encode(bytes(f"{USERNAME}:{TOKEN}", "utf8"))
-    req = urllib.request.Request(url)
-    req.add_header("Authorization", f"Basic {auth}")
-    return req
-
-
-def get_url_data(url: str):
-    return urllib.request.urlopen(make_req(url))
-
-
-def download_file(url: str, path: str):
-    return urllib.request.urlopen(make_req(url))
+    username: str
+    token: str
 
 
 @dataclass
 class LangDict:
+    """Represent the URLs for a specific language"""
+
     name: str
     dir_url: str
     dict_url: str = None
     affix_url: str = None
     license_url: str = None
+
+    def set_urls(self, auth: AuthInfo | None):
+        """Set dict, affix, and license URLs from the name and dir URL"""
+        listing: list[dict[str, Any]] = get_url_data_json(self.dir_url, auth)
+        self.dict_url = next(
+            d["download_url"] for d in listing if d["name"].endswith(".dic")
+        )
+        self.affix_url = next(
+            d["download_url"] for d in listing if d["name"].endswith(".aff")
+        )
+        self.license_url = next(
+            d["download_url"] for d in listing if d["name"].lower() == "license"
+        )
+
+    def download(self, path: str, auth: AuthInfo | None) -> None:
+        """Download the files to a designated path"""
+        print(f"Downloading files for language '{self.name}'")
+
+        dict_path = f"{path}/{self.dict_fname}"
+        affix_path = f"{path}/{self.affix_fname}"
+        license_path = f"{path}/{self.license_fname}"
+        all_paths = (dict_path, affix_path, license_path)
+
+        for fname in all_paths:
+            if os.path.exists(fname):
+                print(f"Language '{self.name}' already exists, found '{fname}'")
+                print("Skipping")
+                return
+
+        download_file(self.dict_url, f"{path}/{self.dict_fname}.tmp", auth)
+        download_file(self.affix_url, f"{path}/{self.affix_fname}.tmp", auth)
+        download_file(self.license_url, f"{path}/{self.license_fname}.tmp", auth)
+
+        # If all goes well, there will be no problems. If one failed, program would abort
+        # Now remove the old ones, if present
+        for fname in all_paths:
+            if os.path.exists(fname):
+                os.remove(fname)
+
+            # And replace with the new
+            os.rename(f"{fname}.tmp", f"{fname}")
+
+        print(f"Finished downloading files for '{self.name}'")
 
     @property
     def dict_fname(self):
@@ -54,91 +91,83 @@ class LangDict:
         return f"{self.name}.license"
 
 
-print("Gathering listing")
+def make_req(url: str, auth: AuthInfo | None) -> str | urllib.request.Request:
+    """Make a request with auth information"""
+    if auth is None:
+        return url
 
-dict_dir_listing = get_url_data(GH_URL)
+    auth_str = base64.b64encode(bytes(f"{auth.username}:{auth.token}", "utf8"))
+    req = urllib.request.Request(url)
+    req.add_header("Authorization", f"Basic {auth_str}")
+    return req
 
-# Collection of dictionaries. Format:
-# [
-#   {
-#     "name": "bg",
-#     "path": "dictionaries/bg",
-#     "sha": "f5333c51490bfd4ca38ae10bfa7a930b0ca590f4",
-#     "size": 0,
-#     "url": "https://api.github.com/repos/wooorm/dictionaries/contents/dictionaries/bg?ref=main",
-#     "html_url": "https://github.com/wooorm/dictionaries/tree/main/dictionaries/bg",
-#     "git_url": "https://api.github.com/repos/wooorm/dictionaries/git/trees/f5333c51490bfd4ca38ae10bfa7a930b0ca590f4",
-#     "download_url": null,
-#     "type": "dir",
-#     "_links": {
-#       "self": "https://api.github.com/repos/wooorm/dictionaries/contents/dictionaries/bg?ref=main",
-#       "git": "https://api.github.com/repos/wooorm/dictionaries/git/trees/f5333c51490bfd4ca38ae10bfa7a930b0ca590f4",
-#       "html": "https://github.com/wooorm/dictionaries/tree/main/dictionaries/bg"
-#     }
-#   }, ...
-# ]
-data = json.loads(dict_dir_listing.read())
 
-# Get the name of the directory (language name) and the URL where we can find
-# its contents
-lang_dicts = [LangDict(d.get("name").replace("-", "_"), d.get("url")) for d in data]
+def get_url_data_json(url: str, auth: AuthInfo | None):
+    return json.loads(urllib.request.urlopen(make_req(url, auth)).read())
 
-lang_dicts_working: list[LangDict] = []
 
-print("Loading file URLs")
+def download_file(url: str, path: str, auth: AuthInfo | None):
+    return urllib.request.urlretrieve(make_req(url, auth), path)
 
-for i, ldict in enumerate(lang_dicts):
-    print(f"File {i} of {len(lang_dicts)}", end="\r", flush=True)
 
-    if ldict.name is None or ldict.dir_url is None:
-        continue
-
-    lang_dir_listing = get_url_data(ldict.dir_url)
-    data = json.loads(lang_dir_listing.read())
-
-    ldict.dict_url = next(
-        (
-            d.get("download_url")
-            for d in data
-            if d.get("name", "").lower().endswith(".dic")
-        ),
-        None,
+def parse_args():
+    parser = argparse.ArgumentParser(
+        prog="Dictionary downloader",
+        description="Download dictionaries for development",
     )
-    ldict.affix_url = next(
-        (
-            d.get("download_url")
-            for d in data
-            if d.get("name", "").lower().endswith(".aff")
-        ),
-        None,
+    parser.add_argument(
+        "languages", nargs="+", help="Specify language codes to download"
     )
-    ldict.license_url = next(
-        (d.get("download_url") for d in data if d.get("name", "").lower() == "license"),
-        None,
+    parser.add_argument("--username", help="specify a github username")
+    parser.add_argument("--token", help="specify a github token")
+    parser.add_argument(
+        "--output-dir", help="specify the output directory", default="dictionaries"
     )
+    args = parser.parse_args()
+    return args
 
-    if ldict.dict_url is None or ldict.affix_url is None or ldict.license_url is None:
-        continue
 
-    lang_dicts_working.append(ldict)
+def make_lang_dicts(languages: list[str], auth: AuthInfo) -> list[LangDict]:
+    print("Gathering listing")
 
-print("Loading dictionaries")
+    listing_data: list[dict] = get_url_data_json(ROOT_GH_URL, auth)
 
-for i, ldict in enumerate(lang_dicts_working):
-    # First download the files with .tmp
-    print(f"Dictionary {i} of {len(lang_dicts_working)}", end="\r", flush=True)
+    lang_dicts: list[LangDict] = []
 
-    download_file(ldict.dict_url, f"dictionaries/{ldict.dict_fname}.tmp")
-    download_file(ldict.affix_url, f"dictionaries/{ldict.affix_fname}.tmp")
-    download_file(ldict.license_url, f"dictionaries/{ldict.license_fname}.tmp")
+    for lang in languages:
+        lang_name = lang.replace("_", "-")
+        listing = next(
+            (listing for listing in listing_data if listing.get("name") == lang_name),
+            None,
+        )
+        if listing is None:
+            print(f"Unable to find language {lang}")
+            exit(1)
+        lang_dicts.append(LangDict(listing["name"], listing["url"]))
 
-    # If all goes well, there will be no problems. If one failed, program would abort
-    # Now remove the old ones, if present
-    for fname in (ldict.dict_fname, ldict.affix_fname, ldict.license_fname):
-        if os.path.exists(f"dictionaries/{fname}"):
-            os.remove(f"dictionaries/{fname}")
+    return lang_dicts
 
-        # And replace with the new
-        os.rename(f"dictionaries/{fname}.tmp", f"dictionaries/{fname}")
 
-print("Done!")
+def main():
+    print(__doc__)
+    args = parse_args()
+    username = args.username or os.environ.get("GH_USERNAME")
+    token = args.token or os.environ.get("GH_TOKEN")
+
+    if username is None or token is None:
+        print("Not using authentication, large requests may fail")
+        auth = None
+    else:
+        print("Using token authentication")
+        auth = AuthInfo(username, token)
+
+    print(username, token)
+    lang_dicts = make_lang_dicts(args.languages, auth)
+
+    for ldict in lang_dicts:
+        ldict.set_urls(auth)
+        ldict.download(args.output_dir, auth)
+
+
+if __name__ == "__main__":
+    main()
