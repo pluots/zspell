@@ -189,12 +189,14 @@ impl ParsedPersonalMeta {
     clippy::option_if_let_else,
     clippy::missing_errors_doc
 )]
-pub fn parse_dict(s: &str, flag_type: FlagType) -> Result<Vec<DictEntry>, ParseError> {
+pub fn parse_dict(input: &str, flag_type: FlagType) -> Result<Vec<DictEntry>, ParseError> {
     // Ignore empty lines and
-    let mut lines_iter = s
+    let mut lines_iter = input
         .lines()
+        // Dictionary files sometimes use tabs for comments, need to check before trim
+        .filter(|line| !line.starts_with('\t'))
         .map(str::trim)
-        .filter(|line| !(line.is_empty() || line.starts_with('#')));
+        .filter(|line| !(line.trim().is_empty() || line.starts_with('#')));
     let lines_backup = lines_iter.clone();
 
     let Some(first) = lines_iter.next() else {
@@ -211,11 +213,10 @@ pub fn parse_dict(s: &str, flag_type: FlagType) -> Result<Vec<DictEntry>, ParseE
     };
 
     for (i, line) in lines_iter.enumerate() {
-        ret.push(DictEntry::parse_str(
-            line,
-            flag_type,
-            convertu32(i + start),
-        )?);
+        ret.push(
+            DictEntry::parse_str(line, flag_type, convertu32(i + start))
+                .map_err(|e| e.add_offset_ret(i + start, 0))?,
+        );
     }
     Ok(ret)
 }

@@ -50,7 +50,8 @@ pub fn spellcheck_cli(cli: &Cli) -> ExitCode {
         }
     };
     let load_time = load_start.elapsed().as_secs_f32();
-    eprintln!("loaded in {load_time:.2}s. started session");
+    let wc = dict.wordlist().inner().len() + dict.wordlist_nosuggest().inner().len();
+    eprintln!("loaded {wc} words in {load_time:.2}s. started session");
 
     if cli.generate_wordlist {
         todo!();

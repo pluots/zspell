@@ -4,11 +4,10 @@
 
 ## [Unreleased] - ReleaseDate
 
-### Added
-
 ### Changed
 
-### Removed
+- `.dic` parser now ignores lines that start with a tab (sometimes used for comments)
+- Updated python documentation
 
 
 
