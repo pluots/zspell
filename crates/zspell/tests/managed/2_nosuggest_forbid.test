@@ -1,4 +1,4 @@
-%% Verify our nosuggest flag works
+%% Verify our nosuggest anf forbid flags works
 
 ==== afx_str ====
 NOSUGGEST !

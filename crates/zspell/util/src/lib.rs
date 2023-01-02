@@ -115,7 +115,7 @@ impl TestManager {
         let mut fpath = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
         fpath.pop();
         fpath.push("tests");
-        fpath.push("files");
+        fpath.push("managed");
         fpath.push(fname);
 
         let f_content = fs::read_to_string(&fpath)
