@@ -1,4 +1,4 @@
-//! Implementation for a store rule
+//! Implementation for a stored rule
 
 use std::hash::Hash;
 use std::ops::Deref;
@@ -88,15 +88,20 @@ impl AfxRule {
         self.can_combine
     }
 
-    /// Apply one of this rule's patterns, error if none apply
-    pub fn apply_pattern(&self, stem: &str) -> Option<String> {
+    /// Apply this rules patterns. Returns an iterator over the index of the
+    /// pattern and the resulting string
+    pub fn apply_patterns<'a>(
+        &'a self,
+        stem: &'a str,
+    ) -> impl Iterator<Item = (usize, String)> + 'a {
         self.patterns
             .iter()
-            .find_map(|pat| pat.apply_pattern(stem, self.kind))
+            .enumerate()
+            .filter_map(|(idx, pat)| pat.apply_pattern(stem, self.kind).map(|s| (idx, s)))
     }
 }
 
-/// A single rule
+/// A single affix rule application
 #[derive(Clone, Default, Debug, PartialEq, Eq, Hash)]
 pub struct AfxRulePattern {
     affix: String,

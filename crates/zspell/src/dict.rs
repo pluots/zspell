@@ -31,9 +31,9 @@ use crate::{suggestions, ParsedCfg};
 /// Internally, this is represented as the following:
 ///
 /// - A main wordlist
-/// - A list of words to accept byt never suggest
+/// - A list of words to accept but never suggest, from the `NOSUGGEST` flag
 /// - A list of words that are usually allowed but are forbidden by a personal
-///   dictionary
+///   dictionary or the `FORBIDDENWORD` flag
 /// - A list of stem words and source information
 /// - Configuration information
 ///
@@ -302,7 +302,6 @@ impl Dictionary {
     /// Return type is vector of `(new_word, rule, second_rule)` where
     /// `second_rule` is available if both a prefix and a suffix were applied
     // PERF: benchmark taking a vec reference instead of returning
-    // TODO: include morph data for generated words
     fn create_affixed_words(&mut self, stem: &str, flags: &[u32], _morph: &[MorphInfo]) {
         let mut prefix_rules = Vec::new();
         let mut suffix_rules = Vec::new();

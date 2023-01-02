@@ -1,0 +1,70 @@
+%% Test basic affix, including:
+%% - Only prefix
+%% - Only suffix
+%% - Stripping characters
+%% - Patterns
+%% - Combined prefix and suffix
+%% - Noncombining prefix and suffix
+
+==== afx_str ====
+SET UTF-8
+
+PFX A Y 1
+PFX A   0     aa         .
+
+SFX B Y 3
+SFX B   0     bb         .
+SFX B   y     cc         y
+SFX B   0     dd         [^y]
+
+PFX C N 2
+PFX C   yy    ee         .
+PFX C   0     ff         .
+
+
+==== dic_str ====
+4
+xxx/A
+yyy/B
+zzz/AB
+yyyy/AC
+
+
+==== check_valid ====
+xxx
+yyy
+zzz
+yyyy
+aaxxx
+yyybb
+yycc
+aazzz
+zzzbb
+zzzdd
+aazzzbb
+aazzzdd
+aayyyy
+eeyy
+ffyyyy
+
+
+==== check_invalid ====
+%% Nothing to see here
+nothing
+
+==== wordlist ====
+xxx
+yyy
+zzz
+yyyy
+aaxxx
+yyybb
+yycc
+aazzz
+zzzbb
+zzzdd
+aazzzbb
+aazzzdd
+aayyyy
+eeyy
+ffyyyy
