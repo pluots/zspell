@@ -38,7 +38,7 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
-      - name: Check stable
+      - name: Check on Rust stable
         uses: actions-rs/cargo@v1
         with:
           command: check
