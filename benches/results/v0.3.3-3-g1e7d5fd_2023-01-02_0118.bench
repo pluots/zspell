@@ -1,0 +1,75 @@
+v0.3.3-3-g1e7d5fd_2023-01-02_0118.bench
+
+Benchmark from 2023-01-02_0118 on commit v0.3.3-3-g1e7d5fd
+rustc 1.68.0-nightly (77429957a 2023-01-01)
+
+CPU Information:
+Intel(R) Core(TM) i5-5257U CPU @ 2.70GHz
+
+Running: 'cargo bench --features benchmarking --bench dict_integration'
+
+
+Parse affix file        time:   [1.7233 ms 1.7281 ms 1.7355 ms]
+                        change: [-0.7695% +0.2918% +1.6412%] (p = 0.67 > 0.05)
+                        No change in performance detected.
+Found 15 outliers among 100 measurements (15.00%)
+  3 (3.00%) high mild
+  12 (12.00%) high severe
+
+Parse dict file         time:   [68.950 ms 69.097 ms 69.264 ms]
+                        change: [-1.8725% -1.4052% -0.9341%] (p = 0.00 < 0.05)
+                        Change within noise threshold.
+Found 4 outliers among 100 measurements (4.00%)
+  2 (2.00%) high mild
+  2 (2.00%) high severe
+
+Spellcheck: compile dictionary
+                        time:   [289.23 ms 293.48 ms 300.70 ms]
+                        change: [+1.3808% +2.8849% +5.6673%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 5 outliers among 100 measurements (5.00%)
+  2 (2.00%) high mild
+  3 (3.00%) high severe
+
+Spellcheck: 1 correct word
+                        time:   [177.69 ns 177.83 ns 178.01 ns]
+                        change: [-5.0761% -2.1543% -0.1512%] (p = 0.09 > 0.05)
+                        No change in performance detected.
+Found 17 outliers among 100 measurements (17.00%)
+  6 (6.00%) high mild
+  11 (11.00%) high severe
+
+Spellcheck: 1 incorrect word
+                        time:   [207.22 ns 207.87 ns 208.60 ns]
+                        change: [+2.3077% +2.8911% +3.6198%] (p = 0.00 < 0.05)
+                        Performance has regressed.
+Found 7 outliers among 100 measurements (7.00%)
+  4 (4.00%) high mild
+  3 (3.00%) high severe
+
+Spellcheck: 15 correct words
+                        time:   [5.7807 µs 5.7842 µs 5.7888 µs]
+                        change: [+0.1442% +0.9362% +1.8589%] (p = 0.02 < 0.05)
+                        Change within noise threshold.
+Found 14 outliers among 100 measurements (14.00%)
+  4 (4.00%) high mild
+  10 (10.00%) high severe
+
+Spellcheck: 15 incorrect words
+                        time:   [6.6361 µs 6.6398 µs 6.6443 µs]
+                        change: [-1.1998% -0.6706% -0.0092%] (p = 0.02 < 0.05)
+                        Change within noise threshold.
+Found 15 outliers among 100 measurements (15.00%)
+  4 (4.00%) high mild
+  11 (11.00%) high severe
+
+Spellcheck: 188 word paragraph
+                        time:   [1.0548 µs 1.0564 µs 1.0585 µs]
+                        change: [+0.5199% +1.3356% +2.0162%] (p = 0.00 < 0.05)
+                        Change within noise threshold.
+Found 13 outliers among 100 measurements (13.00%)
+  5 (5.00%) high mild
+  8 (8.00%) high severe
+
+
+Total execution time: 00:04:21
