@@ -37,15 +37,15 @@ type ParseResult<'a> = Result<Option<(AffixNode, &'a str, u32)>, ParseError>;
 lazy_static! {
     static ref RE_AFX_RULE_HEADER: Regex = Regex::new(
         r"(?x)
-        ^(?P<flag>\w+)\s+
+        ^(?P<flag>\S+)\s+
         (?P<xprod>\w+)\s+
         (?P<num>\d+)$"
     )
     .unwrap();
     static ref RE_AFX_RULE_BODY: Regex = Regex::new(
         r"(?x)
-        ^(?P<flag>\w+)\s+
-        (?P<strip_chars>\w+)\s+
+        ^(?P<flag>\S+)\s+
+        (?P<strip_chars>\S+)\s+
         (?P<affix>\S+)\s+
         (?P<condition>\S+)
         (?:$|\s+(?P<morph>.+)$)"
@@ -216,7 +216,7 @@ where
 
     let header_caps = RE_AFX_RULE_HEADER
         .captures(work)
-        .ok_or_else(|| ParseError::new_nospan(ParseErrorKind::AffixBody, residual))?;
+        .ok_or_else(|| ParseError::new_nospan(ParseErrorKind::AffixHeader, work))?;
     let count: u32 = header_caps.name("num").unwrap().as_str().parse().unwrap();
     let flag = header_caps.name("flag").unwrap().as_str();
     let xprod = header_caps.name("xprod").unwrap().as_str();

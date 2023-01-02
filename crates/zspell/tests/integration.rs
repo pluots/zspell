@@ -10,6 +10,13 @@ fn test_pfx_sfx() {
 }
 
 #[test]
+fn test_pfx_sfx_num() {
+    let mgr = TestManager::new_from_file("1_pfxsfx_num.test");
+    let dict = mgr.build_dict();
+    mgr.check_all(&dict);
+}
+
+#[test]
 fn test_nosuggest_forbid() {
     let mgr = TestManager::new_from_file("2_nosuggest_forbid.test");
     let dict = mgr.build_dict();

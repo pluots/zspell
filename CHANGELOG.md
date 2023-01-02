@@ -4,6 +4,12 @@
 
 ## [Unreleased] - ReleaseDate
 
+### Fixed
+
+- Corrected error message for parsing affix headers
+- Corrected pattern matching for groups that include hyphens
+- Default no longer has a nosuggest flag
+
 ### Changed
 
 - Wordlist now correctly applies more than one affix rule if it is available

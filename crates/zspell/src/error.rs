@@ -255,11 +255,20 @@ impl Display for Error {
 impl Display for ParseError {
     #[inline]
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        const MAX_CTX_LEN: usize = 100;
+        let mut ctx_to_print = String::with_capacity(MAX_CTX_LEN + 12);
+        if self.ctx.len() > MAX_CTX_LEN {
+            ctx_to_print.push_str(&self.ctx[..MAX_CTX_LEN]);
+            ctx_to_print.push_str("...(clipped)");
+        } else {
+            ctx_to_print.push_str(&self.ctx);
+        };
+
         match &self.span {
             Some(span) => write!(
                 f,
                 "parse error at line {}: {}. Context: '{}'",
-                span.start.line, self.err, self.ctx
+                span.start.line, self.err, ctx_to_print
             )?,
             None => write!(f, "parse error: {}", self.err)?,
         };

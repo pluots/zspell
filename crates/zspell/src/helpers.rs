@@ -61,9 +61,11 @@ pub fn compile_re_pattern(
     if condition == "." {
         return Ok(None);
     }
+    // Escape hyphens in groups
+    let cond = condition.replace('-', r"\-");
     let re_pattern = match kind {
-        RuleType::Prefix => format!("^{condition}.*$"),
-        RuleType::Suffix => format!("^.*{condition}$"),
+        RuleType::Prefix => format!("^{cond}.*$"),
+        RuleType::Suffix => format!("^.*{cond}$"),
     };
     ReWrapper::new(re_pattern.as_str()).map(Some)
 }

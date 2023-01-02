@@ -1,0 +1,48 @@
+%% Test numeric flags
+
+==== afx_str ====
+SET UTF-8
+FLAG num
+
+SFX 1     N 1
+SFX 1       0     aa         .
+
+SFX 999   N 1
+SFX 999     0     bb         .
+
+SFX 12345 N 1
+SFX 12345   0     cc         .
+
+==== dic_str ====
+4
+xxx/1
+yyy/1,999,12345
+zzz/999,12345
+
+
+==== check_valid ====
+xxx
+yyy
+zzz
+xxxaa
+yyyaa
+yyybb
+yyycc
+zzzbb
+zzzcc
+
+
+==== check_invalid ====
+%% Nothing to see here
+nothing
+
+==== wordlist ====
+xxx
+yyy
+zzz
+xxxaa
+yyyaa
+yyybb
+yyycc
+zzzbb
+zzzcc
