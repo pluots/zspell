@@ -372,8 +372,8 @@ impl Dictionary {
     /// Update internal wordlists from dictionary entries
     #[allow(clippy::unnecessary_wraps)]
     fn update_wordlist(&mut self, entries: &[DictEntry]) -> Result<(), Error> {
-        // use baseline 3 words per line entry
-        self.wordlist.0.reserve(entries.len() * 3);
+        // the en dictionary has about 3 words per entry, German has 8ish
+        self.wordlist.0.reserve(entries.len() * 5);
 
         // PERF: try moving flags outside of loop
         for entry in entries {

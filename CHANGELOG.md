@@ -4,12 +4,9 @@
 
 ## [Unreleased] - ReleaseDate
 
-### Added
-
 ### Changed
 
-### Removed
-
+- Wordlist now correctly applys more than one affix rule if it is available
 
 
 ## [0.3.3] - 2023-01-01
