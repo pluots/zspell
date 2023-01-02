@@ -513,6 +513,7 @@ impl<'a> DictBuilder<'a> {
     /// Don't use with `config_src`
     #[inline]
     #[must_use]
+    #[cfg_attr(feature = "zspell-unstable", visibility::make(pub))]
     fn config(mut self, cfg: ParsedCfg) -> Self {
         self.cfg = Some(cfg);
         self

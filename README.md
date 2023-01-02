@@ -3,7 +3,8 @@
 This project is a spellchecker written completely in Rust, that maintains
 compatibility with the venerable Hunspell dictionary format. It is entirely
 native and does not rely on any other backends (Enchant, Hunspell, Aspell,
-etc.). This library also has the goal of being usable via WASM.
+etc.). This library also has the goal of being usable via WASM. Full Unicode
+support is baked in.
 
 The library side has a stabalized checker, but the suggestion API is not yet
 finalized. The CLI is usable but not yet considered stabalized. See

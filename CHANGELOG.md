@@ -6,7 +6,8 @@
 
 ### Changed
 
-- Wordlist now correctly applys more than one affix rule if it is available
+- Wordlist now correctly applies more than one affix rule if it is available
+- Moved `DictBuilder::config` behind `zspell-unstable`
 
 
 ## [0.3.3] - 2023-01-01
