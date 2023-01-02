@@ -33,23 +33,7 @@ jobs:
             ~/.cargo/git/db/
             target/
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-      - name: Set rustc version to 1.65
-        uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: "1.65"
-          override: true
-      - name: Check 1.65
-        uses: actions-rs/cargo@v1
-        with:
-          command: check
-      - name: Check 1.65
-        uses: actions-rs/cargo@v1
-        with:
-          command: check
-          args: --all-features --lib --tests --examples
-      - name: Set rust version to stable
-        uses: actions-rs/toolchain@v1
+      - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
           toolchain: stable
@@ -95,7 +79,14 @@ jobs:
           profile: minimal
           toolchain: "1.65"
           override: true
-      - uses: actions-rs/cargo@v1
+      # We both check and test here so our `check` action can be somewhat more lean
+      - name: Check on Rust 1.65
+        uses: actions-rs/cargo@v1
+        with:
+          command: check
+          args: --all-features --lib --tests --examples
+      - name: Run tests
+        uses: actions-rs/cargo@v1
         env:
           RUST_BACKTRACE: "1"
         with:
