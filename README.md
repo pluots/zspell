@@ -68,6 +68,11 @@ i.e., that most words to be checked are correct. With optimizations based around
 this concept and with the modern computers now able to store entire compiled
 word lists in memory (~20 MiB), `zspell` tends to outperform other spellcheckers.
 
+## MSRV
+
+This library relies on features from Rust 1.65, so that is our current minimum
+supported version. Our CI validates this.
+
 ## License
 
 See the LICENSE file for license information. The provided license does allow
