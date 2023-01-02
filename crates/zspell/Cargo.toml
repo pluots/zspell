@@ -4,6 +4,7 @@ version = "0.3.3"
 edition = "2021"
 authors = ["Trevor Gross <tmgross@umich.edu>"]
 description = "Native Rust library for spellchecking, with a command line interface"
+rust-version = "1.65"
 
 readme = "README.md"
 license-file = "LICENSE"

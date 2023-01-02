@@ -38,11 +38,8 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
-      - uses: actions-rs/cargo@v1
-        with:
-          command: check
-      - uses: actions-rs/cargo@v1
-        # check with all features
+      - name: Check on Rust stable
+        uses: actions-rs/cargo@v1
         with:
           command: check
           args: --all-features --all-targets
@@ -80,9 +77,16 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           profile: minimal
-          toolchain: stable
+          toolchain: "1.65"
           override: true
-      - uses: actions-rs/cargo@v1
+      # We both check and test here so our `check` action can be somewhat more lean
+      - name: Check on Rust 1.65
+        uses: actions-rs/cargo@v1
+        with:
+          command: check
+          args: --all-features --lib --tests --examples
+      - name: Run tests
+        uses: actions-rs/cargo@v1
         env:
           RUST_BACKTRACE: "1"
         with:
