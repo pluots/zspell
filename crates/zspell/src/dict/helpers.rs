@@ -20,9 +20,9 @@ pub(super) fn create_affixed_word_map(
     stem: &str,
     stem_rc: &Arc<String>,
     dest: &mut WordList,
-) -> Result<(), ()> {
+) -> bool {
     if prefix_rules.is_empty() && suffix_rules.is_empty() {
-        return Ok(());
+        return false;
     }
 
     // Store words with prefixes that can also have suffixes
@@ -53,11 +53,10 @@ pub(super) fn create_affixed_word_map(
                 // Find words where there's both a prefix and suffix applicable
                 let words_iter = prefixed_words
                     .iter()
-                    .map(|(tmp_res, pfx_rule, idx_pfx)| {
+                    .flat_map(|(tmp_res, pfx_rule, idx_pfx)| {
                         rule.apply_patterns(tmp_res)
                             .map(move |(idx_sfx, newword)| (newword, pfx_rule, idx_pfx, idx_sfx))
-                    })
-                    .flatten();
+                    });
 
                 for (newword, &pfx_rule, _idx_pfx, _idx_sfx) in words_iter {
                     let meta_vec = dest.0.entry_ref(&newword).or_insert_with(Vec::new);
@@ -70,7 +69,7 @@ pub(super) fn create_affixed_word_map(
         }
     }
 
-    Ok(())
+    rule_found
 }
 
 /// Segment words by unicode boundaries.
