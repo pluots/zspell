@@ -32,9 +32,9 @@ anyhow = "1.0.75"
 zspell = { path = "../zspell", features = ["zspell-unstable"] }
 
 [dev-dependencies]
-criterion = "0.4"
+criterion = "0.5"
 assert_cmd = "2.0"
-predicates = "2.1"
+predicates = "3.0"
 tempfile = "3.8"
 httpmock = "0.6"
 lazy_static = "1.4"
