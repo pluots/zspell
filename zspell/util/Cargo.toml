@@ -6,5 +6,5 @@ publish = false
 
 [dependencies]
 zspell = { path = "../", features = ["zspell-unstable"] }
-regex = "1.7"
-pretty_assertions = "1.3"
+regex = "1.10"
+pretty_assertions = "1.4"
