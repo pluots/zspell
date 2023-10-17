@@ -43,9 +43,10 @@ criterion = "0.5"
 pretty_assertions = "1.4"
 tempfile = "3.8"
 rand = "0.8.5"
-util = { path = "util" }
+test-util = { path = "test-util" }
 
 [build-dependencies]
+indoc = "2.0.4"
 
 [features]
 unstable-suggestions = []
