@@ -3,7 +3,7 @@
 use std::fs;
 
 use pretty_assertions::assert_eq;
-use util::workspace_root;
+use test_util::workspace_root;
 
 use super::parser::DictEntry;
 use super::*;
