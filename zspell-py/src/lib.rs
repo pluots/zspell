@@ -1,4 +1,5 @@
 //! Wrappers around the `zspell` module to expose it to Python
+#![forbid(unsafe_code)]
 
 use ::zspell as z;
 use pyo3::create_exception;

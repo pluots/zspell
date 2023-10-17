@@ -1,4 +1,5 @@
 //! Utilities intended to help with test collection
+#![forbid(unsafe_code)]
 #![allow(unused)]
 
 use std::fs;
