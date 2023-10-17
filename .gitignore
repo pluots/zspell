@@ -1,5 +1,4 @@
 /target
-/Cargo.lock
 dictionaries/*.dic
 dictionaries/*.aff
 dictionaries/*.license

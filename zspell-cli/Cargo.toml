@@ -3,6 +3,7 @@ name = "zspell-cli"
 version = "0.3.3"
 edition = "2021"
 publish = false
+rust-version = "1.70"
 
 # Note: this is symlinked from top level
 readme = "README.md"

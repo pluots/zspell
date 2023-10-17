@@ -200,7 +200,7 @@ pub fn parse_dict(input: &str, flag_type: FlagType) -> Result<Vec<DictEntry>, Pa
     let lines_backup = lines_iter.clone();
 
     let Some(first) = lines_iter.next() else {
-        return Ok(Vec::new())
+        return Ok(Vec::new());
     };
 
     // Try to parse the first line as an integer; if not, ignore it

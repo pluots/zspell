@@ -20,8 +20,8 @@ Here are some useful quick links:
 
 ## Interfaces
 
-This project exposes multiple interfaces to its spellchecker, listed in
-this section.
+This project exposes multiple interfaces to its spellchecker, listed in this
+section.
 
 ### Command Line Interface
 
@@ -41,24 +41,24 @@ discussions, for those who are interested.
 
 ### Python Interface
 
-There is a python wrapper for this library with prebuilt wheels, available
-here: <https://pypi.org/project/zspell/>. Its source is located
-in the [zspell-py crate](crates/zspell-py).
+There is a python wrapper for this library with prebuilt wheels, available here:
+<https://pypi.org/project/zspell/>. Its source is located in the
+[zspell-py crate](zspell-py).
 
 ### Usage via WASM
 
-The library API should work out of the box. Official WASM bindings will be
-added at some point.
+The library API should work out of the box. Official WASM bindings will be added
+at some point.
 
 ## Feature Status
 
-| Feature                        | Available via Library | Available via CLI | Tracking Issue |
-|--------------------------------|-----------------------|-------------------|----------------|
-| Basic spellcheck functionality | ✓                     | ✓                 |                |
+| Feature                        | Available via Library | Available via CLI | Tracking Issue                                    |
+| ------------------------------ | --------------------- | ----------------- | ------------------------------------------------- |
+| Basic spellcheck functionality | ✓                     | ✓                 |                                                   |
 | Forbidden word handling        | ✓                     | ✓                 | [#17](https://github.com/pluots/zspell/issues/17) |
 | Suggestions                    | WIP                   | ✕                 | [#16](https://github.com/pluots/zspell/issues/16) |
-| Compound word handling         | ✕                     | ✕                 |                |
-| Full Morph/Phone Handling      | WIP                   | ✕                 |                |
+| Compound word handling         | ✕                     | ✕                 |                                                   |
+| Full Morph/Phone Handling      | WIP                   | ✕                 |                                                   |
 | Python Interface               | Beta                  | N/A               | [#18](https://github.com/pluots/zspell/issues/18) |
 | Prebuilt WASM bindings         | ✕                     | N/A               | [#19](https://github.com/pluots/zspell/issues/19) |
 
@@ -67,7 +67,8 @@ added at some point.
 This repository has the goal of highly prioritizing the most expected usage,
 i.e., that most words to be checked are correct. With optimizations based around
 this concept and with the modern computers now able to store entire compiled
-word lists in memory (~20 MiB), `zspell` tends to outperform other spellcheckers.
+word lists in memory (~20 MiB), `zspell` tends to outperform other
+spellcheckers.
 
 ## MSRV
 

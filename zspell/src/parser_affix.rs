@@ -311,7 +311,7 @@ fn parse_morph_info(s: &str, nlines: u32) -> Result<Vec<MorphInfo>, ParseError> 
 /// returns error if there is no whitespace
 fn munch_newline(s: &str) -> Result<Option<&str>, ParseError> {
     let Some(i_term) = s.find('\n') else {
-        return Ok(None)
+        return Ok(None);
     };
     let ret = &s[i_term + 1..];
     let mut validate = &s[..i_term];
