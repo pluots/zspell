@@ -82,7 +82,6 @@
 //! [Hunspell]: http://hunspell.github.io/
 //! [CLI docs]: https://pluots.github.io/zspell/
 #![forbid(unsafe_code)]
-#![allow(unused)]
 #![warn(clippy::pedantic)]
 // #![warn(clippy::cargo)]
 #![warn(clippy::nursery)]

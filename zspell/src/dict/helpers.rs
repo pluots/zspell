@@ -1,16 +1,10 @@
-use std::borrow::Borrow;
-use std::fmt::Debug;
 use std::sync::Arc;
 
-use hashbrown::HashSet;
 use unicode_segmentation::UnicodeSegmentation;
 
 use super::rule::AfxRule;
-use super::{FlagValue, WordList};
-use crate::affix::{FlagType, RuleType};
+use super::WordList;
 use crate::dict::types::{Meta, Source};
-use crate::error::BuildError;
-use crate::Error;
 
 // pub(super) fn analyze_flags
 
@@ -43,7 +37,7 @@ pub(super) fn create_affixed_word_map(
     }
 
     for &rule in suffix_rules {
-        for (idx, result) in rule.apply_patterns(stem) {
+        for (_idx, result) in rule.apply_patterns(stem) {
             let meta = Meta::new(stem_rc.clone(), Source::Affix(rule.clone()));
             let meta_vec = dest.0.entry_ref(result.as_str()).or_insert_with(Vec::new);
             meta_vec.push(meta);
@@ -83,7 +77,7 @@ mod tests {
     use pretty_assertions::assert_eq;
 
     use super::*;
-    use crate::dict::rule::AfxRulePattern;
+    use crate::affix::RuleType;
 
     #[test]
     fn test_create_words() {
@@ -151,7 +145,7 @@ mod tests {
             let stem_rc = Arc::from(*word);
             create_affixed_word_map(pfxs, sfxs, &stem_rc, &stem_rc, &mut dest);
 
-            let mut tmp: Vec<(Box<str>, _)> = dest.0.into_iter().collect();
+            let tmp: Vec<(Box<str>, _)> = dest.0.into_iter().collect();
             let mut result: Vec<_> = tmp.iter().map(|(s, _)| s.as_ref()).collect();
             let mut expected: Vec<_> = (*expected_slice).to_owned();
             result.sort_unstable();
@@ -167,8 +161,9 @@ mod tests {
     #[test]
     fn test_word_splitter() {
         let s = "the quick brown.     Fox Jum-ped --\t where? 'over' (the) very--lazy dog";
-        let v: Vec<_> = dbg!(word_splitter(s).collect());
-        let v: Vec<_> = dbg!(s.split_word_bound_indices().collect());
+        let _: Vec<_> = dbg!(word_splitter(s).collect());
+        let _: Vec<_> = dbg!(s.split_word_bound_indices().collect());
+        // FIXME: do something with these
     }
 }
 

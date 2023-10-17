@@ -17,7 +17,6 @@ use crate::affix::{
     CompoundPattern, CompoundSyllable, Conversion, Encoding, FlagType, Phonetic, RuleType,
 };
 use crate::error::{ParseError, ParseErrorKind};
-use crate::helpers::convertu32;
 use crate::morph::MorphInfo;
 
 /// Characters considered line enders
@@ -719,7 +718,7 @@ pub fn parse_affix(s: &str) -> Result<Vec<AffixNode>, ParseError> {
     let mut nlines: u32 = 1;
 
     'outer: while !working.is_empty() {
-        'inner: for (ix, parse_fn) in ALL_PARSERS.iter().enumerate() {
+        for (_idx, parse_fn) in ALL_PARSERS.iter().enumerate() {
             let tmp = parse_fn(working).map_err(|e| e.add_offset_ret(nlines, 0))?;
             if let Some((node, residual, nl)) = tmp {
                 nlines += nl;

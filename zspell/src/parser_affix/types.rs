@@ -1,7 +1,3 @@
-use std::hash::Hash;
-
-use regex::Regex;
-
 use crate::error::ParseErrorKind;
 use crate::helpers::{compile_re_pattern, ReWrapper};
 use crate::morph::MorphInfo;
@@ -40,6 +36,7 @@ pub struct ParsedRule {
 }
 
 impl ParsedRule {
+    #[allow(unused)]
     pub(crate) fn new(
         kind: RuleType,
         affix: &str,
@@ -61,6 +58,7 @@ impl ParsedRule {
     }
 
     /// Same as `new` but don't modify the regex string
+    #[allow(unused)]
     pub(crate) fn new_raw_re(
         kind: RuleType,
         affix: &str,

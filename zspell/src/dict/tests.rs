@@ -1,12 +1,11 @@
 //! Tests for a dict file
 
 use std::fs;
-use std::path::PathBuf;
 
 use pretty_assertions::assert_eq;
 use util::workspace_root;
 
-use super::parser::{parse_personal_dict, DictEntry};
+use super::parser::DictEntry;
 use super::*;
 use crate::morph::MorphInfo;
 
