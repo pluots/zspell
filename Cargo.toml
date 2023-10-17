@@ -1,9 +1,9 @@
 [workspace]
-
+resolver = "2"
 members = [
-    "crates/zspell",
-    "crates/zspell-py",
-    "crates/zspell-cli",
+    "zspell",
+    "zspell-py",
+    "zspell-cli",
 ]
 
 # Build with `cargo build --profile=release-debug`

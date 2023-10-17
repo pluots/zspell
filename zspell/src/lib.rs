@@ -83,7 +83,7 @@
 //! [CLI docs]: https://pluots.github.io/zspell/
 #![allow(unused)]
 #![warn(clippy::pedantic)]
-#![warn(clippy::cargo)]
+// #![warn(clippy::cargo)]
 #![warn(clippy::nursery)]
 #![warn(clippy::str_to_string)]
 #![warn(clippy::missing_inline_in_public_items)]

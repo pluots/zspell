@@ -195,7 +195,7 @@ impl TestManager {
         ];
 
         for (name, expected_ref, actual_ref) in check_lists.into_iter() {
-            let Some (tmp) = expected_ref else {
+            let Some(tmp) = expected_ref else {
                 eprintln!("skipped testing for {name}");
                 continue;
             };

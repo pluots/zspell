@@ -195,7 +195,7 @@ impl Dictionary {
     ) -> impl Iterator<Item = (usize, &'a str, Vec<&str>)> {
         word_splitter(input).filter_map(|(idx, w)| {
             self.suggest_word(w)
-                .map_or_else(|v| Some((idx, w, v)), |_| None)
+                .map_or_else(|v| Some((idx, w, v)), |()| None)
         })
     }
 
@@ -241,7 +241,12 @@ impl Dictionary {
     #[inline]
     #[cfg(feature = "unstable-stem")]
     pub fn stem_word(&self, word: &str) -> Result<Vec<&str>, WordNotFoundError> {
-        let Some(meta) = self.wordlist.0.get(word).or_else(|| self.wordlist_nosuggest.0.get(word)) else {
+        let Some(meta) = self
+            .wordlist
+            .0
+            .get(word)
+            .or_else(|| self.wordlist_nosuggest.0.get(word))
+        else {
             return Err(WordNotFoundError);
         };
 
@@ -322,7 +327,7 @@ impl Dictionary {
                 continue;
             }
 
-            match self.flags.get(flag).unwrap().borrow() {
+            match self.flags.get(flag).unwrap() {
                 FlagValue::ForbiddenWord => forbid = true,
                 FlagValue::NoSuggest => nosuggest = true,
                 FlagValue::Rule(rule) => {

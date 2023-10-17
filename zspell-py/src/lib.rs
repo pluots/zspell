@@ -28,13 +28,13 @@ use pyo3::prelude::*;
 /// >>> d.check("Apples are baaaad")
 /// False
 /// ```
-#[pyo3(text_signature = "(config_str, dict_str)")]
 struct Dictionary(z::Dictionary);
 
 #[pymethods]
 impl Dictionary {
     /// Create a new dictionary
     #[new]
+    #[pyo3(text_signature = "(config_str, dict_str)")]
     fn new(config_str: &str, dict_str: &str, personal_str: Option<&str>) -> PyResult<Self> {
         let mut builder = z::DictBuilder::new()
             .dict_str(dict_str)

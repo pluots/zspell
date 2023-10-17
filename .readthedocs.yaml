@@ -14,6 +14,6 @@ build:
 
 python:
    install:
-   - requirements: crates/zspell-py/docs/requirements.txt
+   - requirements: zspell-py/docs/requirements.txt
    - method: pip
-     path: crates/zspell-py/
+     path: zspell-py/

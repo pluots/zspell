@@ -29,7 +29,7 @@ pub(super) fn create_affixed_word_map(
     let mut prefixed_words: Vec<(String, &Arc<AfxRule>, usize)> = Vec::new();
     let mut rule_found = false;
 
-    for &rule in prefix_rules.iter() {
+    for &rule in prefix_rules {
         for (idx, result) in rule.apply_patterns(stem) {
             let meta = Meta::new(stem_rc.clone(), Source::Affix(rule.clone()));
             let meta_vec = dest.0.entry_ref(&result).or_insert_with(Vec::new);
@@ -42,7 +42,7 @@ pub(super) fn create_affixed_word_map(
         }
     }
 
-    for &rule in suffix_rules.iter() {
+    for &rule in suffix_rules {
         for (idx, result) in rule.apply_patterns(stem) {
             let meta = Meta::new(stem_rc.clone(), Source::Affix(rule.clone()));
             let meta_vec = dest.0.entry_ref(&result).or_insert_with(Vec::new);

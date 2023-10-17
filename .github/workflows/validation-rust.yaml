@@ -1,48 +1,42 @@
 ---
-
-# Main "useful" actions config file
-# Cache config comes from https://github.com/actions/cache/blob/main/examples.md#rust---cargo
-# actions-rs/toolchain configures rustup
-# actions-rs/cargo actually runs cargo
+name: Rust Validation
 
 on:
   push:
     branches:
     - main
   pull_request:
-
-name: Rust Validation
+  workflow_call: # allow this to be run from other workflows
 
 env:
   RUSTDOCFLAGS: -D warnings
   RUSTFLAGS: -D warnings
+  RUST_BACKTRACE: 1
   CARGO_UNSTABLE_SPARSE_REGISTRY: true
 
 jobs:
-  check:
-    name: "Check (cargo check)"
+  clippy:
+    name: clippy
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/cache@v3
+      - uses: dtolnay/rust-toolchain@stable
         with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
-      - name: Check on Rust stable
-        uses: actions-rs/cargo@v1
-        with:
-          command: check
-          args: --all-features --all-targets
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo clippy --all-features --all-targets -- -D warnings
+      - run: cargo clippy --no-default-features --all-targets --features benchmarking -- -D warnings
+
+  min_versions:
+    name: check minimum rustc version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: dtolnay/rust-toolchain@1.65
+      - uses: Swatinem/rust-cache@v2
+        # check only zspell; we can use later for the CLI
+      - run: cargo check -p zspell --all-features
+      - run: cargo check -p zspell --no-default-features --features benchmarking
 
   test:
     strategy:
@@ -56,8 +50,7 @@ jobs:
               name: windows
             - os: macos-latest
               name: mac
-
-    name: "Test on ${{ matrix.name }} (cargo test)"
+    name: "test on ${{ matrix.name }}"
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v3
@@ -65,131 +58,42 @@ jobs:
         run: |
           pwd
           ls
-      - uses: actions/cache@v3
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
         with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: "1.65"
-          override: true
-      # We both check and test here so our `check` action can be somewhat more lean
-      - name: Check on Rust 1.65
-        uses: actions-rs/cargo@v1
-        with:
-          command: check
-          args: --all-features --lib --tests --examples
-      - name: Run tests
-        uses: actions-rs/cargo@v1
-        env:
-          RUST_BACKTRACE: "1"
-        with:
-          command: test
+          key: ${{ matrix.os }}
+      - run: cargo test
 
   fmt:
-    name: "Format (cargo fmt)"
+    name: formatting
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/cache@v3
+      - uses: actions/checkout@v2
+      - uses: dtolnay/rust-toolchain@nightly
         with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: nightly
-          override: true
-      - run: rustup component add rustfmt
-      - uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all -- --check
+            components: rustfmt
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo fmt --all -- --check
       - uses: actions/setup-python@v3
       - name: Validate pre-commit
         uses: pre-commit/action@v3.0.0
 
-  clippy:
-    name: "Clippy (cargo clippy)"
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          # Some nice checks are only nightly
-          toolchain: nightly
-          override: true
-      - run: rustup component add clippy
-      - uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: --all-features --all-targets -- -D warnings
-
   doc:
-    name: "Docs (cargo doc)"
+    name: docs
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
-      - uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: nightly
-          override: true
-      - uses: actions-rs/cargo@v1
-        with:
-          command: doc
+      - uses: actions/checkout@v2
+      - uses: dtolnay/rust-toolchain@nightly
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo doc
 
   book:
-    name: "Book (mdbook)"
+    name: book
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
-      - uses: actions/cache@v3
-        with:
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            ~/mdbook
-            target/
-            book/
-          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
-      - uses: actions-rs/toolchain@v1
-        with:
-          profile: minimal
-          toolchain: stable
-          override: true
+      - uses: dtolnay/rust-toolchain@nightly
+      - uses: Swatinem/rust-cache@v2
       - run: |
           mkdir -p ~/mdbook
           # Tar is weird with ~ as home
@@ -199,7 +103,7 @@ jobs:
 
   # Make sure we turned the clippy lint off
   verify_fixme_critical:
-    name: "Verify critical fixmes"
+    name: verify critical fixmes
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3

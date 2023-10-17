@@ -110,7 +110,7 @@ pub fn bench_vec(c: &mut Criterion) {
 }
 
 pub fn bench_btree(c: &mut Criterion) {
-    let bt = BTreeSet::from_iter(lines_loader().into_iter());
+    let bt = BTreeSet::from_iter(lines_loader());
 
     c.bench_function("BTree contains true", |b| {
         b.iter(|| {
@@ -130,7 +130,7 @@ pub fn bench_btree(c: &mut Criterion) {
 }
 
 pub fn bench_hashset(c: &mut Criterion) {
-    let hs: HashSet<String> = HashSet::from_iter(lines_loader().into_iter());
+    let hs: HashSet<String> = HashSet::from_iter(lines_loader());
 
     c.bench_function("HashSet contains true", |b| {
         b.iter(|| {
@@ -150,7 +150,7 @@ pub fn bench_hashset(c: &mut Criterion) {
 }
 
 pub fn bench_hashbrownset(c: &mut Criterion) {
-    let hs: HashBrownSet<String> = HashBrownSet::from_iter(lines_loader().into_iter());
+    let hs: HashBrownSet<String> = HashBrownSet::from_iter(lines_loader());
 
     c.bench_function("HashBrownSet contains true", |b| {
         b.iter(|| {
@@ -208,7 +208,7 @@ pub fn bench_vecmap(c: &mut Criterion) {
 }
 
 pub fn bench_btreemap(c: &mut Criterion) {
-    let bt: BTreeMap<String, _> = BTreeMap::from_iter(map_loader().into_iter());
+    let bt: BTreeMap<String, _> = BTreeMap::from_iter(map_loader());
 
     c.bench_function("BTreeMap contains true", |b| {
         b.iter(|| {
@@ -244,7 +244,7 @@ pub fn bench_btreemap(c: &mut Criterion) {
 }
 
 pub fn bench_hashmap(c: &mut Criterion) {
-    let hm: HashMap<String, _> = HashMap::from_iter(map_loader().into_iter());
+    let hm: HashMap<String, _> = HashMap::from_iter(map_loader());
 
     c.bench_function("HashMap contains true", |b| {
         b.iter(|| {
@@ -280,7 +280,7 @@ pub fn bench_hashmap(c: &mut Criterion) {
 }
 
 pub fn bench_hashbrownmap(c: &mut Criterion) {
-    let hm: HashBrownMap<String, _> = HashBrownMap::from_iter(map_loader().into_iter());
+    let hm: HashBrownMap<String, _> = HashBrownMap::from_iter(map_loader());
 
     c.bench_function("HashBrownMap contains true", |b| {
         b.iter(|| {
