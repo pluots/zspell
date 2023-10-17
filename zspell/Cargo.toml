@@ -26,7 +26,6 @@ path = "src/lib.rs"
 
 [dependencies]
 # Base dependencies
-atty = "0.2.14"
 cfg-if = "1.0"
 hashbrown = "0.14.1"
 home = "0.5.5"

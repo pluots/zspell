@@ -10,8 +10,11 @@ members = [
 # Alternatively `cargo bench --profile=release-debug`
 # Useful for profiling, not for official releases
 [profile.release-debug]
-inherits = "release"
+# inherits = "release"
+inherits = "dev"
+opt-level = 3
 debug = true
+strip = "none"
 
 [profile.release.package.zspell-cli]
 # Minimize binary size by removing all symbols
