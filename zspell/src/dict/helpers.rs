@@ -18,7 +18,7 @@ pub(super) fn create_affixed_word_map(
     prefix_rules: &[&Arc<AfxRule>],
     suffix_rules: &[&Arc<AfxRule>],
     stem: &str,
-    stem_rc: &Arc<String>,
+    stem_rc: &Arc<str>,
     dest: &mut WordList,
 ) -> bool {
     if prefix_rules.is_empty() && suffix_rules.is_empty() {
@@ -32,7 +32,7 @@ pub(super) fn create_affixed_word_map(
     for &rule in prefix_rules {
         for (idx, result) in rule.apply_patterns(stem) {
             let meta = Meta::new(stem_rc.clone(), Source::Affix(rule.clone()));
-            let meta_vec = dest.0.entry_ref(&result).or_insert_with(Vec::new);
+            let meta_vec = dest.0.entry_ref(result.as_str()).or_insert_with(Vec::new);
             meta_vec.push(meta);
             rule_found = true;
 
@@ -45,7 +45,7 @@ pub(super) fn create_affixed_word_map(
     for &rule in suffix_rules {
         for (idx, result) in rule.apply_patterns(stem) {
             let meta = Meta::new(stem_rc.clone(), Source::Affix(rule.clone()));
-            let meta_vec = dest.0.entry_ref(&result).or_insert_with(Vec::new);
+            let meta_vec = dest.0.entry_ref(result.as_str()).or_insert_with(Vec::new);
             meta_vec.push(meta);
             rule_found = true;
 
@@ -59,7 +59,7 @@ pub(super) fn create_affixed_word_map(
                     });
 
                 for (newword, &pfx_rule, _idx_pfx, _idx_sfx) in words_iter {
-                    let meta_vec = dest.0.entry_ref(&newword).or_insert_with(Vec::new);
+                    let meta_vec = dest.0.entry_ref(newword.as_str()).or_insert_with(Vec::new);
                     let meta1 = Meta::new(stem_rc.clone(), Source::Affix(rule.clone()));
                     let meta2 = Meta::new(stem_rc.clone(), Source::Affix(pfx_rule.clone()));
                     meta_vec.push(meta1);
@@ -148,11 +148,11 @@ mod tests {
 
         for (i, (word, pfxs, sfxs, expected_slice)) in conditions.iter().enumerate() {
             let mut dest = WordList::new();
-            let stem_rc = Arc::new((*word).to_owned());
+            let stem_rc = Arc::from(*word);
             create_affixed_word_map(pfxs, sfxs, &stem_rc, &stem_rc, &mut dest);
 
-            let mut tmp: Vec<(String, _)> = dest.0.into_iter().collect();
-            let mut result: Vec<_> = tmp.iter().map(|(s, _)| s.as_str()).collect();
+            let mut tmp: Vec<(Box<str>, _)> = dest.0.into_iter().collect();
+            let mut result: Vec<_> = tmp.iter().map(|(s, _)| s.as_ref()).collect();
             let mut expected: Vec<_> = (*expected_slice).to_owned();
             result.sort_unstable();
             expected.sort_unstable();

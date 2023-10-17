@@ -191,15 +191,15 @@ PHONE abcd 1234
 fn test_full_parse() {
     let expected = vec![
         AffixNode::Encoding(Encoding::Utf8),
-        AffixNode::TryCharacters("abcd'".to_owned()),
+        AffixNode::TryCharacters("abcd'".into()),
         AffixNode::Comment,
         AffixNode::AfxInputConversion(vec![
             Conversion::new("a", "b", false),
             Conversion::new("'", "\"", false),
         ]),
-        AffixNode::NoSuggestFlag("X".to_owned()),
-        AffixNode::CompoundOnlyFlag("C".to_owned()),
-        AffixNode::AfxWordChars("01234".to_owned()),
+        AffixNode::NoSuggestFlag("X".into()),
+        AffixNode::CompoundOnlyFlag("C".into()),
+        AffixNode::AfxWordChars("01234".into()),
         AffixNode::Comment,
         AffixNode::Prefix(ParsedRuleGroup {
             flag: "A".to_owned(),
@@ -213,8 +213,8 @@ fn test_full_parse() {
                     None,
                     vec![
                         MorphInfo::Part(PartOfSpeech::Verb),
-                        MorphInfo::Stem("foot".to_owned()),
-                        MorphInfo::InflecSfx("ay".to_owned()),
+                        MorphInfo::Stem("foot".into()),
+                        MorphInfo::InflecSfx("ay".into()),
                     ],
                 )
                 .unwrap(),

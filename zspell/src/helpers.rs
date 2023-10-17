@@ -86,14 +86,14 @@ impl Display for StrWrapper<'_> {
     }
 }
 
-impl Equivalent<Rc<String>> for StrWrapper<'_> {
-    fn equivalent(&self, key: &Rc<String>) -> bool {
+impl Equivalent<Rc<str>> for StrWrapper<'_> {
+    fn equivalent(&self, key: &Rc<str>) -> bool {
         self.0 == key.as_ref()
     }
 }
 
-impl Equivalent<Arc<String>> for StrWrapper<'_> {
-    fn equivalent(&self, key: &Arc<String>) -> bool {
+impl Equivalent<Arc<str>> for StrWrapper<'_> {
+    fn equivalent(&self, key: &Arc<str>) -> bool {
         self.0 == key.as_ref()
     }
 }

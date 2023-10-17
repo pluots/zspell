@@ -203,7 +203,11 @@ impl TestManager {
             let mut expected = tmp.clone();
             expected.sort_unstable();
 
-            let mut actual: Vec<String> = actual_ref.inner().keys().cloned().collect();
+            let mut actual: Vec<String> = actual_ref
+                .inner()
+                .keys()
+                .map(|v| v.as_ref().into())
+                .collect();
             actual.sort_unstable();
 
             assert_eq!(

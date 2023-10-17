@@ -8,29 +8,29 @@ use crate::error::{ParseError, ParseErrorKind};
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum MorphInfo {
     /// `st:` stem word
-    Stem(String),
+    Stem(Box<str>),
     /// `ph:` better phonetic transliteration if available
-    Phonetic(String),
+    Phonetic(Box<str>),
     /// `al:` allomorphs (e.g. sing -> sang, sung)
-    Allomorph(String),
+    Allomorph(Box<str>),
     /// `po:` part of speech
     Part(PartOfSpeech),
     /// `ds:` derivational suffix
-    DerivSfx(String),
+    DerivSfx(Box<str>),
     /// `is:` inflectional suffix
-    InflecSfx(String),
+    InflecSfx(Box<str>),
     /// `ts:` terminal suffix
-    TerminalSfx(String),
+    TerminalSfx(Box<str>),
     /// `dp:` derivational suffix
-    DerivPfx(String),
+    DerivPfx(Box<str>),
     /// `ip:` inflectional suffix
-    InflecPfx(String),
+    InflecPfx(Box<str>),
     /// `tp:` terminal suffix
-    TermPfx(String),
+    TermPfx(Box<str>),
     /// `sp:` surface prefix
-    SurfacePfx(String),
+    SurfacePfx(Box<str>),
     /// `pa:` parts of compound words
-    CompPart(String),
+    CompPart(Box<str>),
 }
 
 impl MorphInfo {
@@ -40,10 +40,18 @@ impl MorphInfo {
     /// po:verb st:rootword ts:abcd
     /// ```
     #[inline]
+    #[allow(clippy::unnecessary_wraps)]
     pub(crate) fn many_from_str(s: &str) -> Result<Vec<Self>, ParseError> {
         let mut res = Vec::new();
         for morph in s.split_whitespace() {
-            res.push(MorphInfo::try_from(morph).map_err(|e| ParseError::new_nospan(e, morph))?);
+            if let Ok(v) = MorphInfo::try_from(morph) {
+                res.push(v);
+            }
+            // FIXME: we should be able to handle the hungarian dictionary that
+            // has entries like this:
+            // üzletág/UmôŇyiYcÇ       üzletágak
+            // but I am not sure what that means if it is not morph info...
+            // res.push(MorphInfo::try_from(morph).map_err(|e| ParseError::new_nospan(e, morph))?);
         }
         Ok(res)
     }
@@ -58,18 +66,18 @@ impl TryFrom<&str> for MorphInfo {
             .split_once(':')
             .ok_or_else(|| ParseErrorKind::MorphInfoDelim(value.to_owned()))?;
         let ret = match tag {
-            "st" => Self::Stem(val.to_owned()),
-            "ph" => Self::Phonetic(val.to_owned()),
-            "al" => Self::Allomorph(val.to_owned()),
+            "st" => Self::Stem(val.into()),
+            "ph" => Self::Phonetic(val.into()),
+            "al" => Self::Allomorph(val.into()),
             "po" => Self::Part(val.try_into()?),
-            "ds" => Self::DerivSfx(val.to_owned()),
-            "is" => Self::InflecSfx(val.to_owned()),
-            "ts" => Self::TerminalSfx(val.to_owned()),
-            "dp" => Self::DerivPfx(val.to_owned()),
-            "ip" => Self::InflecPfx(val.to_owned()),
-            "tp" => Self::TermPfx(val.to_owned()),
-            "sp" => Self::SurfacePfx(val.to_owned()),
-            "pa" => Self::CompPart(val.to_owned()),
+            "ds" => Self::DerivSfx(val.into()),
+            "is" => Self::InflecSfx(val.into()),
+            "ts" => Self::TerminalSfx(val.into()),
+            "dp" => Self::DerivPfx(val.into()),
+            "ip" => Self::InflecPfx(val.into()),
+            "tp" => Self::TermPfx(val.into()),
+            "sp" => Self::SurfacePfx(val.into()),
+            "pa" => Self::CompPart(val.into()),
             _ => return Err(ParseErrorKind::MorphInvalidTag(tag.to_owned())),
         };
         Ok(ret)
@@ -83,9 +91,9 @@ mod tests {
     #[test]
     fn morph_single_ok() {
         let tests = [
-            ("st:stem", MorphInfo::Stem("stem".to_owned())),
-            ("ip:abc", MorphInfo::InflecPfx("abc".to_owned())),
-            ("pa:xyz", MorphInfo::CompPart("xyz".to_owned())),
+            ("st:stem", MorphInfo::Stem("stem".into())),
+            ("ip:abc", MorphInfo::InflecPfx("abc".into())),
+            ("pa:xyz", MorphInfo::CompPart("xyz".into())),
         ];
 
         for (input, expected) in tests {
@@ -102,11 +110,11 @@ mod tests {
         let input = "st:stem ip:abcd pa:xyz    st:some-stem\tal:def";
         let output = MorphInfo::many_from_str(input);
         let expected = vec![
-            MorphInfo::Stem("stem".to_owned()),
-            MorphInfo::InflecPfx("abcd".to_owned()),
-            MorphInfo::CompPart("xyz".to_owned()),
-            MorphInfo::Stem("some-stem".to_owned()),
-            MorphInfo::Allomorph("def".to_owned()),
+            MorphInfo::Stem("stem".into()),
+            MorphInfo::InflecPfx("abcd".into()),
+            MorphInfo::CompPart("xyz".into()),
+            MorphInfo::Stem("some-stem".into()),
+            MorphInfo::Allomorph("def".into()),
         ];
 
         assert_eq!(output, Ok(expected));
