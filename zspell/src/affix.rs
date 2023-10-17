@@ -53,7 +53,7 @@ pub struct ParsedCfg {
     // Rules for suggestion replacements to try
     replacements: Vec<Conversion>,
 
-    /// Suggest words that differe by 1 try character
+    /// Suggest words that differ by 1 try character
     try_characters: String,
 
     /// Flag used to indicate words that should not be suggested

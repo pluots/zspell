@@ -54,7 +54,7 @@ pub struct Dictionary {
 
     /* the following few types are used to store  meta information */
     /// A list of all stem words
-    stems: HashSet<Arc<String>>,
+    stems: HashSet<Arc<str>>,
     /// Affix flags and rules
     flags: BTreeMap<u32, FlagValue>,
     /// Possible morphs
@@ -135,9 +135,9 @@ impl Dictionary {
         let lower = word.to_lowercase();
         (!self.wordlist_forbidden.0.contains_key(word))
             && (self.wordlist.0.contains_key(word)
-                || self.wordlist.0.contains_key(&lower)
+                || self.wordlist.0.contains_key(lower.as_str())
                 || self.wordlist_nosuggest.0.contains_key(word)
-                || self.wordlist_nosuggest.0.contains_key(&lower))
+                || self.wordlist_nosuggest.0.contains_key(lower.as_str()))
     }
 
     /// Check words in a string, returning a list of the start and end indices
@@ -215,18 +215,14 @@ impl Dictionary {
         if self.check_word(word) {
             return Ok(());
         }
-        let mut suggestions: Vec<(u32, &String)> = self
+        let mut suggestions: Vec<(u32, &str)> = self
             .wordlist
             .0
             .keys()
-            .filter_map(|key| try_levenshtein(key, word, 1).map(|lim| (lim, key)))
+            .filter_map(|key| try_levenshtein(key, word, 1).map(|lim| (lim, key.as_ref())))
             .collect();
         suggestions.sort_unstable_by_key(|(k, v)| *k);
-        Err(suggestions
-            .iter()
-            .take(10)
-            .map(|(k, v)| v.as_str())
-            .collect())
+        Err(suggestions.iter().take(10).map(|(k, v)| *v).collect())
     }
 
     /// **UNSTABLE** Generate the stems for a single word. Feature gated behind
@@ -311,11 +307,9 @@ impl Dictionary {
         let mut prefix_rules = Vec::new();
         let mut suffix_rules = Vec::new();
 
-        let stem_rc: &Arc<String> = self
+        let stem_rc: &Arc<str> = self
             .stems
-            .get_or_insert_with(&StrWrapper::new(stem), |sw: &StrWrapper| {
-                Arc::new(sw.to_string())
-            });
+            .get_or_insert_with(&StrWrapper::new(stem), |sw: &StrWrapper| Arc::from(sw.0));
 
         let mut add_stem = true;
         let mut forbid = false;
@@ -410,9 +404,9 @@ impl Dictionary {
                 // let flags = dict.iter().find(|d| &d.stem() == friend).map(|d| &d.flags);
                 todo!()
             } else {
-                let stem_arc: Arc<String> = self
+                let stem_arc: Arc<str> = self
                     .stems
-                    .get_or_insert_with(&entry.stem, |stem| Arc::new(stem.to_string()))
+                    .get_or_insert_with(entry.stem.as_str(), |stem| Arc::from(stem))
                     .clone();
 
                 let source = Source::Personal(Box::new(PersonalMeta::new(
@@ -430,7 +424,7 @@ impl Dictionary {
 
                 // Add our word, update its meta
                 let extra_vec: &mut Vec<Meta> = hmap
-                    .entry_ref(&entry.stem)
+                    .entry_ref(entry.stem.as_str())
                     .or_insert_with(|| Vec::with_capacity(1));
                 extra_vec.push(meta);
             }
@@ -466,7 +460,7 @@ impl Dictionary {
 ///
 /// Currently contains a `HashMap<String, Vec<Meta>>`
 #[derive(Clone, Debug, PartialEq)]
-pub struct WordList(HashMap<String, Vec<Meta>>);
+pub struct WordList(HashMap<Box<str>, Vec<Meta>>);
 
 impl WordList {
     fn new() -> Self {
@@ -477,7 +471,7 @@ impl WordList {
     /// `zspell-unstable` marker as the internal format may change
     #[inline]
     #[cfg_attr(feature = "zspell-unstable", visibility::make(pub))]
-    pub(crate) fn inner(&self) -> &HashMap<String, Vec<Meta>> {
+    pub(crate) fn inner(&self) -> &HashMap<Box<str>, Vec<Meta>> {
         &self.0
     }
 }

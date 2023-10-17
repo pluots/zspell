@@ -34,16 +34,16 @@ fn test_dict_entry_ok() {
         "abcd".to_owned(),
         &['A' as u32, 'B' as u32, 'C' as u32],
         vec![
-            MorphInfo::InflecPfx("m1".to_owned()),
-            MorphInfo::TermPfx("m2".to_owned()),
+            MorphInfo::InflecPfx("m1".into()),
+            MorphInfo::TermPfx("m2".into()),
         ],
     );
     let r4 = DictEntry::new(
         "abcd".to_owned(),
         &[],
         vec![
-            MorphInfo::InflecPfx("m1".to_owned()),
-            MorphInfo::TermPfx("m2".to_owned()),
+            MorphInfo::InflecPfx("m1".into()),
+            MorphInfo::TermPfx("m2".into()),
         ],
     );
 
@@ -80,8 +80,8 @@ fn test_personal_entry_ok() {
         "abcd",
         Some("ABC"),
         vec![
-            MorphInfo::InflecPfx("m1".to_owned()),
-            MorphInfo::TermPfx("m2".to_owned()),
+            MorphInfo::InflecPfx("m1".into()),
+            MorphInfo::TermPfx("m2".into()),
         ],
         false,
     );

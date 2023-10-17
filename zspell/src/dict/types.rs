@@ -11,12 +11,12 @@ use crate::parser_affix::ParsedRule;
 /// Additional information attached to an entry in a dictionary
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Meta {
-    stem: Arc<String>,
+    stem: Arc<str>,
     source: Source,
 }
 
 impl Meta {
-    pub(crate) fn new(stem_rc: Arc<String>, source: Source) -> Self {
+    pub(crate) fn new(stem_rc: Arc<str>, source: Source) -> Self {
         Self {
             stem: stem_rc,
             source,
@@ -35,7 +35,7 @@ impl Meta {
                     None
                 }
             }) {
-                return stem.as_str();
+                return stem;
             }
         }
 
@@ -80,12 +80,12 @@ impl Source {
 /// Representation of meta info for a personal dictionary
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct PersonalMeta {
-    friend: Option<Arc<String>>,
+    friend: Option<Arc<str>>,
     morph: Vec<Arc<MorphInfo>>,
 }
 
 impl PersonalMeta {
-    pub fn new(friend: Option<Arc<String>>, morph: Vec<Arc<MorphInfo>>) -> Self {
+    pub fn new(friend: Option<Arc<str>>, morph: Vec<Arc<MorphInfo>>) -> Self {
         Self { friend, morph }
     }
 }

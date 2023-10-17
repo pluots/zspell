@@ -66,9 +66,9 @@ impl AfxRule {
                 .collect();
 
             ret.patterns.push(AfxRulePattern {
-                affix: rule.affix.clone(),
+                affix: rule.affix.as_str().into(),
                 condition: rule.condition.clone(),
-                strip: rule.strip.clone(),
+                strip: rule.strip.as_ref().map(|s| Box::from(s.as_str())),
                 morph_info,
             });
         }
@@ -104,11 +104,11 @@ impl AfxRule {
 /// A single affix rule application
 #[derive(Clone, Default, Debug, PartialEq, Eq, Hash)]
 pub struct AfxRulePattern {
-    affix: String,
+    affix: Box<str>,
     /// Condition to be met to apply this rule.
     condition: Option<ReWrapper>,
     /// Characters to strip
-    strip: Option<String>,
+    strip: Option<Box<str>>,
     /// Associated morph info
     morph_info: Vec<Arc<MorphInfo>>,
 }
@@ -118,9 +118,9 @@ impl AfxRulePattern {
     #[cfg(test)]
     pub fn new(afx: &str, strip: Option<&str>) -> Self {
         Self {
-            affix: afx.to_owned(),
+            affix: afx.into(),
             condition: None,
-            strip: strip.map(ToOwned::to_owned),
+            strip: strip.map(Into::into),
             morph_info: Vec::new(),
         }
     }
@@ -152,10 +152,10 @@ impl AfxRulePattern {
         match kind {
             RuleType::Prefix => {
                 // If stripping chars exist, strip them from the prefix
-                let mut working = self.affix.clone();
+                let mut working: String = self.affix.as_ref().into();
 
                 if let Some(sc) = &self.strip {
-                    working.push_str(s.strip_prefix(sc.as_str()).unwrap_or(s));
+                    working.push_str(s.strip_prefix(sc.as_ref()).unwrap_or(s));
                 } else {
                     working.push_str(s);
                 }
@@ -165,7 +165,7 @@ impl AfxRulePattern {
             RuleType::Suffix => {
                 // Same logic as above
                 let mut working = if let Some(sc) = &self.strip {
-                    s.strip_suffix(sc.as_str()).unwrap_or(s).to_owned()
+                    s.strip_suffix(sc.as_ref()).unwrap_or(s).to_owned()
                 } else {
                     s.to_owned()
                 };
