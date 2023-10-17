@@ -6,7 +6,6 @@ mod parser;
 mod rule;
 mod types;
 
-use std::borrow::Borrow;
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
@@ -24,7 +23,7 @@ use crate::affix::FlagType;
 use crate::error::{BuildError, Error, WordNotFoundError};
 use crate::helpers::StrWrapper;
 use crate::morph::MorphInfo;
-use crate::{suggestions, ParsedCfg};
+use crate::ParsedCfg;
 
 /// Main dictionary object used for spellchecking and suggestions
 ///
@@ -182,7 +181,7 @@ impl Dictionary {
         &'d self,
         input: &'a str,
     ) -> impl Iterator<Item = (usize, &'a str)> + 'd {
-        word_splitter(input).filter(|(idx, w)| !self.check_word(w))
+        word_splitter(input).filter(|(_idx, w)| !self.check_word(w))
     }
 
     /// **UNSTABLE** Suggest a word at given indices. Feature gated behind
@@ -221,8 +220,8 @@ impl Dictionary {
             .keys()
             .filter_map(|key| try_levenshtein(key, word, 1).map(|lim| (lim, key.as_ref())))
             .collect();
-        suggestions.sort_unstable_by_key(|(k, v)| *k);
-        Err(suggestions.iter().take(10).map(|(k, v)| *v).collect())
+        suggestions.sort_unstable_by_key(|(k, _v)| *k);
+        Err(suggestions.iter().take(10).map(|(_k, v)| *v).collect())
     }
 
     /// **UNSTABLE** Generate the stems for a single word. Feature gated behind
@@ -270,7 +269,7 @@ impl Dictionary {
     /// Returns a dummy error if the word is not found
     #[inline]
     #[cfg(feature = "unstable-analysis")]
-    pub fn analyze_word(&self, word: &str) -> Result<Vec<MorphInfo>, WordNotFoundError> {
+    pub fn analyze_word(&self, _word: &str) -> Result<Vec<MorphInfo>, WordNotFoundError> {
         todo!()
     }
 
@@ -394,12 +393,12 @@ impl Dictionary {
     fn update_personal(
         &mut self,
         entries: &[PersonalEntry],
-        dict: &[DictEntry],
+        _dict: &[DictEntry],
     ) -> Result<(), Error> {
         // FIXME: don't take `dict` as an argument, use our existing hashmaps
         self.wordlist.0.reserve(entries.len() * 2);
         for entry in entries {
-            if let Some(friend) = &entry.friend {
+            if let Some(_friend) = &entry.friend {
                 // Find the friend in our dictionary, find its source affixes
                 // let flags = dict.iter().find(|d| &d.stem() == friend).map(|d| &d.flags);
                 todo!()

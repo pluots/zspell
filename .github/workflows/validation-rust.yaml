@@ -30,6 +30,9 @@ jobs:
   min_versions:
     name: check minimum rustc version
     runs-on: ubuntu-latest
+    env:
+      # we don't care about unused with these feature configurations
+      RUSTFLAGS: -A unused
     steps:
       - uses: actions/checkout@v3
       - uses: dtolnay/rust-toolchain@1.65

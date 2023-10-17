@@ -9,10 +9,9 @@ pub use self::types::{
     CompoundPattern, CompoundSyllable, Conversion, Encoding, FlagType, PartOfSpeech, Phonetic,
     RuleType,
 };
-use crate::dict::{AfxRule, DictEntry, FlagValue};
-use crate::error::{BuildError, Error, ParseError, ParseErrorKind};
-use crate::morph::MorphInfo;
-use crate::parser_affix::{parse_affix, AffixNode, ParsedRule, ParsedRuleGroup};
+use crate::dict::{AfxRule, FlagValue};
+use crate::error::{BuildError, Error, ParseError};
+use crate::parser_affix::{parse_affix, AffixNode, ParsedRuleGroup};
 
 /// A representation of an affix file
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -275,7 +274,7 @@ impl ParsedCfg {
             let name_str = node.name_str();
             match node {
                 AffixNode::Encoding(v) => res.encoding = v,
-                AffixNode::FlagType(v) => (),
+                AffixNode::FlagType(_) => (),
                 AffixNode::ComplexPrefixes => res.complex_prefixes = true,
                 AffixNode::Language(v) => res.lang = v,
                 AffixNode::IgnoreChars(v) => res.ignore_chars = v,
@@ -349,11 +348,11 @@ impl ParsedCfg {
                 }
                 AffixNode::AfxInputConversion(v) => res.input_conversions = v,
                 AffixNode::AfxOutputConversion(v) => res.output_conversions = v,
-                AffixNode::AfxLemmaPresentFlag(v) => {
+                AffixNode::AfxLemmaPresentFlag(_) => {
                     warnings.push(format!("flag {name_str} is deprecated"));
                 }
                 AffixNode::AfxNeededFlag(v) => res.afx_needed_flag = Some(res.convert_flag(&v)?),
-                AffixNode::AfxPseudoRootFlag(v) => {
+                AffixNode::AfxPseudoRootFlag(_) => {
                     warnings.push(format!("flag {name_str} is deprecated"));
                 }
                 AffixNode::AfxSubstandardFlag(v) => {
@@ -408,7 +407,6 @@ impl ParsedCfg {
         ];
 
         let mut map: BTreeMap<u32, FlagValue> = BTreeMap::new();
-        let mut morphs: Vec<MorphInfo> = Vec::new();
 
         for (key, value) in keysets
             .iter()

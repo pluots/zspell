@@ -1,11 +1,10 @@
 //! Utilities intended to help with test collection
 #![forbid(unsafe_code)]
-#![allow(unused)]
 
 use std::fs;
 use std::path::PathBuf;
 
-use pretty_assertions::{assert_eq, assert_str_eq};
+use pretty_assertions::assert_eq;
 use zspell::{DictBuilder, Dictionary, MorphInfo};
 
 /// Get the workspace root. We use this as a workaround because Github actions
@@ -34,6 +33,7 @@ pub fn workspace_root() -> PathBuf {
 /// A collection from a `.test` file that we can easily validate
 ///
 /// See `0_example.test`  for descriptions of what this file should look like
+#[allow(dead_code)]
 #[derive(Clone, Debug, Default)]
 pub struct TestManager {
     description: String,
@@ -220,6 +220,7 @@ impl TestManager {
     }
 
     /// Check all provided suggestions
+    #[allow(unused)]
     fn check_suggestions(&self, dict: &Dictionary) {
         let Some(ref suggestion) = self.suggestions else {
             eprintln!("skipped suggestion testing");
@@ -240,16 +241,18 @@ impl TestManager {
         eprintln!("all suggestions passed");
     }
 
-    fn check_stems(&self, dict: &Dictionary) {
-        let Some(ref stems) = self.stems else {
+    #[allow(unused)]
+    fn check_stems(&self, _dict: &Dictionary) {
+        let Some(ref _stems) = self.stems else {
             eprintln!("skipped stem testing");
             return;
         };
         todo!()
     }
 
-    fn check_morphs(&self, dict: &Dictionary) {
-        let Some(ref morphs) = self.stems else {
+    #[allow(unused)]
+    fn check_morphs(&self, _dict: &Dictionary) {
+        let Some(ref _morphs) = self.stems else {
             eprintln!("skipped stem testing");
             return;
         };

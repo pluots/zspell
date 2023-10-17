@@ -1,7 +1,5 @@
 //! Parser representations of an affix file
 
-#![allow(unused)]
-
 use super::ParsedRuleGroup;
 use crate::affix::{CompoundPattern, CompoundSyllable, Conversion, Encoding, FlagType, Phonetic};
 
@@ -66,6 +64,7 @@ pub enum AffixNode {
     /// `BREAK`
     BreakSeparator(Vec<String>),
     /// `COMPOUNDRULE`
+    #[allow(dead_code)]
     CompoundRule(Vec<String>),
     /// `COMPOUNDMIN`
     CompoundMinLen(u16),

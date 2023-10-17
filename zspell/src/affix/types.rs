@@ -5,7 +5,7 @@ use std::fmt::Display;
 use lazy_static::lazy_static;
 use regex::Regex;
 
-use crate::error::{BuildError, ParseErrorKind};
+use crate::error::ParseErrorKind;
 
 lazy_static! {
     static ref RE_COMPOUND_PATTERN: Regex = Regex::new(
@@ -142,7 +142,6 @@ impl FlagType {
 
     fn parse_chars_long(chars: [char; 2]) -> Result<u32, ParseErrorKind> {
         if chars.iter().any(|ch| !ch.is_ascii()) {
-            let char_str: String = chars.iter().collect();
             Err(ParseErrorKind::FlagParse(Self::Long))
         } else {
             Ok(u32::from(u16::from_ne_bytes([
@@ -223,6 +222,7 @@ pub struct CompoundPattern {
 /* Method implementations */
 
 impl Phonetic {
+    #[allow(unused)]
     pub(crate) fn new(pattern: &str, replace: &str) -> Self {
         Self {
             pattern: pattern.to_owned(),
@@ -232,6 +232,7 @@ impl Phonetic {
 }
 
 impl Conversion {
+    #[allow(unused)]
     pub(crate) fn new(input: &str, output: &str, bidirectional: bool) -> Self {
         Self {
             input: input.to_owned(),
@@ -331,7 +332,7 @@ impl TryFrom<&str> for Phonetic {
     type Error = ParseErrorKind;
 
     fn try_from(value: &str) -> Result<Self, Self::Error> {
-        let mut split: Vec<_> = value.split_whitespace().collect();
+        let split: Vec<_> = value.split_whitespace().collect();
         if split.len() != 2 {
             return Err(ParseErrorKind::Phonetic(split.len()));
         }
@@ -364,7 +365,7 @@ impl TryFrom<&str> for CompoundSyllable {
 
     /// Format: `COMPOUNDSYLLABLE count vowels`
     fn try_from(value: &str) -> Result<Self, ParseErrorKind> {
-        let mut split: Vec<_> = value.split_whitespace().collect();
+        let split: Vec<_> = value.split_whitespace().collect();
         if split.len() != 2 {
             return Err(ParseErrorKind::CompoundSyllableCount(split.len()));
         }

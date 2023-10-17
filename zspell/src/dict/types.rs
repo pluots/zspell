@@ -1,12 +1,8 @@
 use std::borrow::Borrow;
 use std::sync::Arc;
 
-use hashbrown::Equivalent;
-
-use super::parser::ParsedPersonalMeta;
 use super::rule::AfxRule;
 use crate::morph::MorphInfo;
-use crate::parser_affix::ParsedRule;
 
 /// Additional information attached to an entry in a dictionary
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -91,6 +87,7 @@ impl PersonalMeta {
 }
 
 #[cfg(test)]
+#[allow(unused)]
 mod tests {
     use std::collections::hash_map::DefaultHasher;
     use std::hash::{Hash, Hasher};

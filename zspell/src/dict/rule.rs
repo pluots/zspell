@@ -1,17 +1,12 @@
 //! Implementation for a stored rule
 
 use std::hash::Hash;
-use std::ops::Deref;
 use std::sync::Arc;
 
-use regex::Regex;
-
 use crate::affix::{ParsedCfg, RuleType};
-use crate::error::BuildError;
-use crate::helpers::{compile_re_pattern, ReWrapper};
+use crate::helpers::ReWrapper;
 use crate::morph::MorphInfo;
 use crate::parser_affix::ParsedRuleGroup;
-use crate::Error;
 
 /// A single rule group
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -29,8 +24,8 @@ impl AfxRule {
         affixes: &[&str],
         patterns: &[&str],
         can_combine: bool,
-        strip: Option<&str>,
-        condition: Option<&str>,
+        _strip: Option<&str>,
+        _condition: Option<&str>,
     ) -> Self {
         let mut ret = Self {
             kind,
@@ -41,7 +36,7 @@ impl AfxRule {
                 .collect(),
         };
         for (idx, pat) in patterns.iter().enumerate() {
-            ret.patterns[idx].set_pattern(pat, kind);
+            ret.patterns[idx].set_pattern(pat, kind).unwrap();
         }
         ret
     }
@@ -51,7 +46,7 @@ impl AfxRule {
     /// NOTE: returns a vec reference and `Self`'s morph vec will be empty!
     /// Needs construction wherever the Arc target is
     // PERF: bench with & without vec reference instead of output
-    pub fn from_parsed_group(cfg: &ParsedCfg, group: &ParsedRuleGroup) -> Self {
+    pub fn from_parsed_group(_cfg: &ParsedCfg, group: &ParsedRuleGroup) -> Self {
         let mut ret = Self {
             kind: group.kind,
             can_combine: group.can_combine,
@@ -59,7 +54,7 @@ impl AfxRule {
         };
 
         for rule in &group.rules {
-            let mut morph_info: Vec<Arc<MorphInfo>> = rule
+            let morph_info: Vec<Arc<MorphInfo>> = rule
                 .morph_info
                 .iter()
                 .map(|m| Arc::new(m.clone()))
@@ -128,7 +123,7 @@ impl AfxRulePattern {
     /// Helper for testing, sets the condition based on a kind
     #[cfg(test)]
     pub fn set_pattern(&mut self, condition: &str, kind: RuleType) -> Result<(), regex::Error> {
-        self.condition = compile_re_pattern(condition, kind)?;
+        self.condition = crate::helpers::compile_re_pattern(condition, kind)?;
         Ok(())
     }
 

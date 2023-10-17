@@ -1,7 +1,6 @@
 //! Various functions that are helpful throughout the crate
 
 use core::fmt::Display;
-use std::borrow::Borrow;
 use std::hash::Hash;
 use std::ops::Deref;
 use std::rc::Rc;

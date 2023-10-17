@@ -3,7 +3,6 @@
 //! [`Error`] is the main error type for this crate, all other types of errors
 //! will fall under it.
 
-use core::prelude::v1;
 use std::fmt::Display;
 use std::num::ParseIntError;
 
@@ -212,6 +211,7 @@ impl ParseError {
 }
 
 impl ParseErrorKind {
+    #[allow(unused)]
     fn help_msg(&self) -> Option<&'static str> {
         match self {
             ParseErrorKind::Boolean => {
@@ -321,7 +321,6 @@ impl Display for ParseErrorKind {
             ParseErrorKind::CompoundSyllableCount(n) => write!(f, "expected 2 items but got {n}"),
             ParseErrorKind::CompoundSyllableParse(e) => write!(f, "unable to parse integer: {e}"),
             ParseErrorKind::Regex(e) => e.fmt(f),
-            ParseErrorKind::AffixHeader => todo!(),
             ParseErrorKind::Personal => write!(f, "error parsing entry in personal dictionary"),
             ParseErrorKind::InvalidFlag => {
                 write!(f, "expected a single alphanumeric flag (4 bytes maximum)")

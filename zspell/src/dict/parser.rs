@@ -99,6 +99,7 @@ impl DictEntry {
         Ok(Self { stem, flags, morph })
     }
 
+    #[allow(unused)]
     pub fn stem(&self) -> &str {
         &self.stem
     }
@@ -126,6 +127,7 @@ pub struct PersonalEntry {
 }
 
 impl PersonalEntry {
+    #[allow(unused)]
     pub(crate) fn new(
         stem: &str,
         friend: Option<&str>,
@@ -174,6 +176,7 @@ pub struct ParsedPersonalMeta {
 }
 
 impl ParsedPersonalMeta {
+    #[allow(unused)]
     pub(crate) fn new<S: AsRef<str>>(friend: Option<S>, morph: Vec<MorphInfo>) -> Self {
         Self {
             friend: friend.map(|s| s.as_ref().to_owned()),
