@@ -62,13 +62,20 @@ jobs:
           pwd
           ls
       - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: llvm-tools-preview
+      - uses: taiki-e/install-action@cargo-llvm-cov
       - name: Install nextest
         uses: taiki-e/install-action@nextest
       - uses: Swatinem/rust-cache@v2
         with:
           key: ${{ matrix.os }}
-      - run: cargo nextest
+      - run: cargo llvm-cov nextest --lcov --output-path lcov.info
       - run: cargo test --doc
+      - name: Upload coverage data to codecov
+        uses: codecov/codecov-action@v3
+        with:
+          files: lcov.info
 
   fmt:
     name: formatting
