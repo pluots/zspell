@@ -4,6 +4,12 @@ members = [
     "zspell",
     "zspell-py",
     "zspell-cli",
+    "zspell/test-util",
+]
+
+default-members = [
+    "zspell",
+    "zspell-cli",
 ]
 
 # Build with `cargo build --profile=release-debug`

@@ -20,12 +20,12 @@ use self::parser::{parse_personal_dict, PersonalEntry};
 pub use self::rule::AfxRule;
 use self::types::{Meta, PersonalMeta, Source};
 use crate::affix::FlagType;
-use crate::error::{BuildError, Error, WordNotFoundError};
+use crate::error::{BuildError, Error};
 use crate::helpers::StrWrapper;
 use crate::morph::MorphInfo;
 use crate::ParsedCfg;
 
-/// Main dictionary object used for spellchecking and suggestions
+/// Main dictionary object used for spellchecking, suggestions, and analysis.
 ///
 /// Internally, this is represented as the following:
 ///
@@ -38,9 +38,14 @@ use crate::ParsedCfg;
 ///
 /// The easiest way to construct a dictionary is using a [`DictBuilder`]. You
 /// can use this `Dictionary` object to perform various checks, likely via
-/// [`check`][Dictionary::check] (for simple true/false checking of strings) or
-/// [`check_indices`][Dictionary::check_indices] (to validate a string and
+/// [`check`][Self::check] (for simple true/false checking of strings) or
+/// [`check_indices`][Self::check_indices] (to validate a string and
 /// return the location of errors).
+///
+/// More powerful use for things such as stemming, morphological analysis, or (unstable)
+/// suggestions will want to use the entry API via [`entry`](Self::entry) or
+/// [`entries`](Self::entries).
+#[must_use]
 #[derive(Clone, Debug, PartialEq)]
 pub struct Dictionary {
     /// General word list of words that are accepted and suggested. Note that it
@@ -164,15 +169,15 @@ impl Dictionary {
     /// ```
     ///
     /// The return signature is a bit clunky looking if you're not familiar with
-    /// Rust, but I promise it's more simple than it looks
+    /// Rust, but I promise it's more simple than it looks:
     /// 1. It returns an iterator so you can lazily iterate: `for (idx, wrongword)
-    ///    in dict.check_indice(ssentence) {...}`
+    ///    in dict.check_indice(sentence) {...}`
     /// 2. Lifetimes: the iterator itself can't outlive the `Dictionary` object
     ///    itself (both have lifetime `'d`) since it calls some internal
     ///    functions
     /// 3. Lifetimes 2: the strings in the returned iterator values can't
-    ///    outlive the input string (both have lifetime `'a` since they're
-    ///    just references to the input string)
+    ///    outlive the input string (both have lifetime `'a` since the resturn values
+    ///    are just references to the input string)
     ///
     /// Still hitting lifetime errors? Just `.collect()` it into a vector like
     /// in the above example.
@@ -184,109 +189,83 @@ impl Dictionary {
         word_splitter(input).filter(|(_idx, w)| !self.check_word(w))
     }
 
-    /// **UNSTABLE** Suggest a word at given indices. Feature gated behind
-    /// `unstable-suggestions`.
-    #[inline]
-    #[cfg(feature = "unstable-suggestions")]
-    pub fn suggest_indices<'a>(
-        &self,
-        input: &'a str,
-    ) -> impl Iterator<Item = (usize, &'a str, Vec<&str>)> {
-        word_splitter(input).filter_map(|(idx, w)| {
-            self.suggest_word(w)
-                .map_or_else(|v| Some((idx, w, v)), |()| None)
-        })
-    }
+    /// Helper for `locate_word` that allows setting the index
+    fn locate_word_inner<'d, 's>(&'d self, word: &'s str, index: usize) -> WordEntry<'d, 's> {
+        let lower = word.to_lowercase();
 
-    /// **UNSTABLE** Suggest a replacement for a single word. Feature gated
-    /// behind `unstable-suggestions`.
-    ///
-    /// If the word exists, this will return `Ok(())`. If it does not, it will
-    /// return a vector of suggestions `Err(Vec<&str>)`.
-    ///
-    /// This function is unstable because it has performance issues. We are
-    /// going to try to speed up the algorithm significantly.
-    // PERF: bench with par_iter
-    #[inline]
-    #[cfg(feature = "unstable-suggestions")]
-    #[allow(clippy::missing_errors_doc)]
-    pub fn suggest_word(&self, word: &str) -> Result<(), Vec<&str>> {
-        if self.check_word(word) {
-            return Ok(());
-        }
-        let mut suggestions: Vec<(u32, &str)> = self
-            .wordlist
-            .0
-            .keys()
-            .filter_map(|key| try_levenshtein(key, word, 1).map(|lim| (lim, key.as_ref())))
-            .collect();
-        suggestions.sort_unstable_by_key(|(k, _v)| *k);
-        Err(suggestions.iter().take(10).map(|(_k, v)| *v).collect())
-    }
-
-    /// **UNSTABLE** Generate the stems for a single word. Feature gated behind
-    /// `unstable-stem`.
-    ///
-    /// If the word is found, this will return a vector of `&str` potential
-    /// stems.
-    ///
-    /// # Errors
-    ///
-    /// Returns a dummy error if the word is not found
-    #[inline]
-    #[cfg(feature = "unstable-stem")]
-    pub fn stem_word(&self, word: &str) -> Result<Vec<&str>, WordNotFoundError> {
-        let Some(meta) = self
-            .wordlist
-            .0
-            .get(word)
-            .or_else(|| self.wordlist_nosuggest.0.get(word))
-        else {
-            return Err(WordNotFoundError);
+        let ctx = if self.wordlist_forbidden.0.contains_key(word)
+            || self.wordlist_forbidden.0.contains_key(lower.as_str())
+        {
+            WordCtx::Incorrect { forbidden: true }
+        } else if let Some((matched, meta)) = self.wordlist.0.get_key_value(word) {
+            WordCtx::Correct {
+                matched,
+                meta_list: meta,
+            }
+        } else if let Some((matched, meta)) = self.wordlist.0.get_key_value(lower.as_str()) {
+            WordCtx::Correct {
+                matched,
+                meta_list: meta,
+            }
+        } else if let Some((matched, meta)) = self.wordlist_nosuggest.0.get_key_value(word) {
+            WordCtx::Correct {
+                matched,
+                meta_list: meta,
+            }
+        } else if let Some((matched, meta)) =
+            self.wordlist_nosuggest.0.get_key_value(lower.as_str())
+        {
+            WordCtx::Correct {
+                matched,
+                meta_list: meta,
+            }
+        } else {
+            WordCtx::Incorrect { forbidden: false }
         };
 
-        let mut stems: Vec<&str> = Vec::with_capacity(meta.len());
-        let mut morphs: Vec<&MorphInfo> = Vec::with_capacity(meta.len());
-        for item in meta {
-            item.source().push_morphs(&mut morphs);
-            stems.push(item.stem());
+        WordEntry {
+            word,
+            index,
+            dict: self,
+            context: ctx,
         }
-
-        for morph in morphs {
-            if let MorphInfo::Stem(s) = morph {
-                stems.push(s);
-            }
-        }
-
-        Ok(stems)
     }
 
-    /// **UNSTABLE** Generate the morphological analysis for a single word.
-    /// Feature gated behind `unstable-analysis`.
+    /// Return an iterator over entries for each word in a sentence.
     ///
-    /// # Errors
-    ///
-    /// Returns a dummy error if the word is not found
+    /// This can be used to stem or analyze words that are spelled correctly, or provide
+    /// suggestions for incorrect words. See [`WordEntry`] for more information.
     #[inline]
-    #[cfg(feature = "unstable-analysis")]
-    pub fn analyze_word(&self, _word: &str) -> Result<Vec<MorphInfo>, WordNotFoundError> {
-        todo!()
+    pub fn entries<'d, 's>(&'d self, input: &'s str) -> impl Iterator<Item = WordEntry<'d, 's>> {
+        word_splitter(input).map(|(idx, word)| self.locate_word_inner(word, idx))
+    }
+
+    /// Return an entry for a single word.
+    ///
+    /// This can be used to stem or analyze words that are spelled correctly, or provide
+    /// suggestions for incorrect words. See [`WordEntry`] for more information.
+    #[inline]
+    pub fn entry<'d, 's>(&'d self, word: &'s str) -> WordEntry<'d, 's> {
+        self.locate_word_inner(word, 0)
     }
 
     /// Return a reference to the internal wordlist
     #[inline]
+    #[doc(hidden)]
     pub fn wordlist(&self) -> &WordList {
         &self.wordlist
     }
 
     /// Return a reference to the internal nosuggest wordlist
     #[inline]
+    #[doc(hidden)]
     pub fn wordlist_nosuggest(&self) -> &WordList {
         &self.wordlist_nosuggest
     }
 
     /// Return a reference to the internal forbidden wordlist
     #[inline]
+    #[doc(hidden)]
     pub fn wordlist_forbidden(&self) -> &WordList {
         &self.wordlist_forbidden
     }
@@ -455,9 +434,225 @@ impl Dictionary {
     }
 }
 
+/// The result of checking whether a word exists or not, with methods to perform
+/// advanced operations.
+///
+/// This type is created by [`Dictionary::entry`] and [`Dictionary::entries`].
+pub struct WordEntry<'dict, 'word> {
+    /// Word provided to be matched
+    word: &'word str,
+    index: usize,
+    dict: &'dict Dictionary,
+    context: WordCtx<'dict>,
+}
+
+/// Context held by a `WordEntry` that differs based on whether
+/// the word is correct or not.
+enum WordCtx<'dict> {
+    Correct {
+        /// The value that was matched in the dictionary
+        matched: &'dict str,
+        /// Meta located in the dictionary
+        meta_list: &'dict [Meta],
+    },
+    Incorrect {
+        /// True if the word was located in a forbidden dictionary
+        forbidden: bool,
+    },
+}
+
+impl<'dict, 'word> WordEntry<'dict, 'word> {
+    /// Return true if the word is spelled correctly.
+    ///
+    /// If you only need correctness checking, it can be easier to go through
+    /// [`Dictionary::check`] or related functions.
+    #[inline]
+    pub fn correct(&self) -> bool {
+        matches!(self.context, WordCtx::Correct { .. })
+    }
+
+    /// The input word that was checked.
+    ///
+    /// This is mostly useful when creating this `WordEntry` from [`Dictionary::entries`],
+    /// where a string is split into any number of words.
+    #[inline]
+    pub fn word(&self) -> &str {
+        self.word
+    }
+
+    /// The index of this word, if located within a larger string.
+    ///
+    /// This is most helpful when extracting individual words via [`Dictionary::entries`].
+    #[inline]
+    pub fn index(&self) -> usize {
+        self.index
+    }
+
+    /// The dictionary this match was produced by.
+    #[inline]
+    pub fn dict(&self) -> &Dictionary {
+        self.dict
+    }
+
+    /// If this was found in the dictionary, return the exact entry (this will often be
+    /// the same as `input` but not always).
+    #[inline]
+    pub fn matched_entry(&self) -> Option<&str> {
+        match self.context {
+            WordCtx::Correct { matched, .. } => Some(matched),
+            WordCtx::Incorrect { .. } => None,
+        }
+    }
+
+    /// True if this entry was found in a forbidden list
+    #[inline]
+    pub fn forbidden(&self) -> bool {
+        matches!(self.context, WordCtx::Incorrect { forbidden: true })
+    }
+
+    /// Returns stemming if the word was found, `None` otherwise.
+    ///
+    /// Stems are a list of potential root words, including the word itself. This list may
+    /// contain duplicates (collect to a [`HashSet`](std::collections::HashSet) or use
+    /// [`Vec::dedup`](std::vec::Vec::dedup) if this is needed).
+    ///
+    /// Note that for this to be most useful, you need a dictionary that contains stemming
+    /// information, but these are less common. Some of the [SCOWL] dictionaries provide this
+    /// for English; I do not know of sources for other languages (please let me know if you
+    /// do!).
+    ///
+    /// [SCOWL]: http://wordlist.aspell.net/
+    ///
+    /// ```
+    /// use zspell::DictBuilder;
+    ///
+    /// let affix_str = "
+    /// SFX X Y 1
+    /// SFX X 0 able . ds:able
+    /// ";
+    /// let dict_str = "
+    /// drink/X po:verb
+    /// ";
+    ///
+    /// let dict = DictBuilder::new()
+    ///     .config_str(affix_str)
+    ///     .dict_str(dict_str)
+    ///     .build()
+    ///     .unwrap();
+    ///
+    /// let entry = dict.entry("drink");
+    /// let stems: Vec<_> = entry.stems().unwrap().collect();
+    /// assert_eq!(stems, ["drink"]);
+    ///
+    /// let entry = dict.entry("drinkable");
+    /// let stems: Vec<_> = entry.stems().unwrap().collect();
+    /// assert_eq!(stems, ["drinkable", "drink"]);
+    ///
+    /// // Should be the same with capital letters
+    /// let entry = dict.entry("Drinkable");
+    /// let stems: Vec<_> = entry.stems().unwrap().collect();
+    /// assert_eq!(stems, ["drinkable", "drink"]);
+    /// ```
+    #[inline]
+    pub fn stems(&self) -> Option<impl Iterator<Item = &str>> {
+        let WordCtx::Correct { matched, meta_list } = self.context else {
+            return None;
+        };
+
+        let ret = meta_list.iter().flat_map(|meta| {
+            // Combine the main stem with every stem provided by morphs
+            let stem = std::iter::once(meta.stem());
+            let morph_stems = meta.source().morphs().filter_map(|morph| match morph {
+                MorphInfo::Stem(v) => Some(v.as_ref()),
+                _ => None,
+            });
+
+            stem.chain(morph_stems)
+        });
+        // remove self because we will include that at the beginning
+        let ret = ret.filter(move |value| value != &matched);
+        let ret = std::iter::once(matched).chain(ret);
+        Some(ret)
+    }
+
+    /// Return morphological analysis information about a word if found, `None` otherwise
+    ///
+    /// Like with [`stems`](Self::stems), this is most useful with nonstandard dictionaries that
+    /// include morphological information.
+    ///
+    /// ```
+    /// use zspell::{DictBuilder, MorphInfo, PartOfSpeech};
+    ///
+    /// let affix_str = "
+    /// SFX X Y 1
+    /// SFX X 0 able . ds:able
+    /// ";
+    /// let dict_str = "
+    /// drink/X po:verb
+    /// ";
+    ///
+    /// let dict = DictBuilder::new()
+    ///     .config_str(affix_str)
+    ///     .dict_str(dict_str)
+    ///     .build()
+    ///     .unwrap();
+    ///
+    /// # // FIXME:dict-parser our dictionary parser doesn't extract prefixes properly
+    /// # // our file contains information that we have a verb part of speech
+    /// # // and a derivational suffix
+    /// # let verb_pos = MorphInfo::Part(PartOfSpeech::Verb);
+    /// let deriv_sfx = MorphInfo::DerivSfx("able".into());
+    ///
+    /// # // let entry = dict.entry("drink");
+    /// # // let stems: Vec<_> = entry.analyze().unwrap().collect();
+    /// # //assert_eq!(stems, [&verb_pos]);
+    ///
+    /// let entry = dict.entry("drinkable");
+    /// let stems: Vec<_> = entry.analyze().unwrap().collect();
+    /// assert_eq!(stems, [&deriv_sfx])
+    /// # // assert_eq!(stems, [&verb_pos, &deriv_sfx]);
+    /// # // ^ yeah, this isn't a verb, but this is just an example...
+    /// ```
+    #[inline]
+    pub fn analyze(&self) -> Option<impl Iterator<Item = &MorphInfo>> {
+        let WordCtx::Correct { meta_list, .. } = self.context else {
+            return None;
+        };
+        let ret = meta_list.iter().flat_map(|meta| meta.source().morphs());
+        Some(ret)
+    }
+
+    /// Suggest replacements for a word. Feature gated behind `unstable-suggestions`.
+    ///
+    /// If the word is correct, this will return `None`. Otherwise, it will return an
+    /// iterator over suggested words.
+    ///
+    /// This function is unstable because it has performance issues. We are
+    /// going to try to speed up the algorithm significantly.
+    // PERF: bench with par_iter
+    #[inline]
+    #[cfg(feature = "unstable-suggestions")]
+    pub fn suggest(&self) -> Option<Vec<&str>> {
+        if self.correct() {
+            return None;
+        };
+
+        let mut suggestions: Vec<(u32, &str)> = self
+            .dict
+            .wordlist
+            .0
+            .keys()
+            .filter_map(|key| try_levenshtein(key, self.word, 1).map(|lim| (lim, key.as_ref())))
+            .collect();
+        suggestions.sort_unstable_by_key(|(k, _v)| *k);
+        Some(suggestions.iter().take(10).map(|(_k, v)| *v).collect())
+    }
+}
+
 /// The internal representation of a wordlist.
 ///
 /// Currently contains a `HashMap<String, Vec<Meta>>`
+#[doc(hidden)]
 #[derive(Clone, Debug, PartialEq)]
 pub struct WordList(HashMap<Box<str>, Vec<Meta>>);
 
@@ -478,6 +673,7 @@ impl WordList {
 /// A builder stucture that is used to create a [`Dictionary`].
 ///
 /// See module-level documentation for an example.
+#[must_use]
 #[derive(Clone, Debug, PartialEq)]
 pub struct DictBuilder<'a> {
     cfg: Option<ParsedCfg>,
@@ -500,7 +696,6 @@ impl<'a> DictBuilder<'a> {
 
     /// Load the affix file from the given string.
     #[inline]
-    #[must_use]
     pub fn config_str(mut self, config: &'a str) -> Self {
         self.cfg_src = Some(config);
         self
@@ -510,7 +705,6 @@ impl<'a> DictBuilder<'a> {
     ///
     /// Don't use with `config_src`
     #[inline]
-    #[must_use]
     #[cfg_attr(feature = "zspell-unstable", visibility::make(pub))]
     fn config(mut self, cfg: ParsedCfg) -> Self {
         self.cfg = Some(cfg);
@@ -519,7 +713,6 @@ impl<'a> DictBuilder<'a> {
 
     /// Load the dictionary file from a string
     #[inline]
-    #[must_use]
     pub fn dict_str(mut self, dict: &'a str) -> Self {
         self.dict_src = Some(dict);
         self
@@ -527,7 +720,6 @@ impl<'a> DictBuilder<'a> {
 
     /// Load a personal dictionary file from a string
     #[inline]
-    #[must_use]
     pub fn personal_str(mut self, personal: &'a str) -> Self {
         self.personal_src = Some(personal);
         self

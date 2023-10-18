@@ -50,11 +50,9 @@ indoc = "2.0.4"
 
 [features]
 unstable-suggestions = []
-unstable-analysis = []
-unstable-stem = []
 unstable-system = []
 benchmarking = []
-zspell-unstable = ["unstable-suggestions", "unstable-analysis", "unstable-stem", "unstable-system"]
+zspell-unstable = ["unstable-suggestions", "unstable-system"]
 
 [[bench]]
 name = "datastructure"

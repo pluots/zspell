@@ -113,7 +113,10 @@ fn test_update_personal() {
     assert!(d.check("abcd"));
     assert!(d.check("uvwx"));
     assert!(!d.check("ijkl"));
-    assert_eq!(d.stem_word("efgh").unwrap(), vec!["efgh", "something"]);
+
+    let entry = d.entry("efgh");
+    let stems: Vec<_> = entry.stems().unwrap().collect();
+    assert_eq!(stems, vec!["efgh", "something"]);
 }
 
 #[test]

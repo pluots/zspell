@@ -131,11 +131,6 @@ pub enum ParseErrorKind {
     Regex(regex::Error),
 }
 
-/// An error returned from functions that expect a word to be present in a
-/// dictionary but were unable to find the word.
-#[derive(Clone, Debug, PartialEq)]
-pub struct WordNotFoundError;
-
 impl Span {
     /// New with only start line & column specified. End will be start line + 1
     pub(crate) fn new(line: u32, col: u32) -> Self {

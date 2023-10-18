@@ -1,6 +1,7 @@
 //! Type representations for affix file contents
 
-use std::fmt::Display;
+use std::fmt::{self, Display};
+use std::str::FromStr;
 
 use lazy_static::lazy_static;
 use regex::Regex;
@@ -190,7 +191,7 @@ pub enum RuleType {
 }
 
 /// Representation of a part of speech
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum PartOfSpeech {
     Noun,
     Verb,
@@ -292,11 +293,11 @@ impl From<Encoding> for &str {
     }
 }
 
-impl TryFrom<&str> for FlagType {
-    type Error = ParseErrorKind;
+impl FromStr for FlagType {
+    type Err = ParseErrorKind;
 
     #[inline]
-    fn try_from(value: &str) -> Result<Self, ParseErrorKind> {
+    fn from_str(value: &str) -> Result<Self, ParseErrorKind> {
         match value.to_ascii_lowercase().as_str() {
             "ascii" => Ok(Self::Ascii),
             "utf-8" => Ok(Self::Utf8),
@@ -380,11 +381,11 @@ impl TryFrom<&str> for CompoundSyllable {
     }
 }
 
-impl TryFrom<&str> for PartOfSpeech {
-    type Error = ParseErrorKind;
+impl FromStr for PartOfSpeech {
+    type Err = ParseErrorKind;
 
     #[inline]
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
         let ret = match value.to_lowercase().as_str() {
             "noun" => Self::Noun,
             "verb" => Self::Verb,
@@ -398,6 +399,23 @@ impl TryFrom<&str> for PartOfSpeech {
             _ => return Err(ParseErrorKind::PartOfSpeech(value.to_owned())),
         };
         Ok(ret)
+    }
+}
+
+impl fmt::Display for PartOfSpeech {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            PartOfSpeech::Noun => write!(f, "noun"),
+            PartOfSpeech::Verb => write!(f, "verb"),
+            PartOfSpeech::Adjective => write!(f, "adjective"),
+            PartOfSpeech::Determiner => write!(f, "determiner"),
+            PartOfSpeech::Adverb => write!(f, "adverb"),
+            PartOfSpeech::Pronoun => write!(f, "pronoun"),
+            PartOfSpeech::Preposition => write!(f, "preposition"),
+            PartOfSpeech::Conjunction => write!(f, "conjunction"),
+            PartOfSpeech::Interjection => write!(f, "interjection"),
+        }
     }
 }
 

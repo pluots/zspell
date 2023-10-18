@@ -4,6 +4,11 @@
 
 ## [Unreleased] - ReleaseDate
 
+### Additions
+
+- Add `Dictionary::{entry, entries}` which allow stemming and morphological
+  analysis.
+
 ### Fixed
 
 - Corrected error message for parsing affix headers
@@ -12,8 +17,14 @@
 
 ### Changed
 
+- Remove features `unstable-analysis` and `unstable-stem` since functionality
+  is now public
 - Wordlist now correctly applies more than one affix rule if it is available
 - Moved `DictBuilder::config` behind `zspell-unstable`
+- [build] update CI workflows
+- [internal] make some changes from `TryFrom` to `FromStr`
+- [internal] refactor test system to support stemming and morphological
+  analysis
 
 
 ## [0.3.3] - 2023-01-01

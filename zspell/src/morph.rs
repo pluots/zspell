@@ -1,36 +1,39 @@
 //! Types and implementation of morphological analysis
 
+use std::fmt;
+use std::str::FromStr;
+
 use crate::affix::PartOfSpeech;
 use crate::error::{ParseError, ParseErrorKind};
 
 /// Morphographical information about a word, used by analysis methods
 #[non_exhaustive]
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum MorphInfo {
     /// `st:` stem word
-    Stem(Box<str>),
+    Stem(MorphStr),
     /// `ph:` better phonetic transliteration if available
-    Phonetic(Box<str>),
+    Phonetic(MorphStr),
     /// `al:` allomorphs (e.g. sing -> sang, sung)
-    Allomorph(Box<str>),
+    Allomorph(MorphStr),
     /// `po:` part of speech
     Part(PartOfSpeech),
     /// `ds:` derivational suffix
-    DerivSfx(Box<str>),
+    DerivSfx(MorphStr),
     /// `is:` inflectional suffix
-    InflecSfx(Box<str>),
+    InflecSfx(MorphStr),
     /// `ts:` terminal suffix
-    TerminalSfx(Box<str>),
+    TerminalSfx(MorphStr),
     /// `dp:` derivational suffix
-    DerivPfx(Box<str>),
+    DerivPfx(MorphStr),
     /// `ip:` inflectional suffix
-    InflecPfx(Box<str>),
+    InflecPfx(MorphStr),
     /// `tp:` terminal suffix
-    TermPfx(Box<str>),
+    TermPfx(MorphStr),
     /// `sp:` surface prefix
-    SurfacePfx(Box<str>),
+    SurfacePfx(MorphStr),
     /// `pa:` parts of compound words
-    CompPart(Box<str>),
+    CompPart(MorphStr),
 }
 
 impl MorphInfo {
@@ -44,7 +47,7 @@ impl MorphInfo {
     pub(crate) fn many_from_str(s: &str) -> Result<Vec<Self>, ParseError> {
         let mut res = Vec::new();
         for morph in s.split_whitespace() {
-            if let Ok(v) = MorphInfo::try_from(morph) {
+            if let Ok(v) = MorphInfo::from_str(morph) {
                 res.push(v);
             }
             // FIXME: we should be able to handle the hungarian dictionary that
@@ -57,11 +60,11 @@ impl MorphInfo {
     }
 }
 
-impl TryFrom<&str> for MorphInfo {
-    type Error = ParseErrorKind;
+impl FromStr for MorphInfo {
+    type Err = ParseErrorKind;
 
     #[inline]
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
         let (tag, val) = value
             .split_once(':')
             .ok_or_else(|| ParseErrorKind::MorphInfoDelim(value.to_owned()))?;
@@ -69,7 +72,7 @@ impl TryFrom<&str> for MorphInfo {
             "st" => Self::Stem(val.into()),
             "ph" => Self::Phonetic(val.into()),
             "al" => Self::Allomorph(val.into()),
-            "po" => Self::Part(val.try_into()?),
+            "po" => Self::Part(val.parse()?),
             "ds" => Self::DerivSfx(val.into()),
             "is" => Self::InflecSfx(val.into()),
             "ts" => Self::TerminalSfx(val.into()),
@@ -81,6 +84,51 @@ impl TryFrom<&str> for MorphInfo {
             _ => return Err(ParseErrorKind::MorphInvalidTag(tag.to_owned())),
         };
         Ok(ret)
+    }
+}
+
+impl fmt::Display for MorphInfo {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            MorphInfo::Stem(v) => write!(f, "st:{v}"),
+            MorphInfo::Phonetic(v) => write!(f, "ph:{v}"),
+            MorphInfo::Allomorph(v) => write!(f, "al:{v}"),
+            MorphInfo::Part(v) => write!(f, "po:{v}"),
+            MorphInfo::DerivSfx(v) => write!(f, "ds:{v}"),
+            MorphInfo::InflecSfx(v) => write!(f, "is:{v}"),
+            MorphInfo::TerminalSfx(v) => write!(f, "ts:{v}"),
+            MorphInfo::DerivPfx(v) => write!(f, "dp:{v}"),
+            MorphInfo::InflecPfx(v) => write!(f, "ip:{v}"),
+            MorphInfo::TermPfx(v) => write!(f, "tp:{v}"),
+            MorphInfo::SurfacePfx(v) => write!(f, "sp:{v}"),
+            MorphInfo::CompPart(v) => write!(f, "pa:{v}"),
+        }
+    }
+}
+
+/// A string used as part of morphological analysis
+///
+/// This is a thin wrapper over a native string type to allow us to change
+/// the implementation as needed.
+#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct MorphStr(Box<str>);
+
+impl AsRef<str> for MorphStr {
+    fn as_ref(&self) -> &str {
+        self.0.as_ref()
+    }
+}
+
+impl From<&str> for MorphStr {
+    fn from(value: &str) -> Self {
+        Self(value.into())
+    }
+}
+
+impl fmt::Display for MorphStr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(f)
     }
 }
 
@@ -98,7 +146,7 @@ mod tests {
 
         for (input, expected) in tests {
             assert_eq!(
-                MorphInfo::try_from(input),
+                MorphInfo::from_str(input),
                 Ok(expected),
                 "failure parsing {input}"
             );

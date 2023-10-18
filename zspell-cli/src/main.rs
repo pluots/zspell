@@ -13,6 +13,10 @@ use stringmetrics::levenshtein_limit;
 
 fn main() -> ExitCode {
     let cli_parse = cli::Cli::parse();
+    if let Err(e) = cli_parse.validate() {
+        eprintln!("{e}");
+        return ExitCode::FAILURE;
+    }
 
     if let Some(cli::Commands::Lev {
         string_a,

@@ -25,11 +25,11 @@
 ==== wordlist_forbidden ====
 %% Expected contents of the non-accepted wordlist
 
-=== stem_list ===
+=== stems ===
 %% List the expected stem for a given word
 rooted > root
 
-=== morph_list ===
+=== morph ===
 %% List the expected morph info for a given word
 apple > po:noun ...
 

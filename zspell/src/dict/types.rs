@@ -1,6 +1,8 @@
 use std::borrow::Borrow;
 use std::sync::Arc;
 
+use itertools::Either;
+
 use super::rule::AfxRule;
 use crate::morph::MorphInfo;
 
@@ -31,7 +33,7 @@ impl Meta {
                     None
                 }
             }) {
-                return stem;
+                return stem.as_ref();
             }
         }
 
@@ -51,7 +53,7 @@ pub enum Source {
     /// this meta came from an affix and has a full affix rule
     Affix(Arc<AfxRule>),
     /// this meta came from a .dic file, only contains morphinfo
-    Dict(Box<Vec<Arc<MorphInfo>>>),
+    Dict(Box<[Arc<MorphInfo>]>),
     /// this meta came from the personal dictionary
     /// String is the "friend" word
     Personal(Box<PersonalMeta>),
@@ -60,16 +62,23 @@ pub enum Source {
 }
 
 impl Source {
-    /// Add morphinfo, if any, to a vector
-    pub fn push_morphs<'a>(&'a self, dest: &mut Vec<&'a MorphInfo>) {
+    /// Iterate through all morph info available
+    // https://github.com/rust-lang/rust-clippy/issues/11680
+    #[allow(clippy::iter_on_empty_collections)]
+    pub fn morphs(&self) -> impl Iterator<Item = &MorphInfo> {
         match self {
-            // Unsure how to handle nesting types. Maybe need rule group number
-            // in Affix source
-            Source::Affix(_) => todo!(),
-            Source::Dict(v) => v.iter().for_each(|val| dest.push(val)),
-            Source::Personal(pm) => pm.morph.iter().for_each(|val| dest.push(val)),
-            Source::Raw => (),
+            Source::Affix(rule) => {
+                let iter = rule
+                    .patterns()
+                    .iter()
+                    .flat_map(|pat| pat.morph_info().iter());
+                Either::Left(iter)
+            }
+            Source::Dict(v) => Either::Right(v.as_ref().iter()),
+            Source::Personal(v) => Either::Right(v.morph.iter()),
+            Source::Raw => Either::Right([].iter()),
         }
+        .map(AsRef::as_ref)
     }
 }
 

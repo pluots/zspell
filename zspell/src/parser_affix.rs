@@ -300,7 +300,7 @@ fn parse_xprod(s: &str) -> Result<bool, ParseError> {
 fn parse_morph_info(s: &str, nlines: u32) -> Result<Vec<MorphInfo>, ParseError> {
     let mut ret = Vec::new();
     for minfo in s.split_whitespace() {
-        ret.push(MorphInfo::try_from(minfo).map_err(|e| ParseError::new_nocol(e, minfo, nlines))?);
+        ret.push(MorphInfo::from_str(minfo).map_err(|e| ParseError::new_nocol(e, minfo, nlines))?);
     }
 
     Ok(ret)
@@ -356,7 +356,7 @@ fn parse_encoding(s: &str) -> ParseResult {
 }
 fn parse_flag(s: &str) -> ParseResult {
     line_key_parser(s, "FLAG", |s| {
-        FlagType::try_from(s)
+        FlagType::from_str(s)
             .map(AffixNode::FlagType)
             .map_err(|e| ParseError::new_nospan(e, s))
     })
