@@ -1,0 +1,45 @@
+%% SPDX-License-Identifier: MPL-1.1
+%% https://github.com/hunspell/hunspell/blob/fbf0ce7e4737084fe84e733b031634f4a2c7559f/tests/oconv.aff
+
+==== afx ====
+# output conversion
+SET UTF-8
+
+# Testing also whitespace and comments.
+OCONV 7 # space, space
+OCONV	a A # tab, space, space
+OCONV	á	Á # tab, tab, space
+OCONV	b	B	# tab, tab, tab
+OCONV  c  C		# 2xspace, 2xspace, 2xtab
+OCONV	 d 	D # tab+space, space+tab, space
+OCONV e E #
+OCONV é É
+# Only comment. Note that line above ends with space+tab.
+
+ # space
+  # 2xspace
+	# tab
+		# 2xtab
+ 	# space+tab
+	 # tab+space
+
+==== dic ====
+3
+bébé
+dádá
+aábcdeé
+
+==== valid ====
+bébé
+dádá
+
+==== invalid ====
+béb
+dád
+aábcde
+
+%% FIXME:suggestions
+%% ==== suggest ====
+%% béb > BÉBÉ
+%% dád > DÁDÁ
+%% aábcde > AÁBCDEÉ

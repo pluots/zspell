@@ -1,0 +1,23 @@
+%% SPDX-License-Identifier: MPL-1.1
+%% https://github.com/hunspell/hunspell/blob/fbf0ce7e4737084fe84e733b031634f4a2c7559f/tests/needaffix.aff
+
+==== afx ====
+NEEDAFFIX X
+COMPOUNDFLAG Y
+
+SFX A Y 1
+SFX A 0 s/Y .
+
+==== dic ====
+2
+foo/YXA
+bar/Y
+
+==== valid ====
+bar
+%% FIXME:compound
+%% foos
+%% barfoos
+
+==== invalid ====
+foo

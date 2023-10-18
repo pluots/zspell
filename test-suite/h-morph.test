@@ -1,0 +1,105 @@
+%% SPDX-License-Identifier: MPL-1.1
+%% https://github.com/hunspell/hunspell/blob/fbf0ce7e4737084fe84e733b031634f4a2c7559f/tests/morph.aff
+
+==== afx ====
+# example for morphological analysis, stemming and generation
+PFX P Y 1
+PFX P   0 un . dp:pfx_un sp:un
+
+SFX S Y 1
+SFX S   0 s . is:plur
+
+SFX Q Y 1
+SFX Q   0 s . is:sg_3
+
+SFX R Y 1
+SFX R   0 able/PS . ds:der_able
+
+==== dic ====
+9
+drink/S	po:noun
+drink/RQ	po:verb	al:drank	al:drunk	ts:present
+drank	po:verb	st:drink	is:past_1
+drunk	po:verb	st:drink	is:past_2
+eat/RQ	po:verb	al:ate	al:eaten	ts:present
+ate	po:verb	st:eat	is:past_1
+eaten	po:verb	st:eat	is:past_2
+phenomenon	po:noun	al:phenomena
+phenomena	po:noun st:phenomenon	is:plur
+
+==== valid ====
+%% FIXME: should these double words be tested as one or two?
+%% FIXME:unknown
+
+drink
+drinks
+%% drinkable
+%% drinkables
+%% undrinkable
+%% undrinkables
+drank
+drunk
+phenomenon
+phenomena
+drink eat
+drink eats
+drink ate
+drink eaten
+%% drink eatable
+%% drink eatables
+drink phenomena
+drinks eat
+drinks eats
+drinks ate
+drinks eaten
+%% drinks eatable
+%% drinks eatables
+drinks phenomena
+%% undrinkable phenomena
+phenomenon drinks
+
+==== stem ====
+%% FIXME:stemming
+drink > drink
+%% drinks > drink
+%% drinkable > drinkable
+%% drinkables > drinkable
+%% undrinkable > undrinkable
+%% undrinkables > undrinkable
+%% drank > drink
+%% drunk > drink
+phenomenon > phenomenon
+%% phenomena > phenomenon
+
+%% ==== morph ====
+%% FIXME:morph
+%% drink > st:drink po:noun
+%% drink > st:drink po:verb al:drank al:drunk ts:present
+%% drinks > st:drink po:verb al:drank al:drunk ts:present is:sg_3
+%% drinks > st:drink po:noun is:plur
+%% drinkable > st:drink po:verb al:drank al:drunk ts:present ds:der_able
+%% drinkables > st:drink po:verb al:drank al:drunk ts:present ds:der_able is:plur
+%% undrinkable > dp:pfx_un sp:un st:drink po:verb al:drank al:drunk ts:present ds:der_able
+%% undrinkables > dp:pfx_un sp:un st:drink po:verb al:drank al:drunk ts:present ds:der_able is:plur
+%% drank > po:verb st:drink is:past_1
+%% drunk > po:verb st:drink is:past_2
+%% phenomenon > st:phenomenon po:noun al:phenomena
+%% phenomena > po:noun st:phenomenon is:plur
+
+%% ==== gen ====
+%% generate(drink, eat) = drink
+%% generate(drink, eats) = drinks
+%% generate(drink, ate) = drank
+%% generate(drink, eaten) = drunk
+%% generate(drink, eatable) = drinkable
+%% generate(drink, eatables) = drinkables
+%% generate(drink, phenomena) = drinks
+%% generate(drinks, eat) = drink
+%% generate(drinks, eats) = drinks
+%% generate(drinks, ate) = drank
+%% generate(drinks, eaten) = drunk
+%% generate(drinks, eatable) = drinkable
+%% generate(drinks, eatables) = drinkables
+%% generate(drinks, phenomena) = drinks
+%% generate(undrinkable, phenomena) = undrinkables
+%% generate(phenomenon, drinks) = phenomena

@@ -1,8 +1,8 @@
-==== afx_str ====
+==== afx ====
 SFX X Y 1
 SFX X 0 able . ds:able
 
-==== dic_str ====
+==== dic ====
 %% mice st:mouse
 drink/X po:verb
 
@@ -10,14 +10,14 @@ drink/X po:verb
 %% attr: allow-extra
 %% mice
 
-==== stems ====
+==== stem ====
 %% mice > mouse | miced
 drink > drink
-drinkable > drinkable | drink
-Drinkable > drinkable | drink
+drinkable > drinkable drink
+Drinkable > drinkable drink
 
 ==== morph ====
 %% FIXME:dict-parser
 %% drink > po:verb
-%% drinkable > po:verb | ds:able
+%% drinkable > po:verb ds:able
 drinkable > ds:able

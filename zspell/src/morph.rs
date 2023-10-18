@@ -111,7 +111,7 @@ impl fmt::Display for MorphInfo {
 ///
 /// This is a thin wrapper over a native string type to allow us to change
 /// the implementation as needed.
-#[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct MorphStr(Box<str>);
 
 impl AsRef<str> for MorphStr {
@@ -127,6 +127,12 @@ impl From<&str> for MorphStr {
 }
 
 impl fmt::Display for MorphStr {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.0.fmt(f)
+    }
+}
+
+impl fmt::Debug for MorphStr {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.0.fmt(f)
     }

@@ -1,38 +1,38 @@
 %% Example test file. '%%' is our comment indicator since '#' gets passed directly
 %% to the input
 
-==== afx_str ====
+==== afx ====
 %% This section contains contents of the .aff file
 
-==== dic_str ====
+==== dic ====
 %% This section contains contents of the .dic file
 
-=== personal_str ===
+=== personal ===
 %% This section contains contents of a personal file
 
-==== check_valid ====
+==== valid ====
 %% Each line will get checked with `.check()`, i.e. treated as sentences
 
-==== check_invalid ====
+==== invalid ====
 %% These words should not be valid
 
 ==== wordlist ====
 %% Verify the word list contains exactly the listed words
 
-==== wordlist_nosuggest ====
+==== nosuggest ====
 %% Expected contents of the never suggested wordlist
 
-==== wordlist_forbidden ====
+==== forbidden ====
 %% Expected contents of the non-accepted wordlist
 
-=== stems ===
+=== stem ===
 %% List the expected stem for a given word
-rooted > root
+rooted > root | rooted
 
 === morph ===
 %% List the expected morph info for a given word
-apple > po:noun ...
+apple > po:noun | ...
 
-==== suggestions ====
+==== suggest ====
 %% Something like the following
 appl > apple | Apfel | app

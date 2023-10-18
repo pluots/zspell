@@ -18,6 +18,7 @@ fn update_tests() {
     let root = Path::new(env!("CARGO_MANIFEST_DIR"));
     let out_path = Path::new(&env::var("OUT_DIR").unwrap()).join("auto_suite.rs");
     let suite_dir = root.parent().unwrap().join("test-suite");
+    println!("cargo:rerun-if-changed={}", suite_dir.to_string_lossy());
     let test_paths = fs::read_dir(suite_dir).unwrap();
 
     let mut to_write = TEST_PREFIX.to_owned();
@@ -30,7 +31,8 @@ fn update_tests() {
             .strip_suffix(".test")
             .unwrap()
             .trim_start_matches(char::is_numeric)
-            .trim_start_matches('_');
+            .trim_start_matches('_')
+            .replace('-', "_");
 
         if test_name == "example" {
             continue;

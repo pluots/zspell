@@ -1,0 +1,32 @@
+==== afx ====
+SET UTF-8
+IGNORE ￰
+WORDCHARS  ःािीॉॊोौॎॏॕॖॗ‌‍
+
+
+ICONV 5
+ICONV ‌_ ‌
+ICONV र्‌य र्‌य
+ICONV र्‌व र्‌व
+ICONV ‌ ￰
+ICONV ‍_ ￰
+
+
+==== dic ====
+4
+अलम्
+क्यार
+न्न
+र्‌य
+
+==== valid ====
+न्न
+%% FIXME:unknown
+%% न्‌न
+%% अलम्‍
+र्‌य
+
+==== invalid ====
+र्य
+क्‍यार
+अलम्‌

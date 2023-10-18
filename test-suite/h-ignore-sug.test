@@ -1,0 +1,48 @@
+%% SPDX-License-Identifier: MPL-1.1
+%% https://github.com/hunspell/hunspell/blob/fbf0ce7e4737084fe84e733b031634f4a2c7559f/tests/ignoresug.aff
+
+==== afx ====
+# Ignore punctuation marks used inside of Armenian words, and produce correct
+# suggestion (see issue #570). However, "suggestion test" cannot be used because
+# words in `.wrong` file are not wrong realy, so it leads to an error.
+# Therefore, we apply "morphological analysis" which has a similar result.
+
+SET UTF-8
+WORDCHARS ֊՛՜՞՚
+IGNORE ֊՛՜՞՚
+
+==== dic ====
+3
+ինչ
+մնաս
+որտեղ
+
+==== valid ====
+%% FIXME:ignore
+ինչ
+%% ի՞նչ
+մնաս
+%% մնա՜ս
+որտեղ
+%% որտե՞ղ
+
+%% FIXME:morph
+%% ==== morph ====
+%% > ինչ
+%% analyze(ինչ) =  st:ինչ
+%% stem(ինչ) = ինչ
+%% > ի՞նչ
+%% analyze(ի՞նչ) =  st:ինչ
+%% stem(ի՞նչ) = ինչ
+%% > մնաս
+%% analyze(մնաս) =  st:մնաս
+%% stem(մնաս) = մնաս
+%% > մնա՜ս
+%% analyze(մնա՜ս) =  st:մնաս
+%% stem(մնա՜ս) = մնաս
+%% > որտեղ
+%% analyze(որտեղ) =  st:որտեղ
+%% stem(որտեղ) = որտեղ
+%% > որտե՞ղ
+%% analyze(որտե՞ղ) =  st:որտեղ
+%% stem(որտե՞ղ) = որտեղ
