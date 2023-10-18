@@ -4,12 +4,9 @@
 
 ## [Unreleased] - ReleaseDate
 
-### Added
-
 ### Changed
 
-### Removed
-
+- Change output directory to use cargo directory rather than source
 
 
 ## [0.4.0] - 2023-10-18
