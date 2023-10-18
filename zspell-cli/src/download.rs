@@ -1,22 +1,25 @@
-//! Things required to download dictionaries
+//! Things required to download dictionaries from wooorm's repository
 //!
 //! This is a work in progress; entire section is largely unfinished
+// TODO: should this move to `zspell` under a feature?
 
 #![allow(unused)] // WIP
 
-use std::cmp::min;
+use std::cmp::{max, min};
+use std::error::Error as StdError;
 use std::fs::{File, OpenOptions};
 use std::io::{Read, Seek, Write};
 use std::path::Path;
+use std::sync::OnceLock;
 use std::time::Duration;
 
-use anyhow::{bail, Context};
+use anyhow::{bail, ensure, Context};
 use cfg_if::cfg_if;
-use futures_util::StreamExt;
 use indicatif::{ProgressBar, ProgressStyle};
-use reqwest::Client;
+use serde::Deserialize;
 use serde_json::Value;
 use sha1::{Digest, Sha1};
+use zspell_index::{DictionaryFormat, Downloadable, Index};
 
 const APP_USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PKG_VERSION"),);
 
@@ -24,13 +27,23 @@ const APP_USER_AGENT: &str = concat!(env!("CARGO_PKG_NAME"), "/", env!("CARGO_PK
 // we use a dummy server.
 cfg_if! {
     if #[cfg(not(test))] {
-        const ROOT_URL: &str = "https://api.github.com/repos/wooorm/dictionaries/contents/dictionaries";
+        const INDEX_URL:&str = "https://github.com/pluots/zspell-index/blob/main/zspell-index.json";
+
+        fn get_index_url() -> String {
+            INDEX_URL.to_owned()
+        }
     } else {
-        use lazy_static::lazy_static;
         use httpmock::prelude::*;
 
-        lazy_static!{
-            static ref TEST_SERVER: MockServer = MockServer::start();
+        const INDEX_PATH: &str ="/zspell-index.json";
+
+        fn test_server() -> &'static MockServer {
+            static TEST_SERVER: OnceLock<MockServer> = OnceLock::new();
+            TEST_SERVER.get_or_init(MockServer::start)
+        }
+
+        fn get_index_url() -> String {
+            test_server().url(INDEX_PATH)
         }
     }
 }
@@ -49,123 +62,39 @@ struct DownloadInfo {
 ///
 /// Implementation taken from the git help page, located here
 /// <https://git-scm.com/book/en/v2/Git-Internals-Git-Objects>
-fn calculate_git_hash(s: &str) -> [u8; 20] {
-    let mut tmp = String::from("blob ");
-    tmp.push_str(&s.len().to_string());
-    tmp.push('\0');
-    tmp.push_str(s);
-
+fn calculate_git_hash(bytes: &[u8]) -> [u8; 20] {
     let mut hasher = Sha1::new();
-    hasher.update(tmp.as_bytes());
-    let res: [u8; 20] = hasher.finalize().into();
-    res
+    let prefix = format!("blob {}\0", bytes.len());
+    hasher.update(&prefix);
+    hasher.update(bytes);
+    hasher.finalize().into()
 }
 
-fn calculate_git_hash_buf<R: Read>(mut reader: R, len: usize) -> anyhow::Result<[u8; 20]> {
-    let mut tmp = String::from("blob ");
-    tmp.push_str(&len.to_string());
-    tmp.push('\0');
-
-    let mut hasher = Sha1::new();
-    hasher.update(tmp.as_bytes());
-
-    let mut buffer = [0; 1024];
-
-    loop {
-        let count = reader.read(&mut buffer).unwrap();
-        if count == 0 {
-            break;
-        }
-
-        hasher.update(&buffer[..count]);
+fn get_index(agent: &ureq::Agent) -> anyhow::Result<&Index> {
+    static INDEX: OnceLock<Option<Index>> = OnceLock::new();
+    static ERROR: OnceLock<String> = OnceLock::new();
+    fn inner(agent: &ureq::Agent) -> anyhow::Result<Index> {
+        agent
+            .get(&get_index_url())
+            .call()?
+            .into_json()
+            .map_err(Into::into)
     }
 
-    let res: [u8; 20] = hasher.finalize().into();
-    Ok(res)
-}
+    let ret = INDEX
+        .get_or_init(|| match inner(agent) {
+            Ok(v) => Some(v),
+            Err(e) => {
+                ERROR.set(e.to_string()).unwrap();
+                None
+            }
+        })
+        .as_ref();
 
-/// Helper function for getting the root URL that we can "patch" for testing
-fn get_root_url() -> String {
-    #[cfg(not(test))]
-    return ROOT_URL.to_owned();
-
-    #[cfg(test)]
-    return TEST_SERVER.url("/contents/dictionaries");
-}
-
-/// Gather the URLs to download dictionary, affix, and license files from a client
-///
-/// Only collects the URLs, does not download them. Uses [`get_root_url`]
-/// as a base then navigates one layer deeper.
-async fn retrieve_urls(lang: &str, client: &Client) -> anyhow::Result<DownloadInfo> {
-    let root_json: Value = client
-        .get(get_root_url())
-        .send()
-        .await
-        .context("error while sending request")?
-        .text()
-        .await
-        .map(|txt| {
-            serde_json::from_str(&txt).context("error understanding server response at root")
-        })??;
-
-    // Get the URL of the directory to download
-    let dir_url = root_json
-        .as_array()
-        .context("Data is incorrectly formatted")?
-        .iter()
-        .find(|x| x["name"] == lang && x["type"] == "dir")
-        .map(|x| &x["url"])
-        .context("Unable to locate language")?
-        .as_str()
-        .context("Data is incorrectly formatted")?;
-
-    // Get the listing of that directory
-    let dir_json: Value = client
-        .get(dir_url)
-        .send()
-        .await
-        .context("error while sending request")?
-        .text()
-        .await
-        .map(|txt| {
-            serde_json::from_str(&txt).context("error understanding server response at dir")
-        })??;
-
-    let dir_listing = &dir_json
-        .as_array()
-        .context("error listing server directory")?;
-
-    let affix = get_dl_url_from_tree(dir_listing, |s| s.ends_with(".aff"))?;
-    let dictionary = get_dl_url_from_tree(dir_listing, |s| s.ends_with(".dic"))?;
-    let license = get_dl_url_from_tree(dir_listing, |s| s.ends_with("license"))?;
-
-    let res = DownloadInfo {
-        affix,
-        dictionary,
-        license,
-        lang: lang.to_string(),
-    };
-
-    Ok(res)
-}
-
-/// Take in a JSON tree and locate one where the name matches the specified pattern
-fn get_dl_url_from_tree<F: Fn(&str) -> bool>(tree: &[Value], f: F) -> anyhow::Result<String> {
-    let ctx_str = "could not locate a necessary file";
-    // Collect the SHA sum and download URL of a file
-    let tmp = tree
-        .iter()
-        .find(|x| x["name"].as_str().map(&f).unwrap_or(false))
-        .map(|x| (x.get("sha"), x.get("download_url")))
-        .context(ctx_str)?;
-
-    let mut res = String::from("sha1$");
-    res.push_str(tmp.0.context(ctx_str)?.as_str().context(ctx_str)?);
-    res.push('$');
-    res.push_str(tmp.1.context(ctx_str)?.as_str().context(ctx_str)?);
-
-    Ok(res)
+    match ret {
+        Some(v) => Ok(v),
+        None => bail!("{}", ERROR.get().unwrap()),
+    }
 }
 
 /// Open an existing file or create a new one, depending on overwrite
@@ -185,7 +114,7 @@ fn open_new_file(path: &Path, overwrite: bool) -> anyhow::Result<File> {
             .read(true)
             .create(true)
             .open(path)
-            .context(format!("unable to open \"{fname}\" in \"{dir}\""))
+            .context(format!("unable to open '{fname}' in '{dir}'"))
     } else {
         // Otherwise, use create_new to fail if it exists
         OpenOptions::new()
@@ -193,49 +122,78 @@ fn open_new_file(path: &Path, overwrite: bool) -> anyhow::Result<File> {
             .read(true)
             .create_new(true)
             .open(path)
-            .context(format!("file {fname} already exists in \"{dir}\""))
+            .context(format!("file {fname} already exists in '{dir}'"))
     }
 }
 
-// Download a single file to the given path, and create a progress bar while
-// doing so
-async fn download_file_with_bar(
+/// Download a single file to the given path, and create a progress bar while
+/// doing so.
+fn download_file_with_bar(
     path: &Path,
     overwrite: bool,
-    client: &Client,
-    url: &str,
-    sha: &[u8],
+    agent: &ureq::Agent,
+    // url: &str,
+    // sha: &[u8],
+    dl: &Downloadable,
 ) -> anyhow::Result<()> {
+    const CHUNK_SIZE: usize = 100;
+
     let mut buffer = open_new_file(path, overwrite)?;
 
-    let res = client.get(url).send().await?;
-    let total_size = res.content_length().unwrap_or(100);
+    let mut res_opt = None;
+    let mut found_url = None;
+    for url in dl.urls.iter() {
+        res_opt = Some(agent.get(url).call());
+        if matches!(res_opt, Some(Ok(..))) {
+            found_url = Some(url);
+            break;
+        }
+    }
+    let Some(res) = res_opt else {
+        bail!("no URLs found for the specified language");
+    };
+    let resp = res?;
+    let url = found_url.unwrap();
 
-    let pb = ProgressBar::new(total_size);
+    // Estimate content length for our buffer capacity & progress bar
+    let expected_len: usize = match resp.header("Content-Length") {
+        Some(hdr) => hdr.parse().expect("can't parse number"),
+        None => dl.size.try_into().unwrap(),
+    };
+
+    let mut buf_len = 0usize;
+    let mut buffer: Vec<u8> = Vec::with_capacity(expected_len);
+    let mut reader = resp.into_reader().take(10_000_000);
+
+    let pb = ProgressBar::new(expected_len.try_into().unwrap());
     pb.set_style(ProgressStyle::default_bar()
         .template("{msg}\n{spinner:.green} [{elapsed_precise}] [{bar:.cyan/blue}] {bytes}/{total_bytes} ({bytes_per_sec}, {eta})")?
         .progress_chars("#>-"));
     pb.set_message(format!("Downloading {url}"));
 
-    let mut finished_bytes: u64 = 0;
-    let mut stream = res.bytes_stream();
+    loop {
+        buffer.extend_from_slice(&[0; CHUNK_SIZE]);
+        let chunk = &mut buffer.as_mut_slice()[buf_len..buf_len + CHUNK_SIZE];
+        let read_bytes = reader.read(chunk).expect("error reading stream");
+        buf_len += read_bytes;
+        pb.set_length(max(read_bytes, expected_len).try_into().unwrap());
+        pb.set_position(buf_len.try_into().unwrap());
 
-    while let Some(item) = stream.next().await {
-        let chunk = item?;
-        buffer.write_all(&chunk)?;
-
-        let new = min(finished_bytes + (chunk.len() as u64), total_size);
-        finished_bytes = new;
-        pb.set_position(new);
+        if read_bytes == 0 {
+            break;
+        }
     }
 
-    let buf_len = buffer.stream_position().unwrap();
-    buffer.rewind().context("error writing file").unwrap();
+    buffer.truncate(buf_len);
 
-    let hash = calculate_git_hash_buf(&buffer, buf_len.try_into()?).unwrap();
-
-    if hash != sha {
-        bail!("error downloading file; checksum failure");
+    match dl.hash.split_once(':') {
+        Some(("sha1", digest)) => {
+            let digest = hex::decode(digest).context("invalid hex {digest}")?;
+            let hash = calculate_git_hash(&buffer);
+            ensure!(hash == *digest, "error downloading file; checksum mismatch");
+        }
+        Some((alg, _)) => bail!("unsupported hash algorithm {alg}"),
+        None => bail!("invalid hash string {}", dl.hash),
     }
 
     pb.finish_with_message(format!("Downloaded {} to {}", url, path.to_string_lossy()));
@@ -244,75 +202,41 @@ async fn download_file_with_bar(
 }
 
 // TODO: make pub
-async fn download_dict(
-    lang: &str,
-    dest: &Path,
-    overwrite: bool,
-    _manifest: &Path,
-) -> anyhow::Result<()> {
-    let client = Client::builder()
+/// Download a single dictionary
+fn download_dict(lang: &str, dest: &Path, overwrite: bool, _manifest: &Path) -> anyhow::Result<()> {
+    let agent = make_agent();
+    let index = get_index(&agent)?;
+
+    let Some(lang) = index.items.iter().find(|x| x.lang.as_ref() == lang) else {
+        bail!("unable to located a dictionary for language {lang}");
+    };
+    let name = &lang.lang;
+
+    download_file_with_bar(
+        &dest.join(format!("{name}.lic")),
+        overwrite,
+        &agent,
+        &lang.lic,
+    )?;
+
+    match &lang.format {
+        DictionaryFormat::Hunspell { aff, dic } => {
+            download_file_with_bar(&dest.join(format!("{name}.dic")), overwrite, &agent, dic)?;
+            download_file_with_bar(&dest.join(format!("{name}.aff")), overwrite, &agent, aff)?;
+        }
+        DictionaryFormat::Wordlist(v) => {
+            download_file_with_bar(&dest.join(format!("{name}.wordlist")), overwrite, &agent, v)?;
+        }
+    }
+
+    Ok(())
+}
+
+fn make_agent() -> ureq::Agent {
+    ureq::builder()
         .timeout(Duration::from_secs(10))
         .user_agent(APP_USER_AGENT)
         .build()
-        .context("could not create HTTP client")?;
-
-    let urls = retrieve_urls(lang, &client).await?;
-
-    let fnames = DownloadInfo {
-        affix: format!("{lang}.aff"),
-        dictionary: format!("{lang}.dic"),
-        license: format!("{lang}.license"),
-        lang: String::default(),
-    };
-
-    // We control these strings, unwrap should be safe
-    // Want to split "sha$some_sha_hex$some_url" into (some_sha_hex, some_url)
-
-    fn split_url_sha(s: &str) -> (&str, &str) {
-        s.split_once('$')
-            .map(|x| x.1.split_once('$'))
-            .unwrap()
-            .unwrap()
-    }
-
-    let info_aff = split_url_sha(urls.affix.as_str());
-    let info_dic = split_url_sha(urls.dictionary.as_str());
-    let info_lic = split_url_sha(urls.license.as_str());
-
-    download_file_with_bar(
-        &dest.join(fnames.affix),
-        overwrite,
-        &client,
-        info_aff.1,
-        hex::decode(info_aff.0.as_bytes())?.as_slice(),
-    )
-    .await?;
-
-    download_file_with_bar(
-        &dest.join(fnames.dictionary),
-        overwrite,
-        &client,
-        info_dic.1,
-        hex::decode(info_dic.0.as_bytes())?.as_slice(),
-    )
-    .await?;
-
-    download_file_with_bar(
-        &dest.join(fnames.license),
-        overwrite,
-        &client,
-        info_lic.1,
-        hex::decode(info_lic.0.as_bytes())?.as_slice(),
-    )
-    .await?;
-
-    // Download each with progress bar
-    // Hash each file
-    // Write download info to toml file
-
-    println!("{urls:?}");
-
-    Ok(())
 }
 
 #[cfg(test)]
@@ -320,6 +244,7 @@ mod tests {
     use std::fs;
     use std::path::PathBuf;
 
+    use httpmock::Mock;
     use tempfile::tempdir;
     use test_mocks::*;
 
@@ -329,72 +254,31 @@ mod tests {
     fn calculate_git_hash_ok() {
         // Use example from git help page
         assert_eq!(
-            calculate_git_hash("what is up, doc?"),
+            calculate_git_hash("what is up, doc?".as_bytes()),
             hex::decode("bd9dbf5aae1a3862dd1526723246b20206e5fc37")
                 .unwrap()
                 .as_slice()
         )
     }
 
-    #[tokio::test]
-    async fn retreive_urls_ok() {
-        let mocks = mock_server_setup();
-        let client = make_test_client();
-
-        let urls = retrieve_urls("de-AT", &client).await.unwrap();
-        // SHA sums joined with files
-        let expected = DownloadInfo {
-            affix: format!(
-                "sha1${}${}",
-                CONTENT_AFF_HASH,
-                TEST_SERVER
-                    .url("/main/dictionaries/de-AT/index.aff")
-                    .as_str()
-            ),
-            dictionary: format!(
-                "sha1${}${}",
-                CONTENT_DIC_HASH,
-                TEST_SERVER
-                    .url("/main/dictionaries/de-AT/index.dic")
-                    .as_str()
-            ),
-            license: format!(
-                "sha1${}${}",
-                CONTENT_LIC_HASH,
-                TEST_SERVER.url("/main/dictionaries/de-AT/license").as_str()
-            ),
-            lang: "de-AT".to_owned(),
-        };
-
-        // TODO
-        // mocks.dict_listing.assert();
-        // mocks.de_at_listing.assert();
-
-        assert_eq!(urls, expected);
-    }
-
-    #[tokio::test]
-    async fn download_dict_ok() {
-        let mocks = mock_server_setup();
+    #[test]
+    fn download_dict_ok() {
+        let mocks = mock_de_at_index();
         let dir = tempdir().unwrap();
 
-        let res = download_dict("de-AT", dir.path(), false, &PathBuf::default()).await;
+        download_dict("de-AT", dir.path(), false, &PathBuf::default()).unwrap();
 
-        println!("{res:?}");
-        res.unwrap();
+        // Verify we created the expected paths
+        let mut created_files = fs::read_dir(dir.path())
+            .unwrap()
+            .filter_map(Result::ok)
+            .map(|x| x.file_name())
+            .collect::<Vec<_>>();
+        created_files.sort_unstable();
 
-        let paths = fs::read_dir(dir.path()).unwrap();
+        assert_eq!(created_files, ["de-AT.aff", "de-AT.dic", "de-AT.lic"]);
 
-        for path in paths {
-            println!("Name: {}", path.unwrap().path().display())
-        }
-
-        // TODO: figure out why this isn't being asserted
-        // mocks.dict_listing.assert();
-        // mocks.de_at_listing.assert();
-        // mocks.de_at_aff.assert();
-        // mocks.de_at_dic.assert();
-        // mocks.de_at_lic.assert();
+        mocks.iter().for_each(Mock::assert);
     }
 }
 
@@ -407,80 +291,37 @@ mod test_mocks {
 
     use super::*;
 
-    pub struct TestMocks<'a> {
-        pub dict_listing: Mock<'a>,
-        pub de_at_listing: Mock<'a>,
-        pub de_at_aff: Mock<'a>,
-        pub de_at_dic: Mock<'a>,
-        pub de_at_lic: Mock<'a>,
-    }
-
     // Content for our mock server
-    pub const CONTENT_DIC: &str = "Dictionary Content\n";
-    pub const CONTENT_DIC_HASH: &str = "eee2f5c4eddac4175d67c00bc808032b02058b5d";
     pub const CONTENT_AFF: &str = "Affix Content\n";
     pub const CONTENT_AFF_HASH: &str = "a464def0d8bb136f20012d431b60faae2cc915b5";
+    pub const CONTENT_DIC: &str = "Dictionary Content\n";
+    pub const CONTENT_DIC_HASH: &str = "eee2f5c4eddac4175d67c00bc808032b02058b5d";
     pub const CONTENT_LIC: &str = "License Content\n";
     pub const CONTENT_LIC_HASH: &str = "c4d083267263c478591c4856981f32f31690456d";
 
     macro_rules! make_resp {
         ($path:expr, $ctype:expr, $body:expr) => {
-            TEST_SERVER.mock(|when, then| {
+            test_server().mock(|when, then| {
                 when.method(GET).path($path);
                 then.status(200)
-                    .header("content-type", "$ctyle; charset=utf-8")
+                    .header("content-type", format!("{}; charset=utf-8", $ctype))
                     .body($body);
             })
         };
     }
 
-    pub fn mock_server_setup<'a>() -> TestMocks<'a> {
-        let dict_listing = make_resp!(
-            "/contents/dictionaries",
-            "application/json",
-            fs::read_to_string("tests/files/dict_listing.json")
-                .unwrap()
-                .replace(r"{{ROOT_URL}}", &TEST_SERVER.base_url())
-        );
-
-        let de_at_listing = make_resp!(
-            "/contents/dictionaries/de-AT",
-            "application/json",
-            fs::read_to_string("tests/files/de_at_listing.json")
-                .unwrap()
-                .replace(r"{{ROOT_URL}}", &TEST_SERVER.base_url())
-        );
-
-        let de_at_aff = make_resp!(
-            "/main/dictionaries/de-AT/index.aff",
-            "text/plain",
-            CONTENT_AFF
-        );
-        let de_at_dic = make_resp!(
-            "/main/dictionaries/de-AT/index.dic",
-            "text/plain",
-            CONTENT_DIC
-        );
-        let de_at_lic = make_resp!(
-            "/main/dictionaries/de-AT/license",
-            "text/plain",
-            CONTENT_LIC
-        );
-
-        TestMocks {
-            dict_listing,
-            de_at_listing,
-            de_at_aff,
-            de_at_dic,
-            de_at_lic,
-        }
-    }
-
-    pub fn make_test_client() -> Client {
-        Client::builder()
-            .timeout(Duration::from_secs(5))
-            .user_agent(APP_USER_AGENT)
-            .build()
-            .unwrap()
+    /// Create mocks to be used. Just store these in a dictionary for easy lookup
+    pub fn mock_de_at_index<'a>() -> Vec<Mock<'a>> {
+        vec![
+            make_resp!(
+                INDEX_PATH,
+                "application/json",
+                include_str!("../tests/files/sample-index.json")
+                    .replace(r"{{ROOT_URL}}", &test_server().base_url())
+            ),
+            make_resp!("/dictionaries/de-AT/index.aff", "text/plain", CONTENT_AFF),
+            make_resp!("/dictionaries/de-AT/index.dic", "text/plain", CONTENT_DIC),
+            make_resp!("/dictionaries/de-AT/license", "text/plain", CONTENT_LIC),
+        ]
     }
 }

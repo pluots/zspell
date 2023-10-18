@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "updated": "2024-01-18T09:49:04Z",
+  "items": [
+    {
+      "lang": "de-AT",
+      "tags": [
+        "source-wooorm"
+      ],
+      "is_ext": false,
+      "id": "018d1bf7-22c1-7618-b42e-80592e77bc8a",
+      "fmt": "hunspell",
+      "aff": {
+        "urls": [
+          "{{ROOT_URL}}/dictionaries/de-AT/index.aff"
+        ],
+        "hash": "sha1:a464def0d8bb136f20012d431b60faae2cc915b5",
+        "size": 19199
+      },
+      "dic": {
+        "urls": [
+          "{{ROOT_URL}}/dictionaries/de-AT/index.dic"
+        ],
+        "hash": "sha1:eee2f5c4eddac4175d67c00bc808032b02058b5d",
+        "size": 1121822
+      },
+      "lic": {
+        "urls": [
+          "{{ROOT_URL}}/dictionaries/de-AT/license"
+        ],
+        "hash": "sha1:c4d083267263c478591c4856981f32f31690456d",
+        "size": 760
+      }
+    }
+  ]
+}
