@@ -166,7 +166,8 @@ jobs:
     - uses: messense/maturin-action@v1
       with:
         command: build
-        args: --release -o dist -i 3.7 3.8 3.9 3.10 3.11 3.12 --manifest-path zspell-py/Cargo.toml
+        # FIXME: python 3.12 not yet available on windows runners
+        args: --release -o dist -i 3.7 3.8 3.9 3.10 3.11 --manifest-path zspell-py/Cargo.toml
     - name: upload wheels
       uses: actions/upload-artifact@v2
       with:
