@@ -4,7 +4,7 @@
 use std::collections::BTreeMap;
 use std::fmt::Write;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 
 use pretty_assertions::assert_eq;
@@ -166,18 +166,13 @@ impl TestManager {
 
     /// Load a `TestManager` from a given file name. Assumes the file will be
     /// located in `zspell/tests/files`.
-    pub fn new_from_file(fname: &str) -> Self {
-        let mut fpath = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        fpath.pop();
-        fpath.push("tests");
-        fpath.push("managed");
-        fpath.push(fname);
-
-        let f_content = fs::read_to_string(&fpath)
-            .unwrap_or_else(|_| panic!("error reading file '{}'", fpath.to_string_lossy()));
+    pub fn new_from_file(path: impl AsRef<Path>) -> Self {
+        let path_str = path.as_ref().to_string_lossy();
+        let f_content =
+            fs::read_to_string(&path).unwrap_or_else(|_| panic!("error reading file '{path_str}'"));
 
         let mut ret = Self::new_from_str(&f_content);
-        ret.fname = fname.to_owned();
+        ret.fname = path_str.into_owned();
         ret
     }
 
