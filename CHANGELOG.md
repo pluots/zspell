@@ -4,6 +4,16 @@
 
 ## [Unreleased] - ReleaseDate
 
+### Added
+
+### Changed
+
+### Removed
+
+
+
+## [0.4.1] - 2023-10-18
+
 ### Changed
 
 - Change output directory to use cargo directory rather than source
@@ -164,7 +174,8 @@ Minor bups in the dependency list
 - Behind the scenes work to prepare for automatic dictionary location
 
 <!-- next-url -->
-[Unreleased]: https://github.com/pluots/zspell/compare/v0.4.0...HEAD
+[Unreleased]: https://github.com/pluots/zspell/compare/v0.4.1...HEAD
+[0.4.1]: https://github.com/pluots/zspell/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/pluots/zspell/compare/v0.3.3...v0.4.0
 [0.3.3]: https://github.com/pluots/zspell/compare/v0.3.2...v0.3.3
 [0.3.2]: https://github.com/pluots/zspell/compare/v0.3.1...v0.3.2
