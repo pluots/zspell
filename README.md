@@ -56,6 +56,8 @@ at some point.
 | ------------------------------ | --------------------- | ----------------- | ------------------------------------------------- |
 | Basic spellcheck functionality | ✓                     | ✓                 |                                                   |
 | Forbidden word handling        | ✓                     | ✓                 | [#17](https://github.com/pluots/zspell/issues/17) |
+| Stemming                       | ✓                     | ✓                 |                                                   |
+| Morph analysis                 | ✓                     | ✓                 |                                                   |
 | Suggestions                    | WIP                   | ✕                 | [#16](https://github.com/pluots/zspell/issues/16) |
 | Compound word handling         | ✕                     | ✕                 |                                                   |
 | Full Morph/Phone Handling      | WIP                   | ✕                 |                                                   |
@@ -73,9 +75,9 @@ spellcheckers.
 ## MSRV
 
 This library relies on features from Rust 1.65, so that is our current minimum
-supported version. Our CI validates this for the library, examples, and tests.
+supported version. Our CI validates this for the library and examples.
 
-Running benchmarks requires 1.66 or above for access to `std::hint::black_box`.
+The CLI and test runner require newer features and do not keep a specific MSRV.
 
 ## License
 
