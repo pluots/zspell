@@ -15,7 +15,11 @@ pub struct Cli {
 
     /// Whether to print misspelled words
     #[arg(short = 'l', long, default_value_t = false)]
-    pub list_misspelled: bool,
+    pub misspelled_words: bool,
+
+    /// Whether to print lines with misspelled words
+    #[arg(short = 'L', long, default_value_t = false)]
+    pub misspelled_lines: bool,
 
     /// Print the a compiled dictionary's word list to stdout and exit
     #[arg(long, default_value_t = false)]
@@ -23,7 +27,11 @@ pub struct Cli {
 
     /// Enable morpological analysis mode
     #[arg(short = 'm', long, default_value_t = false)]
-    pub morph_analysis: bool,
+    pub analyze: bool,
+
+    /// Enable word stemming mode
+    #[arg(short = 's', long, default_value_t = false)]
+    pub stem: bool,
 
     /// Print the search path and found dictionaries
     #[arg(short = 'D', long, default_value_t = false)]
@@ -35,6 +43,16 @@ pub struct Cli {
 
     #[command(subcommand)]
     pub command: Option<Commands>,
+}
+
+impl Cli {
+    pub fn validate(&self) -> Result<(), String> {
+        if self.analyze && self.stem {
+            Err("cannot use analysis and stemming together".into())
+        } else {
+            Ok(())
+        }
+    }
 }
 
 #[derive(Subcommand, Debug)]

@@ -38,22 +38,53 @@
 //!     .build()
 //!     .expect("failed to build dictionary!");
 //!
-//! // The `.check(str)` method is useful for quickly verifying entire strings
+//! // The `.check(&str)` method is useful for quickly verifying entire strings
 //! assert_eq!(dict.check("reptiles pillow: bananas"), true);
 //! assert_eq!(dict.check("well, I misspelled soemthing this tiem"), false);
 //!
-//! // Or use `.check_word(str)` to validate the input as a single word
+//! // Or use `.check_word(&str)` to validate the input as a single word
 //! assert_eq!(dict.check_word("okay"), true);
 //! assert_eq!(dict.check_word("okay okay"), false);
 //!
-//! // `.check_indices(str)` provides more useful information for anything other than trivial
+//! // `.check_indices(&str)` provides more useful information for anything other than trivial
 //! // checks. It returns an iterator over `(usize, &str)`, which gives the byte offset and
 //! // string reference of any spelling errors.
 //! let input = "okay, I misspelled soemthing this tiem";
 //! let errors: Vec<(usize, &str)> = dict.check_indices(input).collect();
 //! let expected = vec![(19, "soemthing"), (34, "tiem")];
-//!
 //! assert_eq!(errors, expected);
+//! ```
+//!
+//! There is also a powerful entry-based API that allows for stemming and analysis, as well as
+//! suggestions (which are currently unstable).
+//!
+//! ```
+//! # use std::fs;
+//! # use zspell::{DictBuilder, Dictionary};
+//! # let aff_content =
+//! #     fs::read_to_string("tests/files/w1_eng_short.aff").expect("failed to load config file");
+//! # let dic_content =
+//! #     fs::read_to_string("tests/files/w1_eng_short.dic").expect("failed to load wordlist file");
+//! # let dict: Dictionary = DictBuilder::new()
+//! #     .config_str(&aff_content)
+//! #     .dict_str(&dic_content)
+//! #     .build()
+//! #     .expect("failed to build dictionary!");
+//! let input = "bananas rusting";
+//! let mut entries = dict.entries(input);
+//!
+//! // We can use the entry API to do the standard checks (word position and correctness),
+//! // but also to find word roots.
+//! let banana_entry = entries.next().unwrap();
+//! let banana_stems: Vec<&str> = banana_entry.stems().unwrap().collect();
+//! assert_eq!(banana_entry.word(), "bananas");
+//! assert_eq!(banana_entry.index(), 0);
+//! assert_eq!(banana_entry.correct(), true);
+//! assert_eq!(banana_stems, ["bananas", "banana"]);
+//!
+//! let rust_entry = entries.next().unwrap();
+//! let rust_stems: Vec<&str> = rust_entry.stems().unwrap().collect();
+//! assert_eq!(rust_stems, ["rusting", "rust"]);
 //! ```
 //!
 //! See [`Dictionary`] and [`DictBuilder`] to get started.
@@ -68,8 +99,6 @@
 //!
 //! - `unstable-suggestions`: Needed for providing suggestions, this is
 //!   currently disabled because it is slow.
-//! - `unstable-stem`: Needed for stemming
-//! - `unstable-analysis`: Needed for morphological analysis
 //! - `unstable-system`: Needed for system interfaces like locating existing
 //!   dictionaries
 //! - `zspell-unstable`: Enable all of these options
@@ -88,7 +117,7 @@
 #![warn(clippy::str_to_string)]
 #![warn(clippy::missing_inline_in_public_items)]
 #![warn(clippy::disallowed_types)]
-#![allow(clippy::use_self)] // disabled because strum doesn't enforce it
+#![allow(clippy::use_self)]
 #![allow(clippy::match_same_arms)]
 #![allow(clippy::struct_excessive_bools)]
 #![allow(clippy::missing_panics_doc)]
@@ -112,7 +141,8 @@ pub mod system;
 
 pub(crate) use affix::ParsedCfg;
 pub use affix::PartOfSpeech;
-pub use dict::{DictBuilder, Dictionary, WordList};
+#[doc(inline)]
+pub use dict::{DictBuilder, Dictionary, WordEntry, WordList};
 #[doc(inline)]
 pub use error::Error;
 pub use morph::MorphInfo;

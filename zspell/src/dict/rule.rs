@@ -94,6 +94,10 @@ impl AfxRule {
             .enumerate()
             .filter_map(|(idx, pat)| pat.apply_pattern(stem, self.kind).map(|s| (idx, s)))
     }
+
+    pub(crate) fn patterns(&self) -> &[AfxRulePattern] {
+        &self.patterns
+    }
 }
 
 /// A single affix rule application
@@ -134,6 +138,10 @@ impl AfxRulePattern {
             Some(re) => re.is_match(s),
             None => true,
         }
+    }
+
+    pub(crate) fn morph_info(&self) -> &[Arc<MorphInfo>] {
+        &self.morph_info
     }
 
     // Verify the match condition and apply this rule
