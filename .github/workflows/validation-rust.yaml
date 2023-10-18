@@ -62,10 +62,13 @@ jobs:
           pwd
           ls
       - uses: dtolnay/rust-toolchain@stable
+      - name: Install nextest
+        uses: taiki-e/install-action@nextest
       - uses: Swatinem/rust-cache@v2
         with:
           key: ${{ matrix.os }}
-      - run: cargo test
+      - run: cargo nextest
+      - run: cargo test --doc
 
   fmt:
     name: formatting
