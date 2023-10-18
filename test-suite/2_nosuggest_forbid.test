@@ -1,26 +1,26 @@
 %% Verify our nosuggest anf forbid flags works
 
-==== afx_str ====
+==== afx ====
 NOSUGGEST !
 FORBIDDENWORD *
 
 SFX A Y 1
 SFX A   0     aaa       .
 
-==== dic_str ====
+==== dic ====
 nosuggest/A!
 forbid/A*
 nosuggest2/!
 forbid2/*
 ok
 
-==== check_valid ====
+==== valid ====
 nosuggest
 nosuggestaaa
 nosuggest2
 ok
 
-==== check_invalid ====
+==== invalid ====
 forbid
 forbidaaa
 forbid2
@@ -28,12 +28,12 @@ forbid2
 ==== wordlist ====
 ok
 
-==== wordlist_nosuggest ====
+==== nosuggest ====
 nosuggest
 nosuggestaaa
 nosuggest2
 
-==== wordlist_forbidden ====
+==== forbidden ====
 forbid
 forbidaaa
 forbid2

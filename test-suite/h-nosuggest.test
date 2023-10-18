@@ -1,0 +1,28 @@
+%% SPDX-License-Identifier: MPL-1.1
+%% https://github.com/hunspell/hunspell/blob/fbf0ce7e4737084fe84e733b031634f4a2c7559f/tests/nosuggest.aff
+
+==== afx ====
+# don't suggest word with NOSUGGEST flag (for example vulgar or obscene words)
+# See OpenOffice.org Issue #55498
+# (nosuggest.sug is an empty file)
+NOSUGGEST A
+COMPOUNDFLAG B
+
+==== dic ====
+1
+foo/AB
+bar/B
+
+==== valid ====
+foo
+%% FIXME:compound
+%% foobar
+%% barfoo
+
+==== invalid ====
+foox
+foobarx
+barfoox
+
+%% FIXME:suggestions
+%% ==== suggest ====

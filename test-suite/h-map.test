@@ -1,0 +1,4 @@
+%% SPDX-License-Identifier: MPL-1.1
+%% https://github.com/hunspell/hunspell/blob/fbf0ce7e4737084fe84e733b031634f4a2c7559f/tests/map.aff
+
+%% skipped because we really have no reason to not support utf8

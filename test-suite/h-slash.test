@@ -1,0 +1,22 @@
+%% SPDX-License-Identifier: MPL-1.1
+%% https://github.com/hunspell/hunspell/blob/fbf0ce7e4737084fe84e733b031634f4a2c7559f/tests/slash.aff
+
+==== afx ====
+# slashes in words (\/)
+
+# (only for tokenization)
+WORDCHARS /:
+
+==== dic ====
+4
+/
+1\/2
+http:\/\/
+\/usr\/share\/myspell\/
+
+==== valid ====
+/
+%% FIXME:dict-parser
+%% 1/2
+%% http://
+%% /usr/share/myspell/

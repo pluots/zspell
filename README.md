@@ -86,6 +86,11 @@ for proprietary use and adaptation; that being said, I kindly suggest that if
 you come up with an improvement, you submit a pull request and help us all out
 :)
 
+### Test suite license
+
+Some tests are taken from Hunspell's test suite. Hunspell has various licenses,
+we select MPL and include a SPDX notice on relevant files.
+
 ### Dictionary data license
 
 The dictionaries provided in this repository for testing purposed have been

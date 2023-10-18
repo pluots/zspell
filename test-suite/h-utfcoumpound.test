@@ -1,0 +1,35 @@
+%% SPDX-License-Identifier: MPL-1.1
+%% https://github.com/hunspell/hunspell/blob/fbf0ce7e4737084fe84e733b031634f4a2c7559f/tests/utfcompound.aff
+
+%% FIXME:compound
+%% ==== afx ====
+%% SET UTF-8
+%% COMPOUNDMIN 3
+%% COMPOUNDFLAG A
+%%
+%% ==== dic ====
+%% 8
+%% foo/A
+%% bar/A
+%% fóó/A
+%% áár/A
+%% xy/A
+%% yz/A
+%% éé/A
+%% őő/A
+%%
+%% ==== valid ====
+%% foobar
+%% barfoo
+%% foobarfoo
+%% fóóáár
+%% áárfóó
+%%
+%% ==== invalid ====
+%% xyyz
+%% fooxy
+%% xyfoo
+%% fooxybar
+%% ééőő
+%% fóóéé
+%% őőáár

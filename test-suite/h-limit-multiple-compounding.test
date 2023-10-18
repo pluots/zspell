@@ -1,0 +1,35 @@
+%% SPDX-License-Identifier: MPL-1.1
+%% https://github.com/hunspell/hunspell/blob/fbf0ce7e4737084fe84e733b031634f4a2c7559f/tests/limit-multiple-compounding.aff
+
+==== afx ====
+# "foo+bar" accepted, but not "foo+bar+baz"
+# because 3-or-more-word compounds got a typo check, i.e.
+# "foobarbaz" is rejected, because it is a typo of the dictionary word "goobarbaz"
+# (but not "foobar" as typo of the dictionary word "goobar")
+TRY esianrtolcdugmphbyfvkwz'
+COMPOUNDFLAG x
+
+==== dic ====
+3
+foo/x
+bar/x
+baz/x
+goobar
+goobarbaz
+
+%% FIXME:compound
+%% ==== valid ====
+%% foobar
+%% foobaz
+%% barfoo
+%% bazfoo
+%% barbaz
+%% bazbar
+%% foobazbar
+%% barfoobaz
+%% bazfoobar
+%% barbazfoo
+%% bazbarfoo
+
+==== invalid ====
+foobarbaz

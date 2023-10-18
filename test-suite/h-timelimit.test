@@ -1,0 +1,18 @@
+%% SPDX-License-Identifier: MPL-1.1
+%% https://github.com/hunspell/hunspell/blob/fbf0ce7e4737084fe84e733b031634f4a2c7559f/tests/timelimit.aff
+
+==== afx ====
+WORDCHARS 01
+COMPOUNDMIN 1
+COMPOUNDFLAG Y
+
+==== dic ====
+4
+0/Y
+00/Y
+000/Y
+1/Y
+
+%% FIXME:unknown
+%% ==== valid ====
+%% 1000000000000000000000

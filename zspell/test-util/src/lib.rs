@@ -4,7 +4,7 @@
 use std::collections::BTreeMap;
 use std::fmt::Write;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::sync::OnceLock;
 
 use pretty_assertions::assert_eq;
@@ -52,12 +52,12 @@ pub struct TestManager {
     check_valid: Vec<String>,
     /// These words/sentences will be checked
     check_invalid: Vec<String>,
-    wordlist: Vec<String>,
-    wordlist_nosuggest: Vec<String>,
-    wordlist_forbidden: Vec<String>,
+    wordlist: Option<Vec<String>>,
+    wl_nosuggest: Option<Vec<String>>,
+    wl_forbidden: Option<Vec<String>>,
     wordlist_allow_extra: bool,
-    wordlist_nosuggest_allow_extra: bool,
-    wordlist_forbidden_allow_extra: bool,
+    wl_nosuggest_allow_extra: bool,
+    wl_forbidden_allow_extra: bool,
     /// Map types
     suggestions: BTreeMap<String, Vec<String>>,
     stems: BTreeMap<String, Vec<String>>,
@@ -106,13 +106,13 @@ impl TestManager {
                 .collect();
 
             match sec_title {
-                "afx_str" => ret.afx_str = sec_content.to_owned(),
-                "dic_str" => ret.dic_str = sec_content.to_owned(),
-                "personal_str" => ret.personal_str = sec_content.to_owned(),
-                "check_valid" => ret.check_valid = lines_content,
-                "check_invalid" => ret.check_invalid = lines_content,
+                "afx" => ret.afx_str = sec_content.to_owned(),
+                "dic" => ret.dic_str = sec_content.to_owned(),
+                "personal" => ret.personal_str = sec_content.to_owned(),
+                "valid" => ret.check_valid = lines_content,
+                "invalid" => ret.check_invalid = lines_content,
                 "wordlist" => {
-                    ret.wordlist = lines_content;
+                    ret.wordlist = Some(lines_content);
                     for attr in sec_attrs {
                         if attr == "allow-extra" {
                             ret.wordlist_allow_extra = true;
@@ -121,31 +121,31 @@ impl TestManager {
                         }
                     }
                 }
-                "wordlist_nosuggest" => {
-                    ret.wordlist_nosuggest = lines_content;
+                "nosuggest" => {
+                    ret.wl_nosuggest = Some(lines_content);
                     for attr in sec_attrs {
                         if attr == "allow-extra" {
-                            ret.wordlist_nosuggest_allow_extra = true;
+                            ret.wl_nosuggest_allow_extra = true;
                         } else {
                             panic!("unknown attribute {attr}");
                         }
                     }
                 }
-                "wordlist_forbidden" => {
-                    ret.wordlist_forbidden = lines_content;
+                "forbidden" => {
+                    ret.wl_forbidden = Some(lines_content);
                     for attr in sec_attrs {
                         if attr == "allow-extra" {
-                            ret.wordlist_forbidden_allow_extra = true;
+                            ret.wl_forbidden_allow_extra = true;
                         } else {
                             panic!("unknown attribute {attr}");
                         }
                     }
                 }
-                "suggestions" => {
+                "suggest" => {
                     ret.suggestions =
                         parse_map(&sec_content).unwrap_or_else(|e| ret.panic_with_ctx(&e))
                 }
-                "stems" => {
+                "stem" => {
                     ret.stems = parse_map(&sec_content).unwrap_or_else(|e| ret.panic_with_ctx(&e))
                 }
                 "morph" => {
@@ -166,27 +166,30 @@ impl TestManager {
 
     /// Load a `TestManager` from a given file name. Assumes the file will be
     /// located in `zspell/tests/files`.
-    pub fn new_from_file(fname: &str) -> Self {
-        let mut fpath = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-        fpath.pop();
-        fpath.push("tests");
-        fpath.push("managed");
-        fpath.push(fname);
-
-        let f_content = fs::read_to_string(&fpath)
-            .unwrap_or_else(|_| panic!("error reading file '{}'", fpath.to_string_lossy()));
+    pub fn new_from_file(path: impl AsRef<Path>) -> Self {
+        let path_str = path.as_ref().to_string_lossy();
+        let f_content =
+            fs::read_to_string(&path).unwrap_or_else(|_| panic!("error reading file '{path_str}'"));
 
         let mut ret = Self::new_from_str(&f_content);
-        ret.fname = fname.to_owned();
+        ret.fname = path_str.into_owned();
         ret
     }
 
     pub fn panic_with_ctx(&self, msg: &str) -> ! {
-        panic!("{msg}. Collection:\n{self:#?}\n");
+        if std::env::var_os("SHOW_CTX").is_some() {
+            panic!("{msg}. Collection:\n{self:#?}\n");
+        } else {
+            panic!("{msg}");
+        }
     }
 
     pub fn panic_with_dict(&self, dict: &Dictionary, msg: &str) -> ! {
-        panic!("{msg}. Collection:\n{self:#?}\nDictionary:\n{dict:#?}\n");
+        if std::env::var_os("SHOW_DICT").is_some() {
+            panic!("{msg}. Collection:\n{self:#?}\nDictionary:\n{dict:#?}\n");
+        } else {
+            self.panic_with_ctx(msg);
+        }
     }
 
     /// Build the dictionary based on given input
@@ -215,32 +218,51 @@ impl TestManager {
 
     /// Validate all expected checks are correct
     fn run_check_valid_invalid(&self, dict: &Dictionary) {
-        for item in &self.check_valid {
-            assert!(
-                dict.check(item),
-                "'{item}' failed check (expected true) in {}",
+        let valid_failures: Vec<_> = self
+            .check_valid
+            .iter()
+            .filter(|item| !dict.check(item))
+            .collect();
+
+        let invalid_failures: Vec<_> = self
+            .check_invalid
+            .iter()
+            .filter(|item| dict.check(item))
+            .collect();
+
+        let mut valid_fail_msg = None;
+        let mut invalid_fail_msg = None;
+
+        if !valid_failures.is_empty() {
+            let msg = format!(
+                "valid check failed in '{}'. missing: {valid_failures:#?}\n",
                 self.fname
             );
-        }
-
-        if self.check_valid.is_empty() {
+            valid_fail_msg = Some(msg);
+        } else if self.check_valid.is_empty() {
             eprintln!("Skipped check_valid testing")
         } else {
-            eprintln!("Validated {} items as true", self.check_valid.len());
+            eprintln!("Verified {} items as true", self.check_valid.len());
         }
 
-        for item in &self.check_invalid {
-            assert!(
-                !dict.check(item),
-                "'{item}' failed check (expected false) in {}",
+        if !invalid_failures.is_empty() {
+            let msg = format!(
+                "invalid check failed in '{}'. missing: {invalid_failures:#?}\n",
                 self.fname
             );
-        }
-
-        if self.check_invalid.is_empty() {
+            invalid_fail_msg = Some(msg);
+        } else if self.check_invalid.is_empty() {
             eprintln!("Skipped check_invalid testing")
         } else {
-            eprintln!("Validated {} items as false", self.check_invalid.len());
+            eprintln!("Verified {} items as false", self.check_invalid.len());
+        }
+
+        if valid_fail_msg.is_some() || invalid_fail_msg.is_some() {
+            panic!(
+                "{}{}",
+                valid_fail_msg.unwrap_or_default(),
+                invalid_fail_msg.unwrap_or_default()
+            );
         }
     }
 
@@ -255,19 +277,24 @@ impl TestManager {
             ),
             (
                 "wordlist_nosuggest",
-                &self.wordlist_nosuggest,
-                self.wordlist_nosuggest_allow_extra,
+                &self.wl_nosuggest,
+                self.wl_nosuggest_allow_extra,
                 dict.wordlist_nosuggest(),
             ),
             (
                 "wordlist_forbidden",
-                &self.wordlist_forbidden,
-                self.wordlist_forbidden_allow_extra,
+                &self.wl_forbidden,
+                self.wl_forbidden_allow_extra,
                 dict.wordlist_forbidden(),
             ),
         ];
 
         for (name, expected_ref, allow_extra, actual_ref) in check_lists.into_iter() {
+            let Some(expected_ref) = expected_ref else {
+                eprintln!("skipping {name} test");
+                continue;
+            };
+
             let mut expected = expected_ref.clone();
             expected.sort_unstable();
 
@@ -329,7 +356,7 @@ impl TestManager {
             stem_exp.sort_unstable();
             assert_eq!(
                 stem_dict, stem_exp,
-                "failed stemming checks for '{}'",
+                "failed stemming checks for '{input}' in '{}'",
                 self.fname
             );
         }
@@ -351,7 +378,7 @@ impl TestManager {
             morph_exp.sort_unstable();
             assert_eq!(
                 morph_dict, morph_exp,
-                "failed morph checks for '{}'",
+                "failed morph checks for '{input}' in '{}'",
                 self.fname
             );
         }
@@ -375,15 +402,15 @@ impl TestManager {
     }
 
     pub fn wordlist(&self) -> &[String] {
-        &self.wordlist
+        self.wordlist.as_deref().unwrap_or_default()
     }
 
     pub fn wordlist_nosuggest(&self) -> &[String] {
-        &self.wordlist_nosuggest
+        self.wl_nosuggest.as_deref().unwrap_or_default()
     }
 
     pub fn wordlist_forbidden(&self) -> &[String] {
-        &self.wordlist_forbidden
+        self.wl_forbidden.as_deref().unwrap_or_default()
     }
 
     pub fn suggestions(&self) -> &BTreeMap<String, Vec<String>> {
@@ -427,7 +454,10 @@ fn parse_map(input: &str) -> Result<BTreeMap<String, Vec<String>>, String> {
         let Some((key, values)) = line.split_once('>') else {
             return Err(format!("bad mapping at line {idx} in:\n{input}"));
         };
-        let values = values.split('|').map(|s| s.trim().to_owned()).collect();
+        let values = values
+            .split_whitespace()
+            .map(|s| s.trim().to_owned())
+            .collect();
         map.insert(key.trim().into(), values);
     }
 

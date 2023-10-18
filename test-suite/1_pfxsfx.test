@@ -6,7 +6,7 @@
 %% - Combined prefix and suffix
 %% - Noncombining prefix and suffix
 
-==== afx_str ====
+==== afx ====
 SET UTF-8
 
 PFX A Y 1
@@ -22,7 +22,7 @@ PFX C   yy    ee         .
 PFX C   0     ff         .
 
 
-==== dic_str ====
+==== dic ====
 4
 xxx/A
 yyy/B
@@ -30,7 +30,7 @@ zzz/AB
 yyyy/AC
 
 
-==== check_valid ====
+==== valid ====
 xxx
 yyy
 zzz
@@ -48,7 +48,7 @@ eeyy
 ffyyyy
 
 
-==== check_invalid ====
+==== invalid ====
 %% Nothing to see here
 nothing
 
