@@ -11,15 +11,7 @@
 ### Removed
 
 
-
 ## [0.4.1] - 2023-10-18
-
-### Changed
-
-- Change output directory to use cargo directory rather than source
-
-
-## [0.4.0] - 2023-10-18
 
 ### Additions
 
@@ -31,6 +23,7 @@
 - Corrected error message for parsing affix headers
 - Corrected pattern matching for groups that include hyphens
 - Default no longer has a nosuggest flag
+- Change output directory to use cargo directory rather than source
 
 ### Changed
 
@@ -43,6 +36,10 @@
 - [internal] refactor test system to support stemming and morphological
   analysis
 
+
+## [0.4.0] - 2023-10-18
+
+Immediately superceded release, see 0.4.1.
 
 ## [0.3.3] - 2023-01-01
 
