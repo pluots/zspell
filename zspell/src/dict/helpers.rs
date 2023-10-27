@@ -6,64 +6,93 @@ use super::rule::AfxRule;
 use super::WordList;
 use crate::dict::types::{Meta, Source};
 
-// pub(super) fn analyze_flags
+/// A rule that may be combined with another
+type PossibleCombination<'a> = (String, &'a Arc<AfxRule>, usize);
 
+/// For a given stem, find all prefix and suffix rules that can apply, and store them
+/// to a wordlist.
+///
+/// Also finds words
+#[allow(clippy::similar_names)] // thinks pfx and sfx are too similar
 pub(super) fn create_affixed_word_map(
-    prefix_rules: &[&Arc<AfxRule>],
-    suffix_rules: &[&Arc<AfxRule>],
+    pfx_rules: &[&Arc<AfxRule>],
+    sfx_rules: &[&Arc<AfxRule>],
     stem: &str,
-    stem_rc: &Arc<str>,
+    stem_arc: &Arc<str>,
     dest: &mut WordList,
 ) -> bool {
-    if prefix_rules.is_empty() && suffix_rules.is_empty() {
+    assert_eq!(stem, stem_arc.as_ref());
+    if pfx_rules.is_empty() && sfx_rules.is_empty() {
         return false;
     }
 
     // Store words with prefixes that can also have suffixes
-    let mut prefixed_words: Vec<(String, &Arc<AfxRule>, usize)> = Vec::new();
+    let mut pfxd_maybe_sfx: Vec<PossibleCombination> = Vec::new();
     let mut rule_found = false;
 
-    for &rule in prefix_rules {
-        for (idx, result) in rule.apply_patterns(stem) {
-            let meta = Meta::new(stem_rc.clone(), Source::Affix(rule.clone()));
-            let meta_vec = dest.0.entry_ref(result.as_str()).or_insert_with(Vec::new);
-            meta_vec.push(meta);
+    for &pfx_rule in pfx_rules {
+        // Locate matching prefix rules
+        for (pat_idx, prefixed) in pfx_rule.apply_patterns(stem) {
+            store_applied_pattern(stem_arc, pfx_rule, pat_idx, &prefixed, dest);
+
             rule_found = true;
 
-            if rule.can_combine() {
-                prefixed_words.push((result, rule, idx));
+            // Save rules that can have a prefix and a suffix
+            if pfx_rule.can_combine() {
+                pfxd_maybe_sfx.push((prefixed, pfx_rule, pat_idx));
             }
         }
     }
 
-    for &rule in suffix_rules {
-        for (_idx, result) in rule.apply_patterns(stem) {
-            let meta = Meta::new(stem_rc.clone(), Source::Affix(rule.clone()));
-            let meta_vec = dest.0.entry_ref(result.as_str()).or_insert_with(Vec::new);
-            meta_vec.push(meta);
+    for &sfx_rule in sfx_rules {
+        // Locate matching prefix rules
+        for (pat_idx, suffixed) in sfx_rule.apply_patterns(stem) {
+            store_applied_pattern(stem_arc, sfx_rule, pat_idx, &suffixed, dest);
             rule_found = true;
 
-            if rule.can_combine() {
-                // Find words where there's both a prefix and suffix applicable
-                let words_iter = prefixed_words
-                    .iter()
-                    .flat_map(|(tmp_res, pfx_rule, idx_pfx)| {
-                        rule.apply_patterns(tmp_res)
-                            .map(move |(idx_sfx, newword)| (newword, pfx_rule, idx_pfx, idx_sfx))
-                    });
-
-                for (newword, &pfx_rule, _idx_pfx, _idx_sfx) in words_iter {
-                    let meta_vec = dest.0.entry_ref(newword.as_str()).or_insert_with(Vec::new);
-                    let meta1 = Meta::new(stem_rc.clone(), Source::Affix(rule.clone()));
-                    let meta2 = Meta::new(stem_rc.clone(), Source::Affix(pfx_rule.clone()));
-                    meta_vec.push(meta1);
-                    meta_vec.push(meta2);
-                }
+            if sfx_rule.can_combine() {
+                apply_combo_words(stem_arc, &pfxd_maybe_sfx, sfx_rule, dest);
             }
         }
     }
 
     rule_found
+}
+
+/// Create meta and store an applied pattern to a wordlist
+fn store_applied_pattern(
+    stem_arc: &Arc<str>, // stem word
+    rule: &Arc<AfxRule>, // rule that was applied
+    pat_idx: usize,      // index of the relevant pattern within the rule
+    affixed: &str,       // affixed (created) word
+    dest: &mut WordList, // store the result here
+) {
+    // Create metadata for this application
+    let meta = Meta::new(Arc::clone(stem_arc), Source::new_affix(rule, pat_idx));
+
+    // Add this entry to the wordlist or update an existing one
+    let meta_vec = dest.0.entry_ref(affixed).or_default();
+    meta_vec.push(meta);
+}
+
+/// Given a list of words that are eligible for combinations, check if a rule applies. If
+/// so, save it to the word list
+fn apply_combo_words(
+    stem_arc: &Arc<str>,
+    pfxd_maybe_sfx: &[PossibleCombination],
+    rule: &Arc<AfxRule>,
+    dest: &mut WordList,
+) {
+    for (prefixed, pfx_rule, pfx_idx) in pfxd_maybe_sfx {
+        for (sfx_idx, new_word) in rule.apply_patterns(prefixed) {
+            let meta_vec = dest.0.entry_ref(new_word.as_str()).or_insert_with(Vec::new);
+
+            let meta1 = Meta::new(stem_arc.clone(), Source::new_affix(pfx_rule, *pfx_idx));
+            let meta2 = Meta::new(stem_arc.clone(), Source::new_affix(rule, sfx_idx));
+            meta_vec.push(meta1);
+            meta_vec.push(meta2);
+        }
+    }
 }
 
 /// Segment words by unicode boundaries.
