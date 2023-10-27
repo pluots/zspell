@@ -120,6 +120,7 @@ fn test_update_personal() {
 }
 
 #[test]
+#[cfg(not(miri))] // slow!
 fn test_builder() {
     let aff_content = fs::read_to_string("tests/files/w1_eng_short.aff").unwrap();
     let dic_content = fs::read_to_string("tests/files/w1_eng_short.dic").unwrap();

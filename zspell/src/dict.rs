@@ -93,6 +93,7 @@ impl Dictionary {
     /// correctly, returns `true` if so.
     ///
     /// ```
+    /// # #![cfg(not(miri))]
     /// use std::fs;
     ///
     /// use zspell::DictBuilder;
@@ -117,6 +118,7 @@ impl Dictionary {
     /// Check that a single word is spelled correctly, returns `true` if so
     ///
     /// ```
+    /// # #![cfg(not(miri))]
     /// use std::fs;
     ///
     /// use zspell::DictBuilder;
@@ -151,6 +153,7 @@ impl Dictionary {
     /// user.
     ///
     /// ```
+    /// # #![cfg(not(miri))]
     /// use std::fs;
     ///
     /// use zspell::DictBuilder;

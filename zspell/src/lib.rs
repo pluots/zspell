@@ -21,6 +21,7 @@
 //! Usage will typically look like the following:
 //!
 //! ```
+//! # #![cfg(not(miri))]
 //! use std::fs;
 //!
 //! use zspell::{DictBuilder, Dictionary};
@@ -59,6 +60,8 @@
 //! suggestions (which are currently unstable).
 //!
 //! ```
+//! # #![cfg(not(miri))]
+//!
 //! # use std::fs;
 //! # use zspell::{DictBuilder, Dictionary};
 //! # let aff_content =
