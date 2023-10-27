@@ -1,0 +1,9 @@
+%% Test with only a personal dictionary
+
+==== personal ====
+foo
+bar
+
+==== valid ====
+foo
+bar

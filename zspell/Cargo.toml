@@ -115,3 +115,9 @@ replace = """\
   [Unreleased]: https://github.com/pluots/zspell/compare/{{tag_name}}...HEAD\
   """
 exactly = 1
+
+[[package.metadata.release.pre-release-replacements]]
+file = "../book-src/installation.md"
+search = "zspell = .*"
+replace = "zspell = \"{{version}}\""
+exactly = 1

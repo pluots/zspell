@@ -2,7 +2,6 @@
 name = "zspell-cli"
 version = "0.4.1"
 edition = "2021"
-publish = false
 rust-version = "1.70"
 
 # Note: this is symlinked from top level
