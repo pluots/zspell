@@ -4,7 +4,7 @@ use unicode_segmentation::UnicodeSegmentation;
 
 use super::rule::AfxRule;
 use super::WordList;
-use crate::dict::types::{Meta, Source};
+use crate::dict::meta::{Meta, Source};
 
 /// A rule that may be combined with another
 type PossibleCombination<'a> = (String, &'a Arc<AfxRule>, usize);

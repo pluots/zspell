@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use crate::affix_parse::RuleType;
+use super::RuleType;
 use crate::error::ParseErrorKind;
 use crate::helpers::{compile_re_pattern, ReWrapper};
 use crate::morph::MorphInfo;

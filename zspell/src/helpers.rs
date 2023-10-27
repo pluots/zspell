@@ -1,6 +1,7 @@
 //! Various functions that are helpful throughout the crate
 
 use core::fmt::Display;
+use std::borrow::Cow;
 use std::hash::Hash;
 use std::ops::Deref;
 use std::rc::Rc;
@@ -94,5 +95,14 @@ impl Equivalent<Rc<str>> for StrWrapper<'_> {
 impl Equivalent<Arc<str>> for StrWrapper<'_> {
     fn equivalent(&self, key: &Arc<str>) -> bool {
         self.0 == key.as_ref()
+    }
+}
+
+#[allow(unused)]
+pub fn replace_cow<'a>(s: &'a str, from: char, to: &str) -> Cow<'a, str> {
+    if s.contains(from) {
+        Cow::Owned(s.replace(from, to))
+    } else {
+        Cow::Borrowed(s)
     }
 }

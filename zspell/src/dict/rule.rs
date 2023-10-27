@@ -4,9 +4,9 @@ use std::hash::Hash;
 use std::sync::Arc;
 
 use crate::affix::{ParsedCfg, RuleType};
+use crate::affix_parse::ParsedRuleGroup;
 use crate::helpers::ReWrapper;
 use crate::morph::MorphInfo;
-use crate::parser_affix::ParsedRuleGroup;
 
 /// A single rule group
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]

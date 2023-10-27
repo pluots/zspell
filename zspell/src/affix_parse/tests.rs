@@ -241,7 +241,7 @@ fn test_full_parse() {
         AffixNode::Phonetic(vec![Phonetic::new("abcd", "1234")]),
     ];
 
-    assert_eq!(parse_affix(SAMPLE_AFX_OK), Ok(expected));
+    assert_eq!(affix_from_str(SAMPLE_AFX_OK), Ok(expected));
 }
 
 #[test]
@@ -255,5 +255,5 @@ fn test_large_file_parse() {
         return;
     };
 
-    assert!(parse_affix(&aff_content).is_ok());
+    assert!(affix_from_str(&aff_content).is_ok());
 }

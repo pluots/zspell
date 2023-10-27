@@ -9,9 +9,9 @@ pub use self::types::{
     CompoundPattern, CompoundSyllable, Conversion, Encoding, FlagType, PartOfSpeech, Phonetic,
     RuleType,
 };
+use crate::affix_parse::{affix_from_str, AffixNode, ParsedRuleGroup};
 use crate::dict::{AfxRule, FlagValue};
 use crate::error::{BuildError, Error, ParseError};
-use crate::parser_affix::{parse_affix, AffixNode, ParsedRuleGroup};
 
 /// A representation of an affix file
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -253,7 +253,7 @@ impl ParsedCfg {
     /// invalid
     #[inline]
     pub fn load_from_str(s: &str) -> Result<Self, Error> {
-        Self::from_parsed(parse_affix(s)?)
+        Self::from_parsed(affix_from_str(s)?)
     }
 
     #[allow(clippy::unnecessary_wraps)]

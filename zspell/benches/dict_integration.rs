@@ -2,7 +2,7 @@ use std::fs;
 use std::hint::black_box;
 
 use criterion::{criterion_group, criterion_main, Criterion};
-use zspell::bench::{parse_affix, parse_dict, FlagType};
+use zspell::bench::{affix_from_str, DictEntry, FlagType};
 use zspell::{DictBuilder, Dictionary};
 
 const TEXT: &str = "A Hare was mking fun of the Tortoise one day for being so slow.
@@ -80,12 +80,14 @@ pub fn bench_parsers(c: &mut Criterion) {
     let dic_content = fs::read_to_string("../dictionaries/en_US.dic").unwrap();
 
     c.bench_function("Parse affix file", |b| {
-        b.iter(|| black_box(parse_affix(black_box(&aff_content)).unwrap()))
+        b.iter(|| black_box(affix_from_str(black_box(&aff_content)).unwrap()))
     });
 
     c.bench_function("Parse dict file", |b| {
         b.iter(|| {
-            black_box(parse_dict(black_box(&dic_content), black_box(FlagType::Utf8)).unwrap())
+            black_box(
+                DictEntry::parse_all(black_box(&dic_content), black_box(FlagType::Utf8)).unwrap(),
+            )
         })
     });
 }

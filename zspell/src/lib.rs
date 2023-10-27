@@ -131,12 +131,12 @@
 #![allow(clippy::derive_partial_eq_without_eq)]
 
 mod affix;
+mod affix_parse;
 mod dict;
 pub mod error;
 mod helpers;
 mod meta;
 mod morph;
-mod parser_affix;
 mod suggestions;
 
 #[cfg(feature = "unstable-system")]
@@ -154,6 +154,6 @@ pub use morph::MorphInfo;
 #[cfg(feature = "unstable-bench")]
 pub mod bench {
     pub use super::affix::FlagType;
-    pub use super::dict::parse_dict;
-    pub use super::parser_affix::parse_affix;
+    pub use super::affix_parse::affix_from_str;
+    pub use super::dict::DictEntry;
 }

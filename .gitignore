@@ -2,6 +2,7 @@
 dictionaries/*.dic
 dictionaries/*.aff
 dictionaries/*.license
+dictionaries/scowl*
 tests/files/odyssey.txt
 /book
 .docker-cargo

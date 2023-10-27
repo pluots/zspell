@@ -178,9 +178,9 @@ impl ParseError {
     }
 
     #[inline]
-    pub(crate) fn new_nocol<T>(err: ParseErrorKind, ctx: &str, line: T) -> Self
+    pub(crate) fn new_nocol<L>(err: ParseErrorKind, ctx: &str, line: L) -> Self
     where
-        T: TryInto<u32> + Display + Copy,
+        L: TryInto<u32> + Display + Copy,
     {
         Self::new(err, ctx, convertu32(line), 0)
     }

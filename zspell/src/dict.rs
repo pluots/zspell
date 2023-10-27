@@ -1,10 +1,10 @@
 //! Main datastructure module with entrypoints for checking
 
 mod flags;
-mod helpers;
-mod parser;
+mod meta;
+mod parse;
 mod rule;
-mod types;
+mod util;
 
 use std::collections::BTreeMap;
 use std::sync::Arc;
@@ -14,11 +14,11 @@ use stringmetrics::try_levenshtein;
 use unicode_segmentation::UnicodeSegmentation;
 
 pub use self::flags::FlagValue;
-use self::helpers::{create_affixed_word_map, word_splitter};
-pub use self::parser::{parse_dict, DictEntry};
-use self::parser::{parse_personal_dict, PersonalEntry};
+use self::meta::{Meta, PersonalMeta, Source};
+pub use self::parse::DictEntry;
+use self::parse::PersonalEntry;
 pub use self::rule::AfxRule;
-use self::types::{Meta, PersonalMeta, Source};
+use self::util::{create_affixed_word_map, word_splitter};
 use crate::affix::FlagType;
 use crate::error::{BuildError, Error};
 use crate::helpers::StrWrapper;
@@ -345,7 +345,7 @@ impl Dictionary {
     /// Update the internal wordlist and forbidden wordlist from a dictionary
     /// file string
     fn parse_update_wordlist(&mut self, source: &str) -> Result<(), Error> {
-        let entries = parse_dict(source, self.flag_type)?;
+        let entries = DictEntry::parse_all(source, self.flag_type)?;
         self.update_wordlist(&entries)
     }
 
@@ -366,15 +366,15 @@ impl Dictionary {
     }
 
     fn parse_update_personal(&mut self, source: &str, dict: &[DictEntry]) -> Result<(), Error> {
-        let entries = parse_personal_dict(source)?;
-        self.update_personal(&entries, dict)
+        let entries = PersonalEntry::parse_all(source);
+        self.update_personal(entries, dict)
     }
 
     /// Must happen after `update_wordlist`
     #[allow(clippy::unnecessary_wraps)]
     fn update_personal(
         &mut self,
-        entries: &[PersonalEntry],
+        entries: Vec<PersonalEntry>,
         _dict: &[DictEntry],
     ) -> Result<(), Error> {
         // FIXME: don't take `dict` as an argument, use our existing hashmaps
@@ -385,16 +385,13 @@ impl Dictionary {
                 // let flags = dict.iter().find(|d| &d.stem() == friend).map(|d| &d.flags);
                 todo!()
             } else {
-                let stem_arc: Arc<str> = self
-                    .stems
-                    .get_or_insert_with(entry.stem.as_str(), |stem| Arc::from(stem))
-                    .clone();
+                let stem_arc: Arc<str> = self.stems.get_or_insert(entry.stem).clone();
 
                 let source = Source::Personal(Box::new(PersonalMeta::new(
                     None,
                     self.get_or_insert_morphs(&entry.morph),
                 )));
-                let meta = Meta::new(stem_arc, source);
+                let meta = Meta::new(Arc::clone(&stem_arc), source);
 
                 // Select the correct word to work with
                 let hmap = if entry.forbid {
@@ -405,7 +402,7 @@ impl Dictionary {
 
                 // Add our word, update its meta
                 let extra_vec: &mut Vec<Meta> = hmap
-                    .entry_ref(entry.stem.as_str())
+                    .entry_ref(stem_arc.as_ref())
                     .or_insert_with(|| Vec::with_capacity(1));
                 extra_vec.push(meta);
             }
