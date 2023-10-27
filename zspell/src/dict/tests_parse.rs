@@ -18,12 +18,12 @@ fn test_dict_entry_ok() {
     let s7 = "abcd ip:m1 tp:m2";
     let s8 = "abcd ip:m1 tp:m2 # comment";
 
-    let r1 = DictEntry::new("abcd", &[], Vec::new());
-    let r2 = DictEntry::new("abcd", &['A' as u32, 'B' as u32, 'C' as u32], Vec::new());
+    let r1 = DictEntry::new("abcd", &[], &[]);
+    let r2 = DictEntry::new("abcd", &['A' as u32, 'B' as u32, 'C' as u32], &[]);
     let r3 = DictEntry::new(
         "abcd",
         &['A' as u32, 'B' as u32, 'C' as u32],
-        vec![
+        &[
             MorphInfo::InflecPfx("m1".into()),
             MorphInfo::TermPfx("m2".into()),
         ],
@@ -31,7 +31,7 @@ fn test_dict_entry_ok() {
     let r4 = DictEntry::new(
         "abcd",
         &[],
-        vec![
+        &[
             MorphInfo::InflecPfx("m1".into()),
             MorphInfo::TermPfx("m2".into()),
         ],

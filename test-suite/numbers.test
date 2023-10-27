@@ -30,7 +30,6 @@ SFX 10 0 000 . is:thousands
 900
 
 ==== morph ====
-%% FIXME:dict-parser should have po:number
-%% 900 > po:number
+9 > po:number
 10 > is:tens
 600 > is:hundreds

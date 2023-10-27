@@ -7,6 +7,7 @@ mod types;
 
 use std::num::ParseIntError;
 use std::str::FromStr;
+use std::sync::Arc;
 
 use lazy_static::lazy_static;
 pub use node::AffixNode;
@@ -245,9 +246,9 @@ where
                 let strip = line_groups.name("strip_chars").unwrap().as_str();
                 let affix = line_groups.name("affix").unwrap().as_str();
                 let cond = line_groups.name("condition").unwrap().as_str();
-                let morph_info = line_groups
-                    .name("morph")
-                    .map_or_else(Vec::new, |m| MorphInfo::many_from_str(m.as_str()));
+                let morph_info = line_groups.name("morph").map_or_else(Vec::new, |m| {
+                    MorphInfo::many_from_str(m.as_str()).map(Arc::new).collect()
+                });
 
                 let push = ParsedRule::new_parse(kind, affix, strip, cond, morph_info)
                     .map_err(|e| ParseError::new_nocol(e, cond, nlines))?;

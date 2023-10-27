@@ -284,7 +284,7 @@ impl Dictionary {
     /// Return type is vector of `(new_word, rule, second_rule)` where
     /// `second_rule` is available if both a prefix and a suffix were applied
     // PERF: benchmark taking a vec reference instead of returning
-    fn create_affixed_words(&mut self, stem: &str, flags: &[u32], _morph: &[MorphInfo]) {
+    fn create_affixed_words(&mut self, stem: &str, flags: &[u32], morph: &[Arc<MorphInfo>]) {
         let mut prefix_rules = Vec::new();
         let mut suffix_rules = Vec::new();
 
@@ -332,7 +332,7 @@ impl Dictionary {
 
         if add_stem {
             // TODO: fix location for this, add morph
-            let meta = Meta::new(stem.clone(), Source::Dict(Box::default()));
+            let meta = Meta::new(stem.clone(), Source::Dict(morph.into()));
             let meta_vec = dest.0.entry_ref(stem.as_ref()).or_insert_with(Vec::new);
             meta_vec.push(meta);
         }

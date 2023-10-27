@@ -22,17 +22,17 @@ use crate::morph::MorphInfo;
 pub struct DictEntry {
     pub(super) stem: Arc<str>,
     pub(super) flags: Vec<u32>,
-    pub(super) morph: Vec<MorphInfo>,
+    pub(super) morph: Vec<Arc<MorphInfo>>,
 }
 
 impl DictEntry {
     /// Test config: create a new `DictEntry`
     #[cfg(test)]
-    pub(crate) fn new(stem: &str, flags: &[u32], morph: Vec<MorphInfo>) -> Self {
+    pub(crate) fn new(stem: &str, flags: &[u32], morph: &[MorphInfo]) -> Self {
         Self {
             stem: stem.into(),
             flags: flags.to_owned(),
-            morph,
+            morph: morph.iter().map(|v| Arc::new(v.clone())).collect(),
         }
     }
 
@@ -46,7 +46,9 @@ impl DictEntry {
                 .map_err(|e| ParseError::new_nocol(e, s, line_num))?,
             None => Vec::new(),
         };
-        let morph = MorphInfo::many_from_str(morphstr.trim());
+        let morph = MorphInfo::many_from_str(morphstr.trim())
+            .map(Arc::new)
+            .collect();
         let ret = Self {
             stem: stem.trim().into(),
             flags,
@@ -130,7 +132,7 @@ impl PersonalEntry {
         let (stem, friend, morphstr) = separate_into_parts(value);
         let forbid = stem.starts_with('*');
         let stem = stem.strip_prefix('*').unwrap_or(stem);
-        let morph = MorphInfo::many_from_str(morphstr);
+        let morph = MorphInfo::many_from_str(morphstr).collect();
 
         Self {
             stem: stem.trim().into(),

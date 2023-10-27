@@ -45,8 +45,8 @@ impl MorphInfo {
     /// ```
     #[inline]
     #[allow(clippy::unnecessary_wraps)]
-    pub(crate) fn many_from_str(s: &str) -> Vec<Self> {
-        s.split_whitespace().map(MorphInfo::from).collect()
+    pub(crate) fn many_from_str(s: &str) -> impl Iterator<Item = Self> + '_ {
+        s.split_whitespace().map(MorphInfo::from)
         // FIXME:dict-parser we should be able to handle the hungarian dictionary that
         // has entries like this:
         // üzletág/UmôŇyiYcÇ       üzletágak
@@ -154,7 +154,7 @@ mod tests {
     fn morph_string_ok() {
         let input = "st:stem ip:abcd pa:xyz    st:some-stem\tal:def";
         let output = MorphInfo::many_from_str(input);
-        let expected = vec![
+        let expected = [
             MorphInfo::Stem("stem".into()),
             MorphInfo::InflecPfx("abcd".into()),
             MorphInfo::CompPart("xyz".into()),
@@ -162,6 +162,6 @@ mod tests {
             MorphInfo::Allomorph("def".into()),
         ];
 
-        assert_eq!(output, expected);
+        assert_eq!(&output.collect::<Vec<_>>(), &expected);
     }
 }

@@ -54,11 +54,7 @@ impl AfxRule {
         };
 
         for rule in &group.rules {
-            let morph_info: Vec<Arc<MorphInfo>> = rule
-                .morph_info
-                .iter()
-                .map(|m| Arc::new(m.clone()))
-                .collect();
+            let morph_info: Vec<Arc<MorphInfo>> = rule.morph_info.clone();
 
             ret.patterns.push(AfxRulePattern {
                 affix: rule.affix.as_str().into(),

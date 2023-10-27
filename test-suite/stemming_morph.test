@@ -17,7 +17,5 @@ drinkable > drinkable drink
 Drinkable > drinkable drink
 
 ==== morph ====
-%% FIXME:dict-parser
-%% drink > po:verb
-%% drinkable > po:verb ds:able
-drinkable > ds:able
+drink > po:verb
+drinkable > po:verb ds:able

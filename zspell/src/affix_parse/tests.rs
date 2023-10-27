@@ -211,12 +211,12 @@ fn test_full_parse() {
                     None,
                     None,
                     vec![
-                        MorphInfo::Part(PartOfSpeech::Verb),
-                        MorphInfo::Stem("foot".into()),
-                        MorphInfo::InflecSfx("ay".into()),
-                        MorphInfo::Other("other:foo".into()),
-                        MorphInfo::Other("otherfoo".into()),
-                        MorphInfo::Part(PartOfSpeech::Other("xyz".into())),
+                        MorphInfo::Part(PartOfSpeech::Verb).into(),
+                        MorphInfo::Stem("foot".into()).into(),
+                        MorphInfo::InflecSfx("ay".into()).into(),
+                        MorphInfo::Other("other:foo".into()).into(),
+                        MorphInfo::Other("otherfoo".into()).into(),
+                        MorphInfo::Part(PartOfSpeech::Other("xyz".into())).into(),
                     ],
                 )
                 .unwrap(),
