@@ -618,7 +618,9 @@ impl<'dict, 'word> WordEntry<'dict, 'word> {
         let WordCtx::Correct { meta_list, .. } = self.context else {
             return None;
         };
-        let ret = meta_list.iter().flat_map(|meta| meta.source().morphs());
+        let ret = meta_list
+            .iter()
+            .flat_map(|meta| dbg!(meta).source().morphs());
         Some(ret)
     }
 

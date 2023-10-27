@@ -1,0 +1,34 @@
+%% Based on https://github.com/pluots/zspell/issues/71
+
+==== afx ====
+FLAG num
+SFX 10 Y 3
+SFX 10 0 0 . is:tens
+SFX 10 0 00 . is:hundreds
+SFX 10 0 000 . is:thousands
+
+==== dic ====
+10
+0 po:number
+1/10 po:number
+2/10 po:number
+3/10 po:number
+4/10 po:number
+5/10 po:number
+6/10 po:number
+7/10 po:number
+8/10 po:number
+9/10 po:number
+
+==== valid ====
+1
+10
+100
+1000
+9
+90
+900
+
+%% ==== morph ====
+%% FIXME:dict-parser should have po:number
+%% FIXME:afx-morph 900 > po:number

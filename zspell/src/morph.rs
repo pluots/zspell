@@ -1,12 +1,10 @@
 //! Types and implementation of morphological analysis
 
 use std::fmt;
-use std::str::FromStr;
 
 use crate::affix::PartOfSpeech;
-use crate::error::{ParseError, ParseErrorKind};
 
-/// Morphographical information about a word, used by analysis methods
+/// Morphological information about a word, used by analysis methods
 #[non_exhaustive]
 #[derive(Clone, Debug, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub enum MorphInfo {
@@ -34,6 +32,9 @@ pub enum MorphInfo {
     SurfacePfx(MorphStr),
     /// `pa:` parts of compound words
     CompPart(MorphStr),
+    /// Any unrecognized tag. This will be stored as written (e.g. `foo:bar` is stored as
+    /// `foo:bar`, not just `bar`).
+    Other(MorphStr),
 }
 
 impl MorphInfo {
@@ -44,35 +45,28 @@ impl MorphInfo {
     /// ```
     #[inline]
     #[allow(clippy::unnecessary_wraps)]
-    pub(crate) fn many_from_str(s: &str) -> Result<Vec<Self>, ParseError> {
-        let mut res = Vec::new();
-        for morph in s.split_whitespace() {
-            if let Ok(v) = MorphInfo::from_str(morph) {
-                res.push(v);
-            }
-            // FIXME: we should be able to handle the hungarian dictionary that
-            // has entries like this:
-            // üzletág/UmôŇyiYcÇ       üzletágak
-            // but I am not sure what that means if it is not morph info...
-            // res.push(MorphInfo::try_from(morph).map_err(|e| ParseError::new_nospan(e, morph))?);
-        }
-        Ok(res)
+    pub(crate) fn many_from_str(s: &str) -> Vec<Self> {
+        s.split_whitespace().map(MorphInfo::from).collect()
+        // FIXME:dict-parser we should be able to handle the hungarian dictionary that
+        // has entries like this:
+        // üzletág/UmôŇyiYcÇ       üzletágak
+        // but I am not sure what that means if it is not morph info...
+        // res.push(MorphInfo::try_from(morph).map_err(|e| ParseError::new_nospan(e, morph))?);
     }
 }
 
-impl FromStr for MorphInfo {
-    type Err = ParseErrorKind;
-
+impl From<&str> for MorphInfo {
     #[inline]
-    fn from_str(value: &str) -> Result<Self, Self::Err> {
-        let (tag, val) = value
-            .split_once(':')
-            .ok_or_else(|| ParseErrorKind::MorphInfoDelim(value.to_owned()))?;
-        let ret = match tag {
+    fn from(value: &str) -> Self {
+        let Some((tag, val)) = value.split_once(':') else {
+            return Self::Other(value.into());
+        };
+
+        match tag {
             "st" => Self::Stem(val.into()),
             "ph" => Self::Phonetic(val.into()),
             "al" => Self::Allomorph(val.into()),
-            "po" => Self::Part(val.parse()?),
+            "po" => Self::Part(val.into()),
             "ds" => Self::DerivSfx(val.into()),
             "is" => Self::InflecSfx(val.into()),
             "ts" => Self::TerminalSfx(val.into()),
@@ -81,9 +75,8 @@ impl FromStr for MorphInfo {
             "tp" => Self::TermPfx(val.into()),
             "sp" => Self::SurfacePfx(val.into()),
             "pa" => Self::CompPart(val.into()),
-            _ => return Err(ParseErrorKind::MorphInvalidTag(tag.to_owned())),
-        };
-        Ok(ret)
+            _ => Self::Other(value.into()),
+        }
     }
 }
 
@@ -103,6 +96,7 @@ impl fmt::Display for MorphInfo {
             MorphInfo::TermPfx(v) => write!(f, "tp:{v}"),
             MorphInfo::SurfacePfx(v) => write!(f, "sp:{v}"),
             MorphInfo::CompPart(v) => write!(f, "pa:{v}"),
+            MorphInfo::Other(v) => write!(f, "{v}"),
         }
     }
 }
@@ -148,14 +142,11 @@ mod tests {
             ("st:stem", MorphInfo::Stem("stem".into())),
             ("ip:abc", MorphInfo::InflecPfx("abc".into())),
             ("pa:xyz", MorphInfo::CompPart("xyz".into())),
+            ("foo:xyz", MorphInfo::Other("foo:xyz".into())),
         ];
 
         for (input, expected) in tests {
-            assert_eq!(
-                MorphInfo::from_str(input),
-                Ok(expected),
-                "failure parsing {input}"
-            );
+            assert_eq!(MorphInfo::from(input), expected, "failure parsing {input}");
         }
     }
 
@@ -171,6 +162,6 @@ mod tests {
             MorphInfo::Allomorph("def".into()),
         ];
 
-        assert_eq!(output, Ok(expected));
+        assert_eq!(output, expected);
     }
 }

@@ -7,6 +7,7 @@ use lazy_static::lazy_static;
 use regex::Regex;
 
 use crate::error::ParseErrorKind;
+use crate::morph::MorphStr;
 
 lazy_static! {
     static ref RE_COMPOUND_PATTERN: Regex = Regex::new(
@@ -202,6 +203,8 @@ pub enum PartOfSpeech {
     Preposition,
     Conjunction,
     Interjection,
+    /// Other parts of speech that don't have formal specifiers
+    Other(MorphStr),
 }
 
 /// Representation of the `PHONE` rule
@@ -381,12 +384,10 @@ impl TryFrom<&str> for CompoundSyllable {
     }
 }
 
-impl FromStr for PartOfSpeech {
-    type Err = ParseErrorKind;
-
+impl From<&str> for PartOfSpeech {
     #[inline]
-    fn from_str(value: &str) -> Result<Self, Self::Err> {
-        let ret = match value.to_lowercase().as_str() {
+    fn from(value: &str) -> Self {
+        match value.to_lowercase().as_str() {
             "noun" => Self::Noun,
             "verb" => Self::Verb,
             "adjective" => Self::Adjective,
@@ -396,9 +397,8 @@ impl FromStr for PartOfSpeech {
             "preposition" => Self::Preposition,
             "conjunction" => Self::Conjunction,
             "interjection" => Self::Interjection,
-            _ => return Err(ParseErrorKind::PartOfSpeech(value.to_owned())),
-        };
-        Ok(ret)
+            val => Self::Other(val.into()),
+        }
     }
 }
 
@@ -415,6 +415,7 @@ impl fmt::Display for PartOfSpeech {
             PartOfSpeech::Preposition => write!(f, "preposition"),
             PartOfSpeech::Conjunction => write!(f, "conjunction"),
             PartOfSpeech::Interjection => write!(f, "interjection"),
+            PartOfSpeech::Other(v) => write!(f, "{v}"),
         }
     }
 }
