@@ -9,6 +9,9 @@
 ### Changed
 
 - Add support for nonstandard morphological information types.
+- Fix issue where all morph information for an affix rule were being reported,
+  rather than just that for the relevant pattern. Fixes
+  [#73](https://github.com/pluots/zspell/issues/73).
 
 ### Removed
 

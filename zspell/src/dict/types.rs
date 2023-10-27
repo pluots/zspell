@@ -1,8 +1,6 @@
 use std::borrow::Borrow;
 use std::sync::Arc;
 
-use itertools::Either;
-
 use super::rule::AfxRule;
 use crate::morph::MorphInfo;
 
@@ -51,7 +49,12 @@ impl Meta {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Source {
     /// this meta came from an affix and has a full affix rule
-    Affix(Arc<AfxRule>),
+    Affix {
+        /// the full rule that created this
+        rule: Arc<AfxRule>,
+        /// index of the relevant pattern within the rule
+        pat_idx: usize,
+    },
     /// this meta came from a .dic file, only contains morphinfo
     Dict(Box<[Arc<MorphInfo>]>),
     /// this meta came from the personal dictionary
@@ -63,22 +66,23 @@ pub enum Source {
 
 impl Source {
     /// Iterate through all morph info available
-    // https://github.com/rust-lang/rust-clippy/issues/11680
-    #[allow(clippy::iter_on_empty_collections)]
     pub fn morphs(&self) -> impl Iterator<Item = &MorphInfo> {
         match self {
-            Source::Affix(rule) => {
-                let iter = rule
-                    .patterns()
-                    .iter()
-                    .flat_map(|pat| pat.morph_info().iter());
-                Either::Left(iter)
-            }
-            Source::Dict(v) => Either::Right(v.as_ref().iter()),
-            Source::Personal(v) => Either::Right(v.morph.iter()),
-            Source::Raw => Either::Right([].iter()),
+            Source::Affix { rule, pat_idx } => rule.patterns()[*pat_idx].morph_info(),
+            Source::Dict(v) => v.as_ref(),
+            Source::Personal(v) => v.morph.as_ref(),
+            Source::Raw => &[],
         }
+        .iter()
         .map(AsRef::as_ref)
+    }
+
+    /// Helper to create an `Affix` source when the `Arc` already exists
+    pub(crate) fn new_affix(rule: &Arc<AfxRule>, pat_idx: usize) -> Self {
+        Self::Affix {
+            rule: Arc::clone(rule),
+            pat_idx,
+        }
     }
 }
 
