@@ -63,7 +63,7 @@ impl AfxRule {
             ret.patterns.push(AfxRulePattern {
                 affix: rule.affix.as_str().into(),
                 condition: rule.condition.clone(),
-                strip: rule.strip.as_ref().map(|s| Box::from(s.as_str())),
+                strip: rule.strip.as_ref().map(Arc::clone),
                 morph_info,
             });
         }
@@ -107,7 +107,7 @@ pub struct AfxRulePattern {
     /// Condition to be met to apply this rule.
     condition: Option<ReWrapper>,
     /// Characters to strip
-    strip: Option<Box<str>>,
+    strip: Option<Arc<str>>,
     /// Associated morph info
     morph_info: Vec<Arc<MorphInfo>>,
 }

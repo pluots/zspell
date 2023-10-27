@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use crate::error::ParseErrorKind;
 use crate::helpers::{compile_re_pattern, ReWrapper};
 use crate::morph::MorphInfo;
@@ -27,7 +29,7 @@ pub struct ParsedRule {
     /// Affix to be added
     pub(crate) affix: String,
     /// Characters to remove from the beginning or end
-    pub(crate) strip: Option<String>,
+    pub(crate) strip: Option<Arc<str>>,
     /// Regex-based rule for when this rule is true. `None` indicates `.`, i.e.,
     /// always true
     pub(crate) condition: Option<ReWrapper>,
@@ -50,7 +52,7 @@ impl ParsedRule {
         };
 
         Ok(Self {
-            strip: strip.map(ToOwned::to_owned),
+            strip: strip.map(Into::into),
             affix: affix.to_owned(),
             condition: cond_re,
             morph_info,
@@ -72,7 +74,7 @@ impl ParsedRule {
         };
 
         Ok(Self {
-            strip: strip.map(ToOwned::to_owned),
+            strip: strip.map(Into::into),
             affix: affix.to_owned(),
             condition: cond_re,
             morph_info,
@@ -91,7 +93,7 @@ impl ParsedRule {
         let strip_chars = if strip == "0" {
             None
         } else {
-            Some(strip.to_owned())
+            Some(strip.into())
         };
 
         Ok(Self {

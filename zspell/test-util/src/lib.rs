@@ -153,7 +153,7 @@ impl TestManager {
                     // Turn string morph indicators into MorphInfo
                     ret.morphs = tmp
                         .into_iter()
-                        .map(|(k, v)| (k, v.into_iter().map(|v| v.parse().unwrap()).collect()))
+                        .map(|(k, v)| (k, v.into_iter().map(|v| v.as_str().into()).collect()))
                         .collect();
                 }
                 "end" => break,

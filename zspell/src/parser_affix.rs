@@ -245,11 +245,9 @@ where
                 let strip = line_groups.name("strip_chars").unwrap().as_str();
                 let affix = line_groups.name("affix").unwrap().as_str();
                 let cond = line_groups.name("condition").unwrap().as_str();
-                let morph_info = if let Some(m) = line_groups.name("morph") {
-                    parse_morph_info(m.as_str(), nlines)?
-                } else {
-                    Vec::new()
-                };
+                let morph_info = line_groups
+                    .name("morph")
+                    .map_or_else(Vec::new, |m| MorphInfo::many_from_str(m.as_str()));
 
                 let push = ParsedRule::new_parse(kind, affix, strip, cond, morph_info)
                     .map_err(|e| ParseError::new_nocol(e, cond, nlines))?;
@@ -295,15 +293,6 @@ fn parse_xprod(s: &str) -> Result<bool, ParseError> {
         "n" => Ok(false),
         _ => Err(ParseError::new_nospan(ParseErrorKind::AffixCrossProduct, s)),
     }
-}
-
-fn parse_morph_info(s: &str, nlines: u32) -> Result<Vec<MorphInfo>, ParseError> {
-    let mut ret = Vec::new();
-    for minfo in s.split_whitespace() {
-        ret.push(MorphInfo::from_str(minfo).map_err(|e| ParseError::new_nocol(e, minfo, nlines))?);
-    }
-
-    Ok(ret)
 }
 
 /// Find the next newline, and skip to the character after. Ignores comments,

@@ -90,11 +90,9 @@ impl DictEntry {
             None => Vec::new(),
         };
 
-        let morph = if let Some(morphstr) = caps.name("morph") {
-            MorphInfo::many_from_str(morphstr.as_str())?
-        } else {
-            Vec::new()
-        };
+        let morph = caps.name("morph").map_or_else(Vec::new, |morphstr| {
+            MorphInfo::many_from_str(morphstr.as_str())
+        });
 
         Ok(Self { stem, flags, morph })
     }
@@ -154,11 +152,9 @@ impl PersonalEntry {
         let forbid = caps.name("forbid").is_some();
         let stem = caps.name("stem").unwrap().as_str().to_owned();
         let friend = caps.name("friend").map(|m| m.as_str().to_owned());
-        let morph = if let Some(morphstr) = caps.name("morph") {
-            MorphInfo::many_from_str(morphstr.as_str())?
-        } else {
-            Vec::new()
-        };
+        let morph = caps.name("morph").map_or_else(Vec::new, |morphstr| {
+            MorphInfo::many_from_str(morphstr.as_str())
+        });
 
         Ok(Self {
             stem,

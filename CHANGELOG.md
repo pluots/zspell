@@ -8,8 +8,9 @@
 
 ### Changed
 
-### Removed
+- Add support for nonstandard morphological information types.
 
+### Removed
 
 ## [0.4.1] - 2023-10-18
 
@@ -27,15 +28,13 @@
 
 ### Changed
 
-- Remove features `unstable-analysis` and `unstable-stem` since functionality
-  is now public
+- Remove features `unstable-analysis` and `unstable-stem` since functionality is
+  now public
 - Wordlist now correctly applies more than one affix rule if it is available
 - Moved `DictBuilder::config` behind `zspell-unstable`
 - [build] update CI workflows
 - [internal] make some changes from `TryFrom` to `FromStr`
-- [internal] refactor test system to support stemming and morphological
-  analysis
-
+- [internal] refactor test system to support stemming and morphological analysis
 
 ## [0.4.0] - 2023-10-18
 
@@ -47,20 +46,17 @@ Immediately superceded release, see 0.4.1.
 
 - [build] update python release workflow
 
-
 ## [0.3.2] - 2023-01-01
 
 ### Changed
 
-- `.dic` parser now ignores lines that start with a tab (sometimes used for comments)
+- `.dic` parser now ignores lines that start with a tab (sometimes used for
+  comments)
 - Updated python documentation
-
-
 
 ## [0.3.1] - 2022-12-30
 
 Minor patch to build system workflow
-
 
 ## [0.3.0] - 2022-12-30
 
@@ -94,18 +90,16 @@ very unstable until those feature gates are removed.
 - System tools. These were previously public but have been moved behind the
   feature gate.
 
-
 ## [0.2.2] - 2022-11-04
 
 Minor bups in the dependency list
-
 
 ## [0.2.1] - 2022-11-04
 
 ### Changes
 
-- Changed word breaking to use unicode segmentation, as suggested by @saona-raimundo
-
+- Changed word breaking to use unicode segmentation, as suggested by
+  @saona-raimundo
 
 ## [0.2.0] - 2022-11-04
 
@@ -119,7 +113,6 @@ Minor bups in the dependency list
 
 - Rename helper CLI and py crates (only relevant within this project)
 
-
 ## [0.1.4] - 2022-08-17
 
 ### Additions
@@ -132,14 +125,11 @@ Minor bups in the dependency list
 - Better reserve & shrink vectors and hash sets to save a small ammount of
   overhead
 
-
 ## [0.1.3] - 2022-08-16
 
 ### Changes
 
 - Correction to output generation
-
-
 
 ## [0.1.2] - 2022-08-16
 
@@ -151,15 +141,11 @@ Minor bups in the dependency list
 
 - Updated binary output configuration
 
-
-
 ## [0.1.1] - 2022-07-25
 
 ### Changes
 
 - Updated wheel release configuration
-
-
 
 ## [0.1.0] - 2022-07-25
 
@@ -171,6 +157,7 @@ Minor bups in the dependency list
 - Behind the scenes work to prepare for automatic dictionary location
 
 <!-- next-url -->
+
 [Unreleased]: https://github.com/pluots/zspell/compare/v0.4.1...HEAD
 [0.4.1]: https://github.com/pluots/zspell/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/pluots/zspell/compare/v0.3.3...v0.4.0

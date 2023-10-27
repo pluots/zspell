@@ -154,7 +154,7 @@ fn test_table_parser_ok() {
 #[test]
 fn test_afx_table_parser_err() {
     // check line offset count
-    let s = "PFX A N 2\nPFX A a b x .\nPFX A 0 c a";
+    let s = "PFX A N 2\nPFX 10 a b x .\nPFX A 0 c a";
     let res = parse_prefix(s);
     assert_eq!(res.unwrap_err().span().unwrap(), &Span::new(1, 0));
 }
@@ -171,7 +171,7 @@ ONLYINCOMPOUND C
 WORDCHARS 01234
 # comment
 PFX A N 2
-PFX A   0     ar   .    po:verb st:foot is:ay
+PFX A   0     ar   .    po:verb st:foot is:ay other:foo otherfoo po:xyz
 PFX A   0     br   a
 
 SFX B Y 2
@@ -214,6 +214,9 @@ fn test_full_parse() {
                         MorphInfo::Part(PartOfSpeech::Verb),
                         MorphInfo::Stem("foot".into()),
                         MorphInfo::InflecSfx("ay".into()),
+                        MorphInfo::Other("other:foo".into()),
+                        MorphInfo::Other("otherfoo".into()),
+                        MorphInfo::Part(PartOfSpeech::Other("xyz".into())),
                     ],
                 )
                 .unwrap(),
