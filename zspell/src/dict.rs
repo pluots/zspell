@@ -93,6 +93,7 @@ impl Dictionary {
     /// correctly, returns `true` if so.
     ///
     /// ```
+    /// # #![cfg(not(miri))]
     /// use std::fs;
     ///
     /// use zspell::DictBuilder;
@@ -117,6 +118,7 @@ impl Dictionary {
     /// Check that a single word is spelled correctly, returns `true` if so
     ///
     /// ```
+    /// # #![cfg(not(miri))]
     /// use std::fs;
     ///
     /// use zspell::DictBuilder;
@@ -151,6 +153,7 @@ impl Dictionary {
     /// user.
     ///
     /// ```
+    /// # #![cfg(not(miri))]
     /// use std::fs;
     ///
     /// use zspell::DictBuilder;
@@ -618,9 +621,7 @@ impl<'dict, 'word> WordEntry<'dict, 'word> {
         let WordCtx::Correct { meta_list, .. } = self.context else {
             return None;
         };
-        let ret = meta_list
-            .iter()
-            .flat_map(|meta| dbg!(meta).source().morphs());
+        let ret = meta_list.iter().flat_map(|meta| meta.source().morphs());
         Some(ret)
     }
 

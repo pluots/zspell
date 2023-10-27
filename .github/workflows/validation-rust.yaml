@@ -77,6 +77,28 @@ jobs:
         with:
           files: lcov.info
 
+  miri:
+    name: Miri
+    runs-on: ubuntu-latest
+    env:
+      # Can't interact with files in isolation
+      MIRIFLAGS: -Zmiri-disable-isolation
+    steps:
+      - uses: actions/checkout@v2
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: miri
+      - name: Install nextest
+        uses: taiki-e/install-action@nextest
+      - uses: Swatinem/rust-cache@v2
+      - name: Run Miri
+        # Miri is _slow_ for our use case, only run a few comprehensive tests
+        run: |
+          cargo miri nextest run -p zspell -E '
+            test(=test_stemming_morph) +
+            test(=test_pfxsfx) +
+            test(=test_nosuggest_forbid)'
+
   fmt:
     name: formatting
     runs-on: ubuntu-latest
