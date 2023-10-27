@@ -77,6 +77,29 @@ jobs:
         with:
           files: lcov.info
 
+  sanitizers:
+    name: Test with leak sanitizer
+    runs-on: ubuntu-latest
+    env:
+      # Can't interact with files in isolation
+      RUSTFLAGS: -Zsanitizer=leak
+    steps:
+      - uses: actions/checkout@v2
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rust-src
+      - name: Install nextest
+        uses: taiki-e/install-action@nextest
+      - uses: Swatinem/rust-cache@v2
+      - run: >
+          cargo nextest run -p zspell
+          --target=x86_64-unknown-linux-gnu
+          -Zbuild-std
+      - run: >
+          cargo test -p zspell --doc
+          --target=x86_64-unknown-linux-gnu
+          -Zbuild-std
+
   miri:
     name: Miri
     runs-on: ubuntu-latest
@@ -93,11 +116,11 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Run Miri
         # Miri is _slow_ for our use case, only run a few comprehensive tests
-        run: |
+        run: >
           cargo miri nextest run -p zspell -E '
             test(=test_stemming_morph) +
-            test(=test_pfxsfx) +
-            test(=test_nosuggest_forbid)'
+            test(=test_pfxsfx)
+          '
 
   fmt:
     name: formatting
