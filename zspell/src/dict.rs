@@ -288,7 +288,7 @@ impl Dictionary {
         let mut prefix_rules = Vec::new();
         let mut suffix_rules = Vec::new();
 
-        let stem_rc: &Arc<str> = self
+        let stem: &Arc<str> = self
             .stems
             .get_or_insert_with(&StrWrapper::new(stem), |sw: &StrWrapper| Arc::from(sw.0));
 
@@ -332,12 +332,12 @@ impl Dictionary {
 
         if add_stem {
             // TODO: fix location for this, add morph
-            let meta = Meta::new(stem_rc.clone(), Source::Dict(Box::default()));
-            let meta_vec = dest.0.entry_ref(stem).or_insert_with(Vec::new);
+            let meta = Meta::new(stem.clone(), Source::Dict(Box::default()));
+            let meta_vec = dest.0.entry_ref(stem.as_ref()).or_insert_with(Vec::new);
             meta_vec.push(meta);
         }
 
-        create_affixed_word_map(&prefix_rules, &suffix_rules, stem, stem_rc, dest);
+        create_affixed_word_map(&prefix_rules, &suffix_rules, stem, dest);
         prefix_rules.clear();
         suffix_rules.clear();
     }

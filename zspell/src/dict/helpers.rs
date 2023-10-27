@@ -17,11 +17,9 @@ type PossibleCombination<'a> = (String, &'a Arc<AfxRule>, usize);
 pub(super) fn create_affixed_word_map(
     pfx_rules: &[&Arc<AfxRule>],
     sfx_rules: &[&Arc<AfxRule>],
-    stem: &str,
-    stem_arc: &Arc<str>,
+    stem: &Arc<str>,
     dest: &mut WordList,
 ) -> bool {
-    assert_eq!(stem, stem_arc.as_ref());
     if pfx_rules.is_empty() && sfx_rules.is_empty() {
         return false;
     }
@@ -33,7 +31,7 @@ pub(super) fn create_affixed_word_map(
     for &pfx_rule in pfx_rules {
         // Locate matching prefix rules
         for (pat_idx, prefixed) in pfx_rule.apply_patterns(stem) {
-            store_applied_pattern(stem_arc, pfx_rule, pat_idx, &prefixed, dest);
+            store_applied_pattern(stem, pfx_rule, pat_idx, &prefixed, dest);
 
             rule_found = true;
 
@@ -47,11 +45,11 @@ pub(super) fn create_affixed_word_map(
     for &sfx_rule in sfx_rules {
         // Locate matching prefix rules
         for (pat_idx, suffixed) in sfx_rule.apply_patterns(stem) {
-            store_applied_pattern(stem_arc, sfx_rule, pat_idx, &suffixed, dest);
+            store_applied_pattern(stem, sfx_rule, pat_idx, &suffixed, dest);
             rule_found = true;
 
             if sfx_rule.can_combine() {
-                apply_combo_words(stem_arc, &pfxd_maybe_sfx, sfx_rule, dest);
+                apply_combo_words(stem, &pfxd_maybe_sfx, sfx_rule, dest);
             }
         }
     }
@@ -172,7 +170,7 @@ mod tests {
         for (i, (word, pfxs, sfxs, expected_slice)) in conditions.iter().enumerate() {
             let mut dest = WordList::new();
             let stem_rc = Arc::from(*word);
-            create_affixed_word_map(pfxs, sfxs, &stem_rc, &stem_rc, &mut dest);
+            create_affixed_word_map(pfxs, sfxs, &stem_rc, &mut dest);
 
             let tmp: Vec<(Box<str>, _)> = dest.0.into_iter().collect();
             let mut result: Vec<_> = tmp.iter().map(|(s, _)| s.as_ref()).collect();
