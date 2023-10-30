@@ -2,12 +2,20 @@
 name = "zspell-cli"
 version = "0.4.1"
 edition = "2021"
-publish = false
+publish = true
+description = "Command line interface for the ZSpell spellchecking library"
 rust-version = "1.70"
+
 
 # Note: this is symlinked from top level
 readme = "README.md"
 license-file = "LICENSE"
+
+documentation = "https://docs.rs/zspell"
+repository = "https://github.com/pluots/zspell"
+
+keywords = ["spellcheck", "spelling", "cli"]
+categories = ["algorithms", "text-processing", "command-line-utilities"]
 
 # Required to make name "zspell" instead of "zspell-cli"
 [[bin]]
@@ -29,7 +37,7 @@ stringmetrics = "2.2"
 termcolor = "1.3.0"
 tokio = "1.33.0"
 anyhow = "1.0.75"
-zspell = { path = "../zspell", features = ["zspell-unstable"] }
+zspell = { path = "../zspell", version = "0.4.1", features = ["zspell-unstable"] }
 
 [dev-dependencies]
 criterion = "0.5"
@@ -47,3 +55,10 @@ clap_complete = "4.4"
 
 [package.metadata.release]
 shared-version = true
+allow-branch = ["main", "release"]
+
+[[package.metadata.release.pre-release-replacements]]
+file = "Cargo.toml"
+# Need \d match so we don't accidentally match our pattern here
+search = 'zspell = \{ path = "../zspell", version = "[\d\.]*", features = \["zspell-unstable"\] \}'
+replace = 'zspell = { path = "../zspell", version = "{{version}}", features = ["zspell-unstable"] }'

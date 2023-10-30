@@ -4,6 +4,11 @@
 
 ## [Unreleased] - ReleaseDate
 
+### Additions
+
+Publish the work in progress command line interface under crate name
+`zspell-cli`.
+
 ### Changed
 
 - Add support for nonstandard morphological information types.
