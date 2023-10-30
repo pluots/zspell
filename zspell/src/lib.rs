@@ -24,7 +24,7 @@
 //! # #![cfg(not(miri))]
 //! use std::fs;
 //!
-//! use zspell::{DictBuilder, Dictionary};
+//! use zspell::Dictionary;
 //!
 //! // This example just uses some shortened files. Load them to a string
 //! let aff_content =
@@ -33,7 +33,7 @@
 //!     fs::read_to_string("tests/files/w1_eng_short.dic").expect("failed to load wordlist file");
 //!
 //! // Use the builder pattern to create our `Dictionary` object
-//! let dict: Dictionary = DictBuilder::new()
+//! let dict: Dictionary = zspell::builder()
 //!     .config_str(&aff_content)
 //!     .dict_str(&dic_content)
 //!     .build()
@@ -63,12 +63,12 @@
 //! # #![cfg(not(miri))]
 //!
 //! # use std::fs;
-//! # use zspell::{DictBuilder, Dictionary};
+//! # use zspell::Dictionary;
 //! # let aff_content =
 //! #     fs::read_to_string("tests/files/w1_eng_short.aff").expect("failed to load config file");
 //! # let dic_content =
 //! #     fs::read_to_string("tests/files/w1_eng_short.dic").expect("failed to load wordlist file");
-//! # let dict: Dictionary = DictBuilder::new()
+//! # let dict: Dictionary = zspell::builder()
 //! #     .config_str(&aff_content)
 //! #     .dict_str(&dic_content)
 //! #     .build()
@@ -154,4 +154,21 @@ pub use morph::{MorphInfo, MorphStr};
 pub mod bench {
     pub use super::affix::{affix_from_str, FlagType};
     pub use super::dict::DictEntry;
+}
+
+/// Create a new [`DictBuilder`] instance (shortcut for [`DictBuilder::new`])
+#[inline]
+pub fn builder<'a>() -> DictBuilder<'a> {
+    DictBuilder::new()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_builder() {
+        // grumble grumble, our coverage doesn't catch doctests so we do a special test here
+        let _b = builder();
+    }
 }
