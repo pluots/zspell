@@ -1,6 +1,6 @@
 [package]
 name = "zspell"
-version = "0.4.1"
+version = "0.5.0"
 edition = "2021"
 authors = ["Trevor Gross <tmgross@umich.edu>"]
 description = "Native Rust library for spellchecking"
