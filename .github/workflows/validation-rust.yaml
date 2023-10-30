@@ -25,7 +25,7 @@ jobs:
           components: clippy
       - uses: Swatinem/rust-cache@v2
       - run: cargo clippy --all-features --all-targets -- -D warnings
-      - run: cargo clippy --no-default-features --all-targets --features benchmarking -- -D warnings
+      - run: cargo clippy --no-default-features --all-targets --features unstable-bench -- -D warnings
 
   min_versions:
     name: check minimum rustc version
@@ -39,7 +39,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         # check only zspell; we can use later for the CLI
       - run: cargo check -p zspell --all-features
-      - run: cargo check -p zspell --no-default-features --features benchmarking
+      - run: cargo check -p zspell --no-default-features --features unstable-bench
 
   test:
     strategy:

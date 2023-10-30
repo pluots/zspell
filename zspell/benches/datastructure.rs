@@ -55,7 +55,7 @@ static STR_REF: &str = "SOMETHING";
 /// Load lines from a file
 /// Strip the affix "/" directive
 fn lines_loader() -> Vec<String> {
-    let file = File::open("../../dictionaries/en_US.dic").unwrap();
+    let file = File::open("../dictionaries/en_US.dic").unwrap();
     let lines = io::BufReader::new(file).lines();
 
     let mut v: Vec<String> = Vec::new();
