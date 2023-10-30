@@ -161,14 +161,3 @@ pub mod bench {
 pub fn builder<'a>() -> DictBuilder<'a> {
     DictBuilder::new()
 }
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_builder() {
-        // grumble grumble, our coverage doesn't catch doctests so we do a special test here
-        let _b = builder();
-    }
-}
