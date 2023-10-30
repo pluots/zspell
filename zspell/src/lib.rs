@@ -83,11 +83,11 @@
 //! assert_eq!(banana_entry.word(), "bananas");
 //! assert_eq!(banana_entry.index(), 0);
 //! assert_eq!(banana_entry.correct(), true);
-//! assert_eq!(banana_stems, ["bananas", "banana"]);
+//! assert_eq!(banana_stems, ["banana"]);
 //!
 //! let rust_entry = entries.next().unwrap();
 //! let rust_stems: Vec<&str> = rust_entry.stems().unwrap().collect();
-//! assert_eq!(rust_stems, ["rusting", "rust"]);
+//! assert_eq!(rust_stems, ["rust"]);
 //! ```
 //!
 //! See [`Dictionary`] and [`DictBuilder`] to get started.

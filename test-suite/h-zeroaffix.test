@@ -1,37 +1,35 @@
 %% SPDX-License-Identifier: MPL-1.1
 %% https://github.com/hunspell/hunspell/blob/fbf0ce7e4737084fe84e733b031634f4a2c7559f/tests/zeroaffix.aff
-%%
-%% FIXME:dict-parser
-%%
-%% ==== afx ====
-%% PSEUDOROOT X
-%% COMPOUNDFLAG Y
-%%
-%% SFX A Y 1
-%% SFX A 0 0 . >
-%%
-%% SFX B Y 1
-%% SFX B 0 0 . <ZERO>>
-%%
-%% SFX C Y 2
-%% SFX C 0 0/XAB . <ZERODERIV>
-%% SFX C 0 baz/XAB . <DERIV>
-%%
-%% ==== dic ====
-%% 2
-%% foo/XA	<FOO
-%% bar/XABC	<BAR
-%%
-%% ==== valid ====
-%% bar
-%% foo
+
+==== afx ====
+PSEUDOROOT X
+COMPOUNDFLAG Y
+SFX A Y 1
+SFX A 0 0 . >
+SFX B Y 1
+SFX B 0 0 . <ZERO>>
+SFX C Y 2
+SFX C 0 0/XAB . <ZERODERIV>
+SFX C 0 baz/XAB . <DERIV>
+
+==== dic ====
+2
+foo/XA	<FOO
+bar/XABC	<BAR
+
+==== valid ====
+bar
+foo
+
+%% FIXME: compount
 %% barbaz
-%%
-%% ==== stem ====
-%% foo > foo
-%% bar > bar
+
+==== stem ====
+foo > foo
+bar > bar
+
+%% FIXME: compount
 %% barbaz > bar
-%%
 
 %% ==== morph ====
 %% > bar

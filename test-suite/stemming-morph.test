@@ -13,8 +13,10 @@ drink/X po:verb
 ==== stem ====
 %% mice > mouse | miced
 drink > drink
-drinkable > drinkable drink
-Drinkable > drinkable drink
+
+%% FIXME: hunspell lists these as `> drinkable`, not `> drink`. Why?
+drinkable > drink
+Drinkable > drink
 
 ==== morph ====
 drink > po:verb

@@ -557,12 +557,12 @@ impl<'dict, 'word> WordEntry<'dict, 'word> {
     ///
     /// let entry = dict.entry("drinkable");
     /// let stems: Vec<_> = entry.stems().unwrap().collect();
-    /// assert_eq!(stems, ["drinkable", "drink"]);
+    /// assert_eq!(stems, ["drink"]);
     ///
     /// // Should be the same with capital letters
     /// let entry = dict.entry("Drinkable");
     /// let stems: Vec<_> = entry.stems().unwrap().collect();
-    /// assert_eq!(stems, ["drinkable", "drink"]);
+    /// assert_eq!(stems, ["drink"]);
     /// ```
     #[inline]
     pub fn stems(&self) -> Option<impl Iterator<Item = &str>> {
@@ -588,7 +588,7 @@ impl<'dict, 'word> WordEntry<'dict, 'word> {
             stem.chain(morph_stems)
         });
         // remove self because we will include that at the beginning
-        let ret = ret.filter(move |value| value != &matched);
+        // let ret = ret.filter(move |value| value != &matched);
         // deduplicate
         let ret = ret.filter(move |value| {
             let hash = xxh32(value.as_bytes(), 0);
@@ -599,7 +599,6 @@ impl<'dict, 'word> WordEntry<'dict, 'word> {
                 true
             }
         });
-        let ret = std::iter::once(matched).chain(ret);
         Some(ret)
     }
 
@@ -625,21 +624,16 @@ impl<'dict, 'word> WordEntry<'dict, 'word> {
     ///     .build()
     ///     .unwrap();
     ///
-    /// # // FIXME:dict-parser our dictionary parser doesn't extract prefixes properly
-    /// # // our file contains information that we have a verb part of speech
-    /// # // and a derivational suffix
-    /// # let verb_pos = MorphInfo::Part(PartOfSpeech::Verb);
+    /// let verb_pos = MorphInfo::Part(PartOfSpeech::Verb);
     /// let deriv_sfx = MorphInfo::DerivSfx("able".into());
     ///
-    /// # // let entry = dict.entry("drink");
-    /// # // let stems: Vec<_> = entry.analyze().unwrap().collect();
-    /// # //assert_eq!(stems, [&verb_pos]);
+    /// let entry = dict.entry("drink");
+    /// let stems: Vec<_> = entry.analyze().unwrap().collect();
+    /// assert_eq!(stems, [&verb_pos]);
     ///
     /// let entry = dict.entry("drinkable");
     /// let stems: Vec<_> = entry.analyze().unwrap().collect();
-    /// assert_eq!(stems, [&deriv_sfx])
-    /// # // assert_eq!(stems, [&verb_pos, &deriv_sfx]);
-    /// # // ^ yeah, this isn't a verb, but this is just an example...
+    /// assert_eq!(stems, [&deriv_sfx, &verb_pos]);
     /// ```
     #[inline]
     pub fn analyze(&self) -> Option<impl Iterator<Item = &MorphInfo>> {
