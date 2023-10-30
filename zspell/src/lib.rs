@@ -83,11 +83,11 @@
 //! assert_eq!(banana_entry.word(), "bananas");
 //! assert_eq!(banana_entry.index(), 0);
 //! assert_eq!(banana_entry.correct(), true);
-//! assert_eq!(banana_stems, ["bananas", "banana"]);
+//! assert_eq!(banana_stems, ["banana"]);
 //!
 //! let rust_entry = entries.next().unwrap();
 //! let rust_stems: Vec<&str> = rust_entry.stems().unwrap().collect();
-//! assert_eq!(rust_stems, ["rusting", "rust"]);
+//! assert_eq!(rust_stems, ["rust"]);
 //! ```
 //!
 //! See [`Dictionary`] and [`DictBuilder`] to get started.
@@ -136,7 +136,6 @@ pub mod error;
 mod helpers;
 mod meta;
 mod morph;
-mod parser_affix;
 mod suggestions;
 
 #[cfg(feature = "unstable-system")]
@@ -148,12 +147,11 @@ pub use affix::PartOfSpeech;
 pub use dict::{DictBuilder, Dictionary, WordEntry, WordList};
 #[doc(inline)]
 pub use error::Error;
-pub use morph::MorphInfo;
+pub use morph::{MorphInfo, MorphStr};
 
 // Make some things public when benchmarking
 #[cfg(feature = "unstable-bench")]
 pub mod bench {
-    pub use super::affix::FlagType;
-    pub use super::dict::parse_dict;
-    pub use super::parser_affix::parse_affix;
+    pub use super::affix::{affix_from_str, FlagType};
+    pub use super::dict::DictEntry;
 }

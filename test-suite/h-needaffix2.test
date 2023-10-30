@@ -1,34 +1,39 @@
 %% SPDX-License-Identifier: MPL-1.1
 %% https://github.com/hunspell/hunspell/blob/fbf0ce7e4737084fe84e733b031634f4a2c7559f/tests/needaffix2.aff
 
-%% FIXME:morph
-%% ==== afx ====
-%% NEEDAFFIX X
-%% COMPOUNDFLAG Y
-%%
-%% ==== dic ====
-%% 4
-%% foo	st:foo id:1
-%% foo/YX	st:foo id:2
-%% foo/Y	st:foo id:3
-%% bar/Y
-%%
-%% ==== valid ====
-%% foo
-%% bar
+==== afx ====
+NEEDAFFIX X
+COMPOUNDFLAG Y
+
+==== dic ====
+4
+foo	st:foo id:1
+foo/YX	st:foo id:2
+foo/Y	st:foo id:3
+bar/Y
+
+==== valid ====
+foo
+bar
+
+%% FIXME:compound
 %% foobar
 %% barfoo
-%%
-%% ==== stem ====
-%% foo > foo
-%% bar > bar
+
+==== stem ====
+foo > foo
+bar > bar
+
+%% FIXME:compound
 %% foobar > foo
 %% barfoo > barfoo
-%%
+
 %% ==== morph ====
 %% foo > st:foo id:1
 %% foo > st:foo id:3
+%% FIXME:morph:show-stem: seems like morph should always show a `st` entry?
 %% bar > st:bar
+
+%% FIXME:compound
 %% foobar > pa:foo st:foo id:3 pa:bar
 %% barfoo > pa:bar st:bar pa:foo st:foo id:3
-%%

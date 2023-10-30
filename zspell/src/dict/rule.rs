@@ -3,13 +3,12 @@
 use std::hash::Hash;
 use std::sync::Arc;
 
-use crate::affix::{ParsedCfg, RuleType};
+use crate::affix::{ParsedCfg, ParsedRuleGroup, RuleType};
 use crate::helpers::ReWrapper;
 use crate::morph::MorphInfo;
-use crate::parser_affix::ParsedRuleGroup;
 
 /// A single rule group
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, PartialEq, Eq, Hash)]
 pub struct AfxRule {
     kind: RuleType,
     can_combine: bool,
@@ -54,11 +53,7 @@ impl AfxRule {
         };
 
         for rule in &group.rules {
-            let morph_info: Vec<Arc<MorphInfo>> = rule
-                .morph_info
-                .iter()
-                .map(|m| Arc::new(m.clone()))
-                .collect();
+            let morph_info: Vec<Arc<MorphInfo>> = rule.morph_info.clone();
 
             ret.patterns.push(AfxRulePattern {
                 affix: rule.affix.as_str().into(),
@@ -181,4 +176,5 @@ impl AfxRulePattern {
 }
 
 #[cfg(test)]
+#[path = "tests_rule.rs"]
 mod tests;

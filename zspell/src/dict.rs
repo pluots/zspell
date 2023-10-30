@@ -1,24 +1,26 @@
 //! Main datastructure module with entrypoints for checking
 
 mod flags;
-mod helpers;
-mod parser;
+mod meta;
+mod parse;
 mod rule;
-mod types;
+mod util;
 
 use std::collections::BTreeMap;
+use std::fmt;
 use std::sync::Arc;
 
 use hashbrown::{HashMap, HashSet};
 use stringmetrics::try_levenshtein;
 use unicode_segmentation::UnicodeSegmentation;
+use xxhash_rust::xxh32::xxh32;
 
 pub use self::flags::FlagValue;
-use self::helpers::{create_affixed_word_map, word_splitter};
-pub use self::parser::{parse_dict, DictEntry};
-use self::parser::{parse_personal_dict, PersonalEntry};
+use self::meta::{Meta, PersonalMeta, Source};
+pub use self::parse::DictEntry;
+use self::parse::PersonalEntry;
 pub use self::rule::AfxRule;
-use self::types::{Meta, PersonalMeta, Source};
+use self::util::{create_affixed_word_map, word_splitter};
 use crate::affix::FlagType;
 use crate::error::{BuildError, Error};
 use crate::helpers::StrWrapper;
@@ -284,13 +286,13 @@ impl Dictionary {
     /// Return type is vector of `(new_word, rule, second_rule)` where
     /// `second_rule` is available if both a prefix and a suffix were applied
     // PERF: benchmark taking a vec reference instead of returning
-    fn create_affixed_words(&mut self, stem: &str, flags: &[u32], _morph: &[MorphInfo]) {
+    fn create_affixed_words(&mut self, stem: &str, flags: &[u32], morph: &[Arc<MorphInfo>]) {
         let mut prefix_rules = Vec::new();
         let mut suffix_rules = Vec::new();
 
         let stem: &Arc<str> = self
             .stems
-            .get_or_insert_with(&StrWrapper::new(stem), |sw: &StrWrapper| Arc::from(sw.0));
+            .get_or_insert_with(&StrWrapper::new(stem), |s: &StrWrapper| Arc::from(s.0));
 
         let mut add_stem = true;
         let mut forbid = false;
@@ -312,6 +314,7 @@ impl Dictionary {
                         suffix_rules.push(rule);
                     }
                 }
+                // Don't add the stem to the dictionary
                 FlagValue::AfxNeeded => add_stem = false,
                 _ => {
                     // FIXME: should be unimplemented
@@ -330,14 +333,18 @@ impl Dictionary {
             &mut self.wordlist
         };
 
-        if add_stem {
-            // TODO: fix location for this, add morph
-            let meta = Meta::new(stem.clone(), Source::Dict(Box::default()));
+        let dict_meta = if add_stem {
+            #[cfg(not(box_from_slice_has_clone_bound))]
+            let morph = morph.to_owned(); // create a temporary vec if < 1.71
+            let meta = Meta::new(stem.clone(), Source::Dict(morph.into()));
             let meta_vec = dest.0.entry_ref(stem.as_ref()).or_insert_with(Vec::new);
-            meta_vec.push(meta);
-        }
+            meta_vec.push(Meta::clone(&meta));
+            Some(meta)
+        } else {
+            None
+        };
 
-        create_affixed_word_map(&prefix_rules, &suffix_rules, stem, dest);
+        create_affixed_word_map(stem, &prefix_rules, &suffix_rules, dict_meta.as_ref(), dest);
         prefix_rules.clear();
         suffix_rules.clear();
     }
@@ -345,13 +352,14 @@ impl Dictionary {
     /// Update the internal wordlist and forbidden wordlist from a dictionary
     /// file string
     fn parse_update_wordlist(&mut self, source: &str) -> Result<(), Error> {
-        let entries = parse_dict(source, self.flag_type)?;
-        self.update_wordlist(&entries)
+        // FIXME: this could potentially be lazy, I don't think we need to collect to a Vec
+        let entries = DictEntry::parse_all(source, self.flag_type)?;
+        self.update_wordlist(&entries);
+        Ok(())
     }
 
     /// Update internal wordlists from dictionary entries
-    #[allow(clippy::unnecessary_wraps)]
-    fn update_wordlist(&mut self, entries: &[DictEntry]) -> Result<(), Error> {
+    fn update_wordlist(&mut self, entries: &[DictEntry]) {
         // the en dictionary has about 3 words per entry, German has 8ish
         self.wordlist.0.reserve(entries.len() * 5);
 
@@ -361,40 +369,28 @@ impl Dictionary {
 
             self.create_affixed_words(stem, flags, morph);
         }
+    }
 
+    #[allow(clippy::unnecessary_wraps)] // parsing may become fallible
+    fn parse_update_personal(&mut self, source: &str, dict: &[DictEntry]) -> Result<(), Error> {
+        let entries = PersonalEntry::parse_all(source);
+        self.update_personal(entries, dict);
         Ok(())
     }
 
-    fn parse_update_personal(&mut self, source: &str, dict: &[DictEntry]) -> Result<(), Error> {
-        let entries = parse_personal_dict(source)?;
-        self.update_personal(&entries, dict)
-    }
-
     /// Must happen after `update_wordlist`
-    #[allow(clippy::unnecessary_wraps)]
-    fn update_personal(
-        &mut self,
-        entries: &[PersonalEntry],
-        _dict: &[DictEntry],
-    ) -> Result<(), Error> {
+    fn update_personal(&mut self, entries: Vec<PersonalEntry>, _dict: &[DictEntry]) {
         // FIXME: don't take `dict` as an argument, use our existing hashmaps
         self.wordlist.0.reserve(entries.len() * 2);
         for entry in entries {
             if let Some(_friend) = &entry.friend {
-                // Find the friend in our dictionary, find its source affixes
+                // FIXME:friends Find the friend in our dictionary, find its source affixes
                 // let flags = dict.iter().find(|d| &d.stem() == friend).map(|d| &d.flags);
-                todo!()
             } else {
-                let stem_arc: Arc<str> = self
-                    .stems
-                    .get_or_insert_with(entry.stem.as_str(), |stem| Arc::from(stem))
-                    .clone();
-
-                let source = Source::Personal(Box::new(PersonalMeta::new(
-                    None,
-                    self.get_or_insert_morphs(&entry.morph),
-                )));
-                let meta = Meta::new(stem_arc, source);
+                let stem_arc: Arc<str> = self.stems.get_or_insert(entry.stem).clone();
+                let meta = PersonalMeta::new(None, self.get_or_insert_morphs(&entry.morph));
+                let source = Source::Personal(Arc::new(meta));
+                let meta = Meta::new(Arc::clone(&stem_arc), source);
 
                 // Select the correct word to work with
                 let hmap = if entry.forbid {
@@ -405,12 +401,11 @@ impl Dictionary {
 
                 // Add our word, update its meta
                 let extra_vec: &mut Vec<Meta> = hmap
-                    .entry_ref(entry.stem.as_str())
+                    .entry_ref(stem_arc.as_ref())
                     .or_insert_with(|| Vec::with_capacity(1));
                 extra_vec.push(meta);
             }
         }
-        Ok(())
     }
 
     /// For each morph in the slice: find it or insert it in our hashset, return
@@ -441,6 +436,7 @@ impl Dictionary {
 /// advanced operations.
 ///
 /// This type is created by [`Dictionary::entry`] and [`Dictionary::entries`].
+#[derive(Clone)]
 pub struct WordEntry<'dict, 'word> {
     /// Word provided to be matched
     word: &'word str,
@@ -449,8 +445,21 @@ pub struct WordEntry<'dict, 'word> {
     context: WordCtx<'dict>,
 }
 
+impl<'dict, 'word> fmt::Debug for WordEntry<'dict, 'word> {
+    #[inline]
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // exclude the dictionary
+        f.debug_struct("WordEntry")
+            .field("word", &self.word)
+            .field("index", &self.index)
+            .field("context", &self.context)
+            .finish()
+    }
+}
+
 /// Context held by a `WordEntry` that differs based on whether
 /// the word is correct or not.
+#[derive(Clone, Debug)]
 enum WordCtx<'dict> {
     Correct {
         /// The value that was matched in the dictionary
@@ -549,16 +558,27 @@ impl<'dict, 'word> WordEntry<'dict, 'word> {
     ///
     /// let entry = dict.entry("drinkable");
     /// let stems: Vec<_> = entry.stems().unwrap().collect();
-    /// assert_eq!(stems, ["drinkable", "drink"]);
+    /// assert_eq!(stems, ["drink"]);
     ///
     /// // Should be the same with capital letters
     /// let entry = dict.entry("Drinkable");
     /// let stems: Vec<_> = entry.stems().unwrap().collect();
-    /// assert_eq!(stems, ["drinkable", "drink"]);
+    /// assert_eq!(stems, ["drink"]);
     /// ```
     #[inline]
     pub fn stems(&self) -> Option<impl Iterator<Item = &str>> {
-        let WordCtx::Correct { matched, meta_list } = self.context else {
+        // FIXME: we can probably be smarter about what we send here to avoid duplicates without
+        // manual tracking. Maybe not printing a dictionary stem if one for affixes exists, or
+        // something like that. Or we be very sneaky and keep a `RefCell<Vec<u32>>` in our
+        // `Dictionary` struct and use that as a cache so we don't need to reallocate for each stem
+        // call. Needs benchmarking.
+        let mut visited: Vec<u32> = Vec::new();
+
+        let WordCtx::Correct {
+            matched: _,
+            meta_list,
+        } = self.context
+        else {
             return None;
         };
 
@@ -573,8 +593,17 @@ impl<'dict, 'word> WordEntry<'dict, 'word> {
             stem.chain(morph_stems)
         });
         // remove self because we will include that at the beginning
-        let ret = ret.filter(move |value| value != &matched);
-        let ret = std::iter::once(matched).chain(ret);
+        // let ret = ret.filter(move |value| value != &matched);
+        // deduplicate
+        let ret = ret.filter(move |value| {
+            let hash = xxh32(value.as_bytes(), 0);
+            if visited.contains(&hash) {
+                false
+            } else {
+                visited.push(hash);
+                true
+            }
+        });
         Some(ret)
     }
 
@@ -600,21 +629,16 @@ impl<'dict, 'word> WordEntry<'dict, 'word> {
     ///     .build()
     ///     .unwrap();
     ///
-    /// # // FIXME:dict-parser our dictionary parser doesn't extract prefixes properly
-    /// # // our file contains information that we have a verb part of speech
-    /// # // and a derivational suffix
-    /// # let verb_pos = MorphInfo::Part(PartOfSpeech::Verb);
+    /// let verb_pos = MorphInfo::Part(PartOfSpeech::Verb);
     /// let deriv_sfx = MorphInfo::DerivSfx("able".into());
     ///
-    /// # // let entry = dict.entry("drink");
-    /// # // let stems: Vec<_> = entry.analyze().unwrap().collect();
-    /// # //assert_eq!(stems, [&verb_pos]);
+    /// let entry = dict.entry("drink");
+    /// let stems: Vec<_> = entry.analyze().unwrap().collect();
+    /// assert_eq!(stems, [&verb_pos]);
     ///
     /// let entry = dict.entry("drinkable");
     /// let stems: Vec<_> = entry.analyze().unwrap().collect();
-    /// assert_eq!(stems, [&deriv_sfx])
-    /// # // assert_eq!(stems, [&verb_pos, &deriv_sfx]);
-    /// # // ^ yeah, this isn't a verb, but this is just an example...
+    /// assert_eq!(stems, [&deriv_sfx, &verb_pos]);
     /// ```
     #[inline]
     pub fn analyze(&self) -> Option<impl Iterator<Item = &MorphInfo>> {

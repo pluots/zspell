@@ -458,7 +458,9 @@ fn parse_map(input: &str) -> Result<BTreeMap<String, Vec<String>>, String> {
             .split_whitespace()
             .map(|s| s.trim().to_owned())
             .collect();
-        map.insert(key.trim().into(), values);
+        let key = key.trim().into();
+        assert!(!map.contains_key(&key), "key '{key}' specified twice");
+        map.insert(key, values);
     }
 
     Ok(map)

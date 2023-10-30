@@ -1,9 +1,9 @@
 use std::sync::Arc;
 
+use super::RuleType;
 use crate::error::ParseErrorKind;
 use crate::helpers::{compile_re_pattern, ReWrapper};
 use crate::morph::MorphInfo;
-use crate::parser_affix::RuleType;
 use crate::Error;
 
 /// A simple prefix or suffix rule
@@ -34,7 +34,7 @@ pub struct ParsedRule {
     /// always true
     pub(crate) condition: Option<ReWrapper>,
     /// Morphological information
-    pub(crate) morph_info: Vec<MorphInfo>,
+    pub(crate) morph_info: Vec<Arc<MorphInfo>>,
 }
 
 impl ParsedRule {
@@ -44,7 +44,7 @@ impl ParsedRule {
         affix: &str,
         strip: Option<&str>,
         condition: Option<&str>,
-        morph_info: Vec<MorphInfo>,
+        morph_info: Vec<Arc<MorphInfo>>,
     ) -> Result<Self, Error> {
         let cond_re = match condition {
             Some(c) => compile_re_pattern(c, kind)?,
@@ -66,7 +66,7 @@ impl ParsedRule {
         affix: &str,
         strip: Option<&str>,
         condition: Option<&str>,
-        morph_info: Vec<MorphInfo>,
+        morph_info: Vec<Arc<MorphInfo>>,
     ) -> Result<Self, Error> {
         let cond_re = match condition {
             Some(c) => Some(ReWrapper::new(c)?),
@@ -87,7 +87,7 @@ impl ParsedRule {
         affix: &str,
         strip: &str,
         condition: &str,
-        morph_info: Vec<MorphInfo>,
+        morph_info: Vec<Arc<MorphInfo>>,
     ) -> Result<Self, ParseErrorKind> {
         let cond_re = compile_re_pattern(condition, kind)?;
         let strip_chars = if strip == "0" {

@@ -2,94 +2,11 @@
 
 use std::fs;
 
+use indoc::indoc;
 use pretty_assertions::assert_eq;
 use test_util::workspace_root;
 
-use super::parser::DictEntry;
 use super::*;
-use crate::morph::MorphInfo;
-
-#[test]
-fn test_dict_entry_ok() {
-    let f1 = FlagType::Utf8;
-    let f2 = FlagType::Ascii;
-
-    let s1 = "abcd";
-    let s2 = "abcd # comment";
-    let s3 = "abcd/ABC";
-    let s4 = "abcd/ABC # comment";
-    let s5 = "abcd/ABC ip:m1 tp:m2";
-    let s6 = "abcd/ABC ip:m1 tp:m2 # comment";
-    let s7 = "abcd ip:m1 tp:m2";
-    let s8 = "abcd ip:m1 tp:m2 # comment";
-
-    let r1 = DictEntry::new("abcd".to_owned(), &[], Vec::new());
-    let r2 = DictEntry::new(
-        "abcd".to_owned(),
-        &['A' as u32, 'B' as u32, 'C' as u32],
-        Vec::new(),
-    );
-    let r3 = DictEntry::new(
-        "abcd".to_owned(),
-        &['A' as u32, 'B' as u32, 'C' as u32],
-        vec![
-            MorphInfo::InflecPfx("m1".into()),
-            MorphInfo::TermPfx("m2".into()),
-        ],
-    );
-    let r4 = DictEntry::new(
-        "abcd".to_owned(),
-        &[],
-        vec![
-            MorphInfo::InflecPfx("m1".into()),
-            MorphInfo::TermPfx("m2".into()),
-        ],
-    );
-
-    assert_eq!(DictEntry::parse_str(s1, f1, 0), Ok(r1.clone()));
-    assert_eq!(DictEntry::parse_str(s2, f1, 0), Ok(r1.clone()));
-    assert_eq!(DictEntry::parse_str(s3, f1, 0), Ok(r2.clone()));
-    assert_eq!(DictEntry::parse_str(s4, f1, 0), Ok(r2.clone()));
-    assert_eq!(DictEntry::parse_str(s5, f1, 0), Ok(r3.clone()));
-    assert_eq!(DictEntry::parse_str(s6, f1, 0), Ok(r3.clone()));
-    assert_eq!(DictEntry::parse_str(s7, f1, 0), Ok(r4.clone()));
-    assert_eq!(DictEntry::parse_str(s8, f1, 0), Ok(r4.clone()));
-
-    assert_eq!(DictEntry::parse_str(s1, f2, 0), Ok(r1.clone()));
-    assert_eq!(DictEntry::parse_str(s2, f2, 0), Ok(r1));
-    assert_eq!(DictEntry::parse_str(s3, f2, 0), Ok(r2.clone()));
-    assert_eq!(DictEntry::parse_str(s4, f2, 0), Ok(r2));
-    assert_eq!(DictEntry::parse_str(s5, f2, 0), Ok(r3.clone()));
-    assert_eq!(DictEntry::parse_str(s6, f2, 0), Ok(r3));
-    assert_eq!(DictEntry::parse_str(s7, f2, 0), Ok(r4.clone()));
-    assert_eq!(DictEntry::parse_str(s8, f2, 0), Ok(r4));
-}
-
-#[test]
-fn test_personal_entry_ok() {
-    let s1 = "abcd # comment";
-    let s2 = "abcd/ABC # comment";
-    let s3 = "*abcd/ABC # comment";
-    let s4 = "abcd/ABC ip:m1 tp:m2 # comment";
-
-    let r1 = PersonalEntry::new("abcd", None, Vec::new(), false);
-    let r2 = PersonalEntry::new("abcd", Some("ABC"), Vec::new(), false);
-    let r3 = PersonalEntry::new("abcd", Some("ABC"), Vec::new(), true);
-    let r4 = PersonalEntry::new(
-        "abcd",
-        Some("ABC"),
-        vec![
-            MorphInfo::InflecPfx("m1".into()),
-            MorphInfo::TermPfx("m2".into()),
-        ],
-        false,
-    );
-
-    assert_eq!(PersonalEntry::parse_str(s1, 0), Ok(r1));
-    assert_eq!(PersonalEntry::parse_str(s2, 0), Ok(r2));
-    assert_eq!(PersonalEntry::parse_str(s3, 0), Ok(r3));
-    assert_eq!(PersonalEntry::parse_str(s4, 0), Ok(r4));
-}
 
 #[test]
 fn test_update_personal() {
@@ -156,4 +73,48 @@ fn test_builder_large_file() {
 
     assert_eq!(dict.check("reptiles pillow bananas"), true);
     assert_eq!(dict.check("pine missssspelled"), false);
+}
+
+// Test how data is inserted
+#[test]
+fn test_morph() {
+    use crate::DictBuilder;
+
+    let dict_str = "drink/X po:verb";
+    let aff_str = indoc! {"
+        SFX X Y 1
+        SFX X 0 able . ds:able
+    "};
+
+    let d = DictBuilder::new()
+        .dict_str(dict_str)
+        .config_str(aff_str)
+        .build()
+        .unwrap();
+
+    let meta = d.wordlist.0.get("drinkable").unwrap();
+    assert_eq!(meta[0].stem(), "drink");
+    assert_eq!(meta[1].stem(), "drink");
+    assert!(matches!(
+        meta[0].source(),
+        Source::Affix {
+            rule: _,
+            pat_idx: 0
+        }
+    ));
+
+    let Source::Dict(mvec) = meta[1].source() else {
+        panic!()
+    };
+
+    let po = MorphInfo::Part(crate::PartOfSpeech::Verb);
+    assert_eq!(mvec.as_ref(), [po.clone().into()]);
+
+    let entry = d.entry("drinkable");
+    let morph = entry.analyze().unwrap().collect::<Vec<_>>();
+    assert_eq!(morph, [&MorphInfo::DerivSfx("able".into()), &po]);
+
+    let stems = entry.stems().unwrap().collect::<Vec<_>>();
+    assert_eq!(stems, ["drink"]);
+    // assert_eq!(stems, ["drinkable", "drink"]);
 }

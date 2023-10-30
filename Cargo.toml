@@ -21,7 +21,3 @@ inherits = "dev"
 opt-level = 3
 debug = true
 strip = "none"
-
-[profile.release.package.zspell-cli]
-# Minimize binary size by removing all symbols
-strip = "symbols"

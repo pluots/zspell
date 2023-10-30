@@ -28,9 +28,7 @@ phenomenon	po:noun	al:phenomena
 phenomena	po:noun st:phenomenon	is:plur
 
 ==== valid ====
-%% FIXME: should these double words be tested as one or two?
-%% FIXME:unknown
-
+%% FIXME:duplicates should these double words be tested as one or two?
 drink
 drinks
 %% drinkable
@@ -61,18 +59,18 @@ phenomenon drinks
 ==== stem ====
 %% FIXME:stemming
 drink > drink
-%% drinks > drink
+drinks > drink
 %% drinkable > drinkable
 %% drinkables > drinkable
 %% undrinkable > undrinkable
 %% undrinkables > undrinkable
-%% drank > drink
-%% drunk > drink
+drank > drink
+drunk > drink
 phenomenon > phenomenon
-%% phenomena > phenomenon
+phenomena > phenomenon
 
 %% ==== morph ====
-%% FIXME:morph
+%% FIXME:morph. We should probably be storing these duplicates as separate meta entries (vec in our map)
 %% drink > st:drink po:noun
 %% drink > st:drink po:verb al:drank al:drunk ts:present
 %% drinks > st:drink po:verb al:drank al:drunk ts:present is:sg_3
