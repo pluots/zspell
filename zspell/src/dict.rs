@@ -331,7 +331,8 @@ impl Dictionary {
         };
 
         if add_stem {
-            // TODO: fix location for this, add morph
+            #[cfg(not(box_from_slice_has_clone_bound))]
+            let morph = morph.to_owned(); // create a temporary vec if < 1.71
             let meta = Meta::new(stem.clone(), Source::Dict(morph.into()));
             let meta_vec = dest.0.entry_ref(stem.as_ref()).or_insert_with(Vec::new);
             meta_vec.push(meta);
