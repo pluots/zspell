@@ -78,7 +78,7 @@ harness = false
 
 [package.metadata.release]
 shared-version = true
-
+allow-branch = ["main", "release"]
 
 # Can't run replacements at workspace root. Need to use this "hacky" sort of way.
 [[package.metadata.release.pre-release-replacements]]
