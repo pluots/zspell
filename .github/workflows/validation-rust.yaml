@@ -62,7 +62,7 @@ jobs:
         run: |
           pwd
           ls
-      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@nightly
         with:
           components: ${{ matrix.coverage && 'llvm-tools-preview' || '' }}
       - uses: taiki-e/install-action@cargo-llvm-cov
@@ -71,11 +71,24 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           key: ${{ matrix.os }}
-      - run: ${{ matrix.coverage && 'cargo llvm-cov nextest --lcov --output-path lcov.info' || 'cargo nextest run' }}
-      - run: cargo test --doc
+      - name: run tests without coverage
+        if: ${{ ! matrix.coverage }}
+        run: |
+          cargo nextest run
+          cargo test --doc
+      - name: run tests with coverage
+        if: ${{ matrix.coverage }}
+        # nextest can't run doctests so we run coverage on those separately
+        # and do a combined report
+        run: |
+          cargo llvm-cov --no-report nextest
+          cargo llvm-cov --no-report --doc
+          cargo llvm-cov report --lcov --output-path lcov.info
       - name: Upload coverage data to codecov
         if: ${{ matrix.coverage }}
         uses: codecov/codecov-action@v3
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         with:
           files: lcov.info
 
