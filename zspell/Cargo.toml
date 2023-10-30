@@ -1,9 +1,9 @@
 [package]
 name = "zspell"
-version = "0.4.1"
+version = "0.5.0"
 edition = "2021"
 authors = ["Trevor Gross <tmgross@umich.edu>"]
-description = "Native Rust library for spellchecking, with a command line interface"
+description = "Native Rust library for spellchecking"
 rust-version = "1.65"
 
 readme = "README.md"
@@ -27,7 +27,7 @@ path = "src/lib.rs"
 [dependencies]
 # Base dependencies
 cfg-if = "1.0"
-hashbrown = "0.14.1"
+hashbrown = "0.14.2"
 home = "0.5.5"
 lazy_static = "1.4"
 regex = "1.10"
@@ -78,7 +78,7 @@ harness = false
 
 [package.metadata.release]
 shared-version = true
-
+allow-branch = ["main", "release"]
 
 # Can't run replacements at workspace root. Need to use this "hacky" sort of way.
 [[package.metadata.release.pre-release-replacements]]
