@@ -75,12 +75,13 @@ fn store_applied_pattern(
     meta_vec.push(meta);
 
     if let Some(meta) = dict_meta {
-        meta_vec.push(Meta::clone(meta))
+        meta_vec.push(Meta::clone(meta));
     }
 }
 
 /// Given a list of words that are eligible for combinations, check if a rule applies. If
 /// so, save it to the word list
+#[allow(clippy::similar_names)] // pfx sfx...
 fn apply_combo_words(
     stem_arc: &Arc<str>,
     pfxd_maybe_sfx: &[PossibleCombination],
@@ -98,7 +99,7 @@ fn apply_combo_words(
             meta_vec.push(meta_sfx);
 
             if let Some(meta) = dict_meta {
-                meta_vec.push(Meta::clone(meta))
+                meta_vec.push(Meta::clone(meta));
             }
         }
     }

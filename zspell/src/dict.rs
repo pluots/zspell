@@ -333,16 +333,16 @@ impl Dictionary {
             &mut self.wordlist
         };
 
-        let mut dict_meta = None;
-
-        if add_stem {
+        let dict_meta = if add_stem {
             #[cfg(not(box_from_slice_has_clone_bound))]
             let morph = morph.to_owned(); // create a temporary vec if < 1.71
             let meta = Meta::new(stem.clone(), Source::Dict(morph.into()));
             let meta_vec = dest.0.entry_ref(stem.as_ref()).or_insert_with(Vec::new);
             meta_vec.push(Meta::clone(&meta));
-            dict_meta = Some(meta);
-        }
+            Some(meta)
+        } else {
+            None
+        };
 
         create_affixed_word_map(stem, &prefix_rules, &suffix_rules, dict_meta.as_ref(), dest);
         prefix_rules.clear();
@@ -446,6 +446,7 @@ pub struct WordEntry<'dict, 'word> {
 }
 
 impl<'dict, 'word> fmt::Debug for WordEntry<'dict, 'word> {
+    #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         // exclude the dictionary
         f.debug_struct("WordEntry")
@@ -573,7 +574,11 @@ impl<'dict, 'word> WordEntry<'dict, 'word> {
         // call. Needs benchmarking.
         let mut visited: Vec<u32> = Vec::new();
 
-        let WordCtx::Correct { matched, meta_list } = self.context else {
+        let WordCtx::Correct {
+            matched: _,
+            meta_list,
+        } = self.context
+        else {
             return None;
         };
 

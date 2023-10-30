@@ -109,24 +109,28 @@ impl fmt::Display for MorphInfo {
 pub struct MorphStr(Box<str>);
 
 impl AsRef<str> for MorphStr {
+    #[inline]
     fn as_ref(&self) -> &str {
         self.0.as_ref()
     }
 }
 
 impl From<&str> for MorphStr {
+    #[inline]
     fn from(value: &str) -> Self {
         Self(value.into())
     }
 }
 
 impl fmt::Display for MorphStr {
+    #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.0.fmt(f)
     }
 }
 
 impl fmt::Debug for MorphStr {
+    #[inline]
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         self.0.fmt(f)
     }
