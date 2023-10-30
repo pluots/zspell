@@ -2,6 +2,7 @@
 
 use std::fs;
 
+use indoc::indoc;
 use pretty_assertions::assert_eq;
 use test_util::workspace_root;
 
@@ -72,4 +73,47 @@ fn test_builder_large_file() {
 
     assert_eq!(dict.check("reptiles pillow bananas"), true);
     assert_eq!(dict.check("pine missssspelled"), false);
+}
+
+// Test how data is inserted
+#[test]
+fn test_morph() {
+    use crate::DictBuilder;
+
+    let dict_str = "drink/X po:verb";
+    let aff_str = indoc! {"
+        SFX X Y 1
+        SFX X 0 able . ds:able
+    "};
+
+    let d = DictBuilder::new()
+        .dict_str(dict_str)
+        .config_str(aff_str)
+        .build()
+        .unwrap();
+
+    let meta = d.wordlist.0.get("drinkable").unwrap();
+    assert_eq!(meta[0].stem(), "drink");
+    assert_eq!(meta[1].stem(), "drink");
+    assert!(matches!(
+        meta[0].source(),
+        Source::Affix {
+            rule: _,
+            pat_idx: 0
+        }
+    ));
+
+    let Source::Dict(mvec) = meta[1].source() else {
+        panic!()
+    };
+
+    let po = MorphInfo::Part(crate::PartOfSpeech::Verb);
+    assert_eq!(mvec.as_ref(), [po.clone().into()]);
+
+    let entry = d.entry("drinkable");
+    let morph = entry.analyze().unwrap().collect::<Vec<_>>();
+    assert_eq!(morph, [&MorphInfo::DerivSfx("able".into()), &po]);
+
+    let stems = entry.stems().unwrap().collect::<Vec<_>>();
+    assert_eq!(stems, ["drinkable", "drink"]);
 }

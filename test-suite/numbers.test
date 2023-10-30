@@ -31,5 +31,5 @@ SFX 10 0 000 . is:thousands
 
 ==== morph ====
 9 > po:number
-10 > is:tens
-600 > is:hundreds
+10 > po:number is:tens
+600 > po:number is:hundreds

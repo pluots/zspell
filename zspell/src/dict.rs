@@ -7,11 +7,13 @@ mod rule;
 mod util;
 
 use std::collections::BTreeMap;
+use std::fmt;
 use std::sync::Arc;
 
 use hashbrown::{HashMap, HashSet};
 use stringmetrics::try_levenshtein;
 use unicode_segmentation::UnicodeSegmentation;
+use xxhash_rust::xxh32::xxh32;
 
 pub use self::flags::FlagValue;
 use self::meta::{Meta, PersonalMeta, Source};
@@ -312,6 +314,7 @@ impl Dictionary {
                         suffix_rules.push(rule);
                     }
                 }
+                // Don't add the stem to the dictionary
                 FlagValue::AfxNeeded => add_stem = false,
                 _ => {
                     // FIXME: should be unimplemented
@@ -330,15 +333,18 @@ impl Dictionary {
             &mut self.wordlist
         };
 
+        let mut dict_meta = None;
+
         if add_stem {
             #[cfg(not(box_from_slice_has_clone_bound))]
             let morph = morph.to_owned(); // create a temporary vec if < 1.71
             let meta = Meta::new(stem.clone(), Source::Dict(morph.into()));
             let meta_vec = dest.0.entry_ref(stem.as_ref()).or_insert_with(Vec::new);
-            meta_vec.push(meta);
+            meta_vec.push(Meta::clone(&meta));
+            dict_meta = Some(meta);
         }
 
-        create_affixed_word_map(&prefix_rules, &suffix_rules, stem, dest);
+        create_affixed_word_map(stem, &prefix_rules, &suffix_rules, dict_meta.as_ref(), dest);
         prefix_rules.clear();
         suffix_rules.clear();
     }
@@ -346,6 +352,7 @@ impl Dictionary {
     /// Update the internal wordlist and forbidden wordlist from a dictionary
     /// file string
     fn parse_update_wordlist(&mut self, source: &str) -> Result<(), Error> {
+        // FIXME: this could potentially be lazy, I don't think we need to collect to a Vec
         let entries = DictEntry::parse_all(source, self.flag_type)?;
         self.update_wordlist(&entries);
         Ok(())
@@ -381,11 +388,8 @@ impl Dictionary {
                 // let flags = dict.iter().find(|d| &d.stem() == friend).map(|d| &d.flags);
             } else {
                 let stem_arc: Arc<str> = self.stems.get_or_insert(entry.stem).clone();
-
-                let source = Source::Personal(Box::new(PersonalMeta::new(
-                    None,
-                    self.get_or_insert_morphs(&entry.morph),
-                )));
+                let meta = PersonalMeta::new(None, self.get_or_insert_morphs(&entry.morph));
+                let source = Source::Personal(Arc::new(meta));
                 let meta = Meta::new(Arc::clone(&stem_arc), source);
 
                 // Select the correct word to work with
@@ -432,6 +436,7 @@ impl Dictionary {
 /// advanced operations.
 ///
 /// This type is created by [`Dictionary::entry`] and [`Dictionary::entries`].
+#[derive(Clone)]
 pub struct WordEntry<'dict, 'word> {
     /// Word provided to be matched
     word: &'word str,
@@ -440,8 +445,20 @@ pub struct WordEntry<'dict, 'word> {
     context: WordCtx<'dict>,
 }
 
+impl<'dict, 'word> fmt::Debug for WordEntry<'dict, 'word> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        // exclude the dictionary
+        f.debug_struct("WordEntry")
+            .field("word", &self.word)
+            .field("index", &self.index)
+            .field("context", &self.context)
+            .finish()
+    }
+}
+
 /// Context held by a `WordEntry` that differs based on whether
 /// the word is correct or not.
+#[derive(Clone, Debug)]
 enum WordCtx<'dict> {
     Correct {
         /// The value that was matched in the dictionary
@@ -549,6 +566,13 @@ impl<'dict, 'word> WordEntry<'dict, 'word> {
     /// ```
     #[inline]
     pub fn stems(&self) -> Option<impl Iterator<Item = &str>> {
+        // FIXME: we can probably be smarter about what we send here to avoid duplicates without
+        // manual tracking. Maybe not printing a dictionary stem if one for affixes exists, or
+        // something like that. Or we be very sneaky and keep a `RefCell<Vec<u32>>` in our
+        // `Dictionary` struct and use that as a cache so we don't need to reallocate for each stem
+        // call. Needs benchmarking.
+        let mut visited: Vec<u32> = Vec::new();
+
         let WordCtx::Correct { matched, meta_list } = self.context else {
             return None;
         };
@@ -565,6 +589,16 @@ impl<'dict, 'word> WordEntry<'dict, 'word> {
         });
         // remove self because we will include that at the beginning
         let ret = ret.filter(move |value| value != &matched);
+        // deduplicate
+        let ret = ret.filter(move |value| {
+            let hash = xxh32(value.as_bytes(), 0);
+            if visited.contains(&hash) {
+                false
+            } else {
+                visited.push(hash);
+                true
+            }
+        });
         let ret = std::iter::once(matched).chain(ret);
         Some(ret)
     }

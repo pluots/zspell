@@ -8,7 +8,7 @@ use crate::helpers::ReWrapper;
 use crate::morph::MorphInfo;
 
 /// A single rule group
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, PartialEq, Eq, Hash)]
 pub struct AfxRule {
     kind: RuleType,
     can_combine: bool,

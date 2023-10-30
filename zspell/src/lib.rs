@@ -147,7 +147,7 @@ pub use affix::PartOfSpeech;
 pub use dict::{DictBuilder, Dictionary, WordEntry, WordList};
 #[doc(inline)]
 pub use error::Error;
-pub use morph::MorphInfo;
+pub use morph::{MorphInfo, MorphStr};
 
 // Make some things public when benchmarking
 #[cfg(feature = "unstable-bench")]

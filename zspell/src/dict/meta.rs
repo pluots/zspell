@@ -5,6 +5,8 @@ use super::rule::AfxRule;
 use crate::morph::MorphInfo;
 
 /// Additional information attached to an entry in a dictionary
+///
+/// Cheaply cloneable
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct Meta {
     stem: Arc<str>,
@@ -50,16 +52,16 @@ impl Meta {
 pub enum Source {
     /// This meta came from an affix and has a full affix rule
     Affix {
-        /// the full rule that created this
+        /// The full rule that created this
         rule: Arc<AfxRule>,
-        /// index of the relevant pattern within the rule
+        /// Index of the relevant pattern within the rule. This could potentially be a reference
+        /// but that might require a RefCell, and I don't want to risk reference
         pat_idx: usize,
     },
     /// This meta came from a .dic file, only contains morphinfo
-    Dict(Box<[Arc<MorphInfo>]>),
+    Dict(Arc<[Arc<MorphInfo>]>),
     /// This meta came from the personal dictionary
-    /// String is the "friend" word
-    Personal(Box<PersonalMeta>),
+    Personal(Arc<PersonalMeta>),
     /// The source is a raw text file with no additional metadata
     Raw,
 }
@@ -87,7 +89,7 @@ impl Source {
 }
 
 /// Representation of meta info for a personal dictionary
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Debug, PartialEq, Eq, Hash)]
 pub struct PersonalMeta {
     friend: Option<Arc<str>>,
     morph: Vec<Arc<MorphInfo>>,
