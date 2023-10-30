@@ -2,9 +2,6 @@
 //!
 //! Contains various munchers for all possible affix keys
 
-mod node;
-mod types;
-
 use std::num::ParseIntError;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -12,8 +9,9 @@ use std::sync::Arc;
 use lazy_static::lazy_static;
 pub use node::AffixNode;
 use regex::Regex;
-pub use types::{ParsedRule, ParsedRuleGroup};
+pub use rule::{ParsedRule, ParsedRuleGroup};
 
+use super::{node, rule};
 use crate::affix::{
     CompoundPattern, CompoundSyllable, Conversion, Encoding, FlagType, Phonetic, RuleType,
 };
@@ -734,4 +732,5 @@ pub fn affix_from_str(s: &str) -> Result<Vec<AffixNode>, ParseError> {
 }
 
 #[cfg(test)]
+#[path = "tests_parse.rs"]
 mod tests;

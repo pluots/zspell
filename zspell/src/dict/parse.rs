@@ -107,6 +107,8 @@ impl DictEntry {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct PersonalEntry {
     pub stem: Arc<str>,
+    /// Reference to a main word in the dictionary that this word should inherit
+    /// its metadata (stemming, affixes, etc) from
     pub friend: Option<Box<str>>,
     pub morph: Vec<MorphInfo>,
     pub forbid: bool,

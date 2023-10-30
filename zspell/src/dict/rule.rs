@@ -3,8 +3,7 @@
 use std::hash::Hash;
 use std::sync::Arc;
 
-use crate::affix::{ParsedCfg, RuleType};
-use crate::affix_parse::ParsedRuleGroup;
+use crate::affix::{ParsedCfg, ParsedRuleGroup, RuleType};
 use crate::helpers::ReWrapper;
 use crate::morph::MorphInfo;
 
@@ -177,4 +176,5 @@ impl AfxRulePattern {
 }
 
 #[cfg(test)]
+#[path = "tests_rule.rs"]
 mod tests;

@@ -1,15 +1,18 @@
 //! Representation of an affix file
 
+mod node;
+mod parse;
+mod rule;
 mod types;
 
 use std::collections::BTreeMap;
 use std::sync::Arc;
 
+pub use self::parse::{affix_from_str, AffixNode, ParsedRuleGroup};
 pub use self::types::{
     CompoundPattern, CompoundSyllable, Conversion, Encoding, FlagType, PartOfSpeech, Phonetic,
     RuleType,
 };
-use crate::affix_parse::{affix_from_str, AffixNode, ParsedRuleGroup};
 use crate::dict::{AfxRule, FlagValue};
 use crate::error::{BuildError, Error, ParseError};
 

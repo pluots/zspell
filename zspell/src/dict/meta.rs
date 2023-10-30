@@ -21,7 +21,7 @@ impl Meta {
 
     /// Return the stem of a word. Prefers the stem from the morph info if it is available
     pub fn stem(&self) -> &str {
-        // If we have a dictionary source, check if we have a stem `MorphInfo`
+        // If we have a dictionary source, check if we have a stem-type `MorphInfo`
         // and return it
         if let Source::Dict(morphvec) = &self.source {
             if let Some(stem) = morphvec.iter().find_map(|morph| {
@@ -48,16 +48,16 @@ impl Meta {
 #[non_exhaustive]
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Source {
-    /// this meta came from an affix and has a full affix rule
+    /// This meta came from an affix and has a full affix rule
     Affix {
         /// the full rule that created this
         rule: Arc<AfxRule>,
         /// index of the relevant pattern within the rule
         pat_idx: usize,
     },
-    /// this meta came from a .dic file, only contains morphinfo
+    /// This meta came from a .dic file, only contains morphinfo
     Dict(Box<[Arc<MorphInfo>]>),
-    /// this meta came from the personal dictionary
+    /// This meta came from the personal dictionary
     /// String is the "friend" word
     Personal(Box<PersonalMeta>),
     /// The source is a raw text file with no additional metadata
@@ -112,37 +112,4 @@ mod tests {
         t.hash(&mut s);
         s.finish()
     }
-
-    // FIXME
-    // #[test]
-    // fn check_hashes() {
-    //     // validate that our owned & borrowed types have the same hash
-    //     let owned = Extra {
-    //         stem: "abcd".to_string(),
-    //         source: Source::Personal(Box::new(PersonalMeta {
-    //             friend: Some("efgh".to_owned()),
-    //             morph: vec![MorphInfo::DerivPfx("xyz".to_owned())],
-    //         })),
-    //     };
-
-    //     let meta = match owned.source {
-    //         Source::Personal(ref m) => m,
-    //         _ => panic!(),
-    //     };
-
-    //     let borrowed = ExtraBorrowed {
-    //         stem: &owned.stem,
-    //         source: SourceBorrowed::Personal {
-    //             friend: meta.friend.as_ref(),
-    //             morph: &meta.morph,
-    //         },
-    //     };
-
-    //     let h1 = calculate_hash(&owned);
-    //     let h2 = calculate_hash(&borrowed);
-
-    //     assert_eq!(h1, h2);
-    //     assert_eq!(&owned, &borrowed);
-    //     assert_eq!(owned, borrowed.to_owned());
-    // }
 }

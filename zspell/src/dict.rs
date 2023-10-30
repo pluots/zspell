@@ -290,7 +290,7 @@ impl Dictionary {
 
         let stem: &Arc<str> = self
             .stems
-            .get_or_insert_with(&StrWrapper::new(stem), |sw: &StrWrapper| Arc::from(sw.0));
+            .get_or_insert_with(&StrWrapper::new(stem), |s: &StrWrapper| Arc::from(s.0));
 
         let mut add_stem = true;
         let mut forbid = false;
@@ -347,12 +347,12 @@ impl Dictionary {
     /// file string
     fn parse_update_wordlist(&mut self, source: &str) -> Result<(), Error> {
         let entries = DictEntry::parse_all(source, self.flag_type)?;
-        self.update_wordlist(&entries)
+        self.update_wordlist(&entries);
+        Ok(())
     }
 
     /// Update internal wordlists from dictionary entries
-    #[allow(clippy::unnecessary_wraps)]
-    fn update_wordlist(&mut self, entries: &[DictEntry]) -> Result<(), Error> {
+    fn update_wordlist(&mut self, entries: &[DictEntry]) {
         // the en dictionary has about 3 words per entry, German has 8ish
         self.wordlist.0.reserve(entries.len() * 5);
 
@@ -362,29 +362,23 @@ impl Dictionary {
 
             self.create_affixed_words(stem, flags, morph);
         }
+    }
 
+    #[allow(clippy::unnecessary_wraps)] // parsing may become fallible
+    fn parse_update_personal(&mut self, source: &str, dict: &[DictEntry]) -> Result<(), Error> {
+        let entries = PersonalEntry::parse_all(source);
+        self.update_personal(entries, dict);
         Ok(())
     }
 
-    fn parse_update_personal(&mut self, source: &str, dict: &[DictEntry]) -> Result<(), Error> {
-        let entries = PersonalEntry::parse_all(source);
-        self.update_personal(entries, dict)
-    }
-
     /// Must happen after `update_wordlist`
-    #[allow(clippy::unnecessary_wraps)]
-    fn update_personal(
-        &mut self,
-        entries: Vec<PersonalEntry>,
-        _dict: &[DictEntry],
-    ) -> Result<(), Error> {
+    fn update_personal(&mut self, entries: Vec<PersonalEntry>, _dict: &[DictEntry]) {
         // FIXME: don't take `dict` as an argument, use our existing hashmaps
         self.wordlist.0.reserve(entries.len() * 2);
         for entry in entries {
             if let Some(_friend) = &entry.friend {
-                // Find the friend in our dictionary, find its source affixes
+                // FIXME:friends Find the friend in our dictionary, find its source affixes
                 // let flags = dict.iter().find(|d| &d.stem() == friend).map(|d| &d.flags);
-                todo!()
             } else {
                 let stem_arc: Arc<str> = self.stems.get_or_insert(entry.stem).clone();
 
@@ -408,7 +402,6 @@ impl Dictionary {
                 extra_vec.push(meta);
             }
         }
-        Ok(())
     }
 
     /// For each morph in the slice: find it or insert it in our hashset, return
