@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 """Run `cargo bench`, print the output with CPU information to a timestamped
 file.
+
+Does not work on Windows (WSL works).
 """
 
 
@@ -42,7 +44,7 @@ def get_cpu_info() -> str:
         cmd = ["sysctl", "-n", "machdep.cpu.brand_string"]
         s += decode_sp_out(sp.check_output(cmd))
     else:
-        tmp = sp.check_output("lscpu")
+        tmp = decode_sp_out(sp.check_output("lscpu"))
         for line in tmp.splitlines():
             if (
                 "Architecture" in line
@@ -63,7 +65,7 @@ def main():
     fname, fpath = get_fpath(dtime, describe)
     version = rustc_version()
     cpu_info = get_cpu_info()
-    cmd = ["cargo", "bench", "--features", "benchmarking"]
+    cmd = ["cargo", "bench", "--features", "unstable-bench"]
     cmd += sys.argv[1:]
 
     header_str = (
@@ -100,7 +102,7 @@ def main():
     time_str = f"\nTotal execution time: {time.strftime('%H:%M:%S', time.gmtime(elapsed_time))}"
     output += time_str
     print(time_str)
-    print("\nWriting file...", end="")
+    print("\nWriting file '{fpath}'...", end="")
 
     with open(fpath, "w") as f:
         f.write(output)

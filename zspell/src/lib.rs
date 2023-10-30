@@ -151,8 +151,8 @@ pub use error::Error;
 pub use morph::MorphInfo;
 
 // Make some things public when benchmarking
-#[cfg(feature = "benchmarking")]
-pub mod benchmarking {
+#[cfg(feature = "unstable-bench")]
+pub mod bench {
     pub use super::affix::FlagType;
     pub use super::dict::parse_dict;
     pub use super::parser_affix::parse_affix;

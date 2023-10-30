@@ -2,7 +2,7 @@ use std::fs;
 use std::hint::black_box;
 
 use criterion::{criterion_group, criterion_main, Criterion};
-use zspell::benchmarking::{parse_affix, parse_dict, FlagType};
+use zspell::bench::{parse_affix, parse_dict, FlagType};
 use zspell::{DictBuilder, Dictionary};
 
 const TEXT: &str = "A Hare was mking fun of the Tortoise one day for being so slow.
@@ -65,8 +65,8 @@ const NOT_CONTAINS_LIST: [&str; 15] = [
 fn fixture_create_en_dict() -> Dictionary {
     // Test that we correctly compile the short wordlist
 
-    let aff_content = fs::read_to_string("../../dictionaries/en_US.aff").unwrap();
-    let dic_content = fs::read_to_string("../../dictionaries/en_US.dic").unwrap();
+    let aff_content = fs::read_to_string("../dictionaries/en_US.aff").unwrap();
+    let dic_content = fs::read_to_string("../dictionaries/en_US.dic").unwrap();
 
     DictBuilder::new()
         .dict_str(black_box(&dic_content))
@@ -76,8 +76,8 @@ fn fixture_create_en_dict() -> Dictionary {
 }
 
 pub fn bench_parsers(c: &mut Criterion) {
-    let aff_content = fs::read_to_string("../../dictionaries/en_US.aff").unwrap();
-    let dic_content = fs::read_to_string("../../dictionaries/en_US.dic").unwrap();
+    let aff_content = fs::read_to_string("../dictionaries/en_US.aff").unwrap();
+    let dic_content = fs::read_to_string("../dictionaries/en_US.dic").unwrap();
 
     c.bench_function("Parse affix file", |b| {
         b.iter(|| black_box(parse_affix(black_box(&aff_content)).unwrap()))
@@ -92,8 +92,8 @@ pub fn bench_parsers(c: &mut Criterion) {
 
 /// This test just creates a dictionary. The compiling is the slow step.
 pub fn bench_dict_compile(c: &mut Criterion) {
-    let aff_content = fs::read_to_string("../../dictionaries/en_US.aff").unwrap();
-    let dic_content = fs::read_to_string("../../dictionaries/en_US.dic").unwrap();
+    let aff_content = fs::read_to_string("../dictionaries/en_US.aff").unwrap();
+    let dic_content = fs::read_to_string("../dictionaries/en_US.dic").unwrap();
 
     c.bench_function("Spellcheck: compile dictionary", |b| {
         b.iter(|| {
