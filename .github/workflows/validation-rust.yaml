@@ -49,6 +49,7 @@ jobs:
           include:
             - os: ubuntu-latest
               name: linux
+              coverage: true
             - os: windows-latest
               name: windows
             - os: macos-latest
@@ -63,16 +64,17 @@ jobs:
           ls
       - uses: dtolnay/rust-toolchain@stable
         with:
-          components: llvm-tools-preview
+          components: ${{ matrix.coverage && 'llvm-tools-preview' || '' }}
       - uses: taiki-e/install-action@cargo-llvm-cov
       - name: Install nextest
         uses: taiki-e/install-action@nextest
       - uses: Swatinem/rust-cache@v2
         with:
           key: ${{ matrix.os }}
-      - run: cargo llvm-cov nextest --lcov --output-path lcov.info
+      - run: ${{ matrix.coverage && 'cargo llvm-cov nextest --lcov --output-path lcov.info' || 'cargo nextest run' }}
       - run: cargo test --doc
       - name: Upload coverage data to codecov
+        if: ${{ matrix.coverage }}
         uses: codecov/codecov-action@v3
         with:
           files: lcov.info
@@ -81,7 +83,6 @@ jobs:
     name: Test with leak sanitizer
     runs-on: ubuntu-latest
     env:
-      # Can't interact with files in isolation
       RUSTFLAGS: -Zsanitizer=leak
     steps:
       - uses: actions/checkout@v2
