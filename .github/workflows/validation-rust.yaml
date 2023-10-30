@@ -19,7 +19,7 @@ jobs:
     name: clippy
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
         with:
           components: clippy
@@ -34,7 +34,7 @@ jobs:
       # we don't care about unused with these feature configurations
       RUSTFLAGS: -A unused
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@1.65
       - uses: Swatinem/rust-cache@v2
         # check only zspell; we can use later for the CLI
@@ -57,7 +57,7 @@ jobs:
     name: "test on ${{ matrix.name }}"
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: List files
         run: |
           pwd
@@ -85,7 +85,7 @@ jobs:
     env:
       RUSTFLAGS: -Zsanitizer=leak
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@nightly
         with:
           components: rust-src
@@ -110,7 +110,7 @@ jobs:
       # Can't interact with files in isolation
       MIRIFLAGS: -Zmiri-disable-isolation
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@nightly
         with:
           components: miri
@@ -129,7 +129,7 @@ jobs:
     name: formatting
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@nightly
         with:
             components: rustfmt
@@ -143,7 +143,7 @@ jobs:
     name: docs
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@nightly
       - uses: Swatinem/rust-cache@v2
       - run: cargo doc
@@ -152,7 +152,7 @@ jobs:
     name: book
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@nightly
       - uses: Swatinem/rust-cache@v2
       - run: |
@@ -167,5 +167,5 @@ jobs:
     name: verify critical fixmes
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - run: grep -r "FIXME:CRIT" --exclude-dir="target" --exclude-dir=".git" --exclude="validation-rust.yaml" && exit 1 || exit 0
