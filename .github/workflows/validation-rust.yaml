@@ -103,6 +103,8 @@ jobs:
   miri:
     name: Miri
     runs-on: ubuntu-latest
+    # basically only run this if we're sure we don't cancel since it eats so much CPU
+    needs: ["clippy", "test", "fmt", "doc"]
     env:
       # Can't interact with files in isolation
       MIRIFLAGS: -Zmiri-disable-isolation
