@@ -6,11 +6,7 @@
 
 ### Added
 
-### Changed
-
-### Removed
-
-
+Add a `zspell::builder()` shortcut for `DictBuilder::new()`.
 
 
 ## [0.5.1] - 2023-10-30
