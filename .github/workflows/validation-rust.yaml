@@ -83,7 +83,7 @@ jobs:
         run: |
           cargo llvm-cov --no-report nextest
           cargo llvm-cov --no-report --doc
-          cargo llvm-cov report --lcov --output-path lcov.info
+          cargo llvm-cov report --doctests --lcov --output-path lcov.info
       - name: Upload coverage data to codecov
         if: ${{ matrix.coverage }}
         uses: codecov/codecov-action@v3
