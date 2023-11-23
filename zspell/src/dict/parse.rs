@@ -189,7 +189,7 @@ fn extract_content(input: &str) -> impl Iterator<Item = &str> + Clone {
         // Trim hash comments
         .map(|line| line.split_once('#').unwrap_or((line, "")).0)
         .map(str::trim)
-        .filter(|line| !line.trim().is_empty())
+        .filter(|line| !line.is_empty())
 }
 
 #[cfg(test)]

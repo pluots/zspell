@@ -1,3 +1,6 @@
+//! Tools to forward generate a wordlist. That is, take an initial wordlist and a
+//! group of rules, and expand the wordlist by applying those rules.
+
 use std::sync::Arc;
 
 use unicode_segmentation::UnicodeSegmentation;

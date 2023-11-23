@@ -99,7 +99,7 @@ pub struct ParsedCfg {
     /*
         Affix Options
     */
-    // Rules for setting prefixes and suffixes
+    /// Rules for setting prefixes and suffixes
     afx_rule_groups: Vec<ParsedRuleGroup>,
 
     /*
@@ -122,7 +122,7 @@ pub struct ParsedCfg {
 
 /// Separated structure for compound rules
 #[derive(Clone, Debug, PartialEq, Eq)]
-struct CompoundConfig {
+pub struct CompoundConfig {
     /// Something like `-` to indicate whether both sides should be checked
     /// Prefer COMPOUNDRULE instead
     break_separators: Vec<String>,

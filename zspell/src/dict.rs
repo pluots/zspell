@@ -4,7 +4,8 @@ mod flags;
 mod meta;
 mod parse;
 mod rule;
-mod util;
+mod rules_apply;
+mod rules_reverse;
 
 use std::collections::BTreeMap;
 use std::fmt;
@@ -20,7 +21,7 @@ use self::meta::{Meta, PersonalMeta, Source};
 pub use self::parse::DictEntry;
 use self::parse::PersonalEntry;
 pub use self::rule::AfxRule;
-use self::util::{create_affixed_word_map, word_splitter};
+use self::rules_apply::{create_affixed_word_map, word_splitter};
 use crate::affix::FlagType;
 use crate::error::{BuildError, Error};
 use crate::helpers::StrWrapper;
@@ -282,10 +283,6 @@ impl Dictionary {
     /// this affix. Does not check if the flag is valid.
     ///
     /// May contain duplicates, does not contain the original word
-    ///
-    /// Return type is vector of `(new_word, rule, second_rule)` where
-    /// `second_rule` is available if both a prefix and a suffix were applied
-    // PERF: benchmark taking a vec reference instead of returning
     fn create_affixed_words(&mut self, stem: &str, flags: &[u32], morph: &[Arc<MorphInfo>]) {
         let mut prefix_rules = Vec::new();
         let mut suffix_rules = Vec::new();
