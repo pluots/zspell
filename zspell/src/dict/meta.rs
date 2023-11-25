@@ -55,7 +55,7 @@ pub enum Source {
         /// The full rule that created this
         rule: Arc<AfxRule>,
         /// Index of the relevant pattern within the rule. This could potentially be a reference
-        /// but that might require a RefCell, and I don't want to risk reference
+        /// but that might require a RefCell, and I don't want to risk reference cycles.
         pat_idx: usize,
     },
     /// This meta came from a .dic file, only contains morphinfo

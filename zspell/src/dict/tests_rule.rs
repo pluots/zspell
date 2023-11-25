@@ -4,37 +4,45 @@ use crate::affix::RuleType::{self, Prefix, Suffix};
 #[test]
 fn test_check_condition() {
     let mut kind = RuleType::Suffix;
-    let mut rule = AfxRulePattern::default();
-    rule.set_pattern("[^aeiou]y", kind).unwrap();
+    let mut rule_pat = AfxRulePattern::default();
+    rule_pat.set_pattern("[^aeiou]y", kind).unwrap();
 
     // General tests, including with pattern in the middle
-    assert!(rule.check_condition("xxxy"));
-    assert!(!rule.check_condition("xxxay"));
-    assert!(!rule.check_condition("xxxyxx"));
+    assert!(rule_pat.check_condition("xxxy"));
+    assert!(!rule_pat.check_condition("xxxay"));
+    assert!(!rule_pat.check_condition("xxxyxx"));
 
     // Test with prefix
     kind = RuleType::Prefix;
-    rule.set_pattern("y[^aeiou]", kind).unwrap();
-    assert!(rule.check_condition("yxxx"));
-    assert!(!rule.check_condition("yaxxx"));
-    assert!(!rule.check_condition("xxxyxxx"));
+    rule_pat.set_pattern("y[^aeiou]", kind).unwrap();
+    assert!(rule_pat.check_condition("yxxx"));
+    assert!(!rule_pat.check_condition("yaxxx"));
+    assert!(!rule_pat.check_condition("xxxyxxx"));
 
     // Test other real rules
     kind = RuleType::Suffix;
-    rule.set_pattern("[sxzh]", kind).unwrap();
-    assert!(rule.check_condition("access"));
-    assert!(rule.check_condition("abyss"));
-    assert!(!rule.check_condition("accomplishment"));
-    assert!(rule.check_condition("mmms"));
-    assert!(!rule.check_condition("mmsmm"));
+    rule_pat.set_pattern("[sxzh]", kind).unwrap();
+    assert!(rule_pat.check_condition("access"));
+    assert!(rule_pat.check_condition("abyss"));
+    assert!(!rule_pat.check_condition("accomplishment"));
+    assert!(rule_pat.check_condition("mmms"));
+    assert!(!rule_pat.check_condition("mmsmm"));
 
     // Check with default condition
-    rule.set_pattern(".", kind).unwrap();
-    assert!(rule.check_condition("xxx"));
+    rule_pat.set_pattern(".", kind).unwrap();
+    assert!(rule_pat.check_condition("xxx"));
 }
 
 // affix, strip, condition, kind, input, output
-const RULE_PATTERNS: &[(&str, Option<&str>, &str, RuleType, &str, &str)] = &[
+type TestRulePattern = (
+    &'static str,
+    Option<&'static str>,
+    &'static str,
+    RuleType,
+    &'static str,
+    &'static str,
+);
+const RULE_PATTERNS: &[TestRulePattern] = &[
     ("zzz", Some("y"), "[^aeiou]y", Suffix, "xxxy", "xxxzzz"),
     ("zzz", Some("y"), "y[^aeiou]", Prefix, "yxxx", "zzzxxx"),
     ("zzz", None, ".", Suffix, "xxx", "xxxzzz"),

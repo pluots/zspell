@@ -92,8 +92,14 @@ impl AfxRule {
     }
 
     /// Do the opposite of [`apply_patterns`], try to strip this pattern from a word
-    pub fn strip_patterns(&self, word: &str) {
-        todo!()
+    pub fn strip_patterns<'a>(
+        &'a self,
+        word: &'a str,
+    ) -> impl Iterator<Item = (usize, Cow<'a, str>)> + 'a {
+        self.patterns
+            .iter()
+            .enumerate()
+            .filter_map(|(idx, pat)| pat.strip_pattern(word, self.kind).map(|s| (idx, s)))
     }
 
     pub(crate) fn patterns(&self) -> &[AfxRulePattern] {
@@ -190,23 +196,23 @@ impl AfxRulePattern {
                 let Some(base) = dbg!(word.strip_prefix(self.affix.as_ref())) else {
                     return None;
                 };
-                match &self.strip {
-                    Some(add_back) => Cow::Owned(format!("{add_back}{base}")),
-                    None => Cow::Borrowed(base),
-                }
+                self.strip.as_ref().map_or(Cow::Borrowed(base), |add_back| {
+                    Cow::Owned(format!("{add_back}{base}"))
+                })
             }
             RuleType::Suffix => {
                 let Some(base) = dbg!(word.strip_suffix(self.affix.as_ref())) else {
                     return None;
                 };
-                match &self.strip {
-                    Some(add_back) => Cow::Owned(format!("{base}{add_back}")),
-                    None => Cow::Borrowed(base),
-                }
+                self.strip.as_ref().map_or(Cow::Borrowed(base), |add_back| {
+                    Cow::Owned(format!("{base}{add_back}"))
+                })
             }
         };
 
         if let Some(re) = &self.condition {
+            // FIXME: we probably want to change this to return `None` if it turns out
+            // these patterns come up
             debug_assert!(
                 re.is_match(ret.as_ref()),
                 "created word {ret} does not match {re:?}!"
