@@ -1,5 +1,5 @@
 use super::*;
-use crate::affix::RuleType;
+use crate::affix::RuleType::{self, Prefix, Suffix};
 
 #[test]
 fn test_check_condition() {
@@ -33,21 +33,41 @@ fn test_check_condition() {
     assert!(rule.check_condition("xxx"));
 }
 
+// affix, strip, condition, kind, input, output
+const RULE_PATTERNS: &[(&str, Option<&str>, &str, RuleType, &str, &str)] = &[
+    ("zzz", Some("y"), "[^aeiou]y", Suffix, "xxxy", "xxxzzz"),
+    ("zzz", Some("y"), "y[^aeiou]", Prefix, "yxxx", "zzzxxx"),
+    ("zzz", None, ".", Suffix, "xxx", "xxxzzz"),
+];
+
 #[test]
 fn test_apply_pattern() {
-    let mut kind = RuleType::Suffix;
-    let mut rule = AfxRulePattern::new("zzz", Some("y"));
+    for rule_pat in RULE_PATTERNS {
+        let (afx, strip, cond, kind, input, output) = rule_pat;
+        let mut rule = AfxRulePattern::new(afx, *strip);
+        rule.set_pattern(cond, *kind).unwrap();
 
-    rule.set_pattern("[^aeiou]y", kind).unwrap();
-    assert_eq!(rule.apply_pattern("xxxy", kind), Some("xxxzzz".to_owned()));
+        assert_eq!(
+            rule.apply_pattern(input, *kind),
+            Some((*output).into()),
+            "testing {rule_pat:?}"
+        );
+    }
+}
 
-    kind = RuleType::Prefix;
-    rule.set_pattern("y[^aeiou]", kind).unwrap();
-    assert_eq!(rule.apply_pattern("yxxx", kind), Some("zzzxxx".to_owned()));
+#[test]
+fn test_strip_pattern() {
+    for rule_pat in RULE_PATTERNS {
+        let (afx, strip, cond, kind, input, output) = rule_pat;
+        let mut rule = AfxRulePattern::new(afx, *strip);
+        rule.set_pattern(cond, *kind).unwrap();
 
-    kind = RuleType::Suffix;
-    rule.set_pattern(".", kind).unwrap();
-    assert_eq!(rule.apply_pattern("xxx", kind), Some("xxxzzz".to_owned()));
+        assert_eq!(
+            rule.strip_pattern(output, *kind),
+            Some((*input).into()),
+            "testing {rule_pat:?}"
+        );
+    }
 }
 
 // #[test]
