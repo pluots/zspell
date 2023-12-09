@@ -20,10 +20,10 @@
 %% Verify the word list contains exactly the listed words
 
 ==== nosuggest ====
-%% Expected contents of the never suggested wordlist
+%% Exact expected contents of the never suggested wordlist
 
 ==== forbidden ====
-%% Expected contents of the non-accepted wordlist
+%% Exact expected contents of the non-accepted wordlist
 
 ==== stem ====
 %% List the expected stem for a given word
