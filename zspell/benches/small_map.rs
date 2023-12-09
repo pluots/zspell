@@ -19,6 +19,7 @@
 
 use std::collections::{BTreeMap, HashMap};
 use std::hint::black_box;
+use std::sync::Mutex;
 
 use criterion::{criterion_group, criterion_main, Criterion};
 use hashbrown::HashMap as HashBrownMap;
@@ -31,24 +32,34 @@ const CAP_XLONG: usize = 400;
 
 type ValType = [i32; 8];
 
-fn make_vec(len: usize) -> (Vec<(u32, ValType)>, Vec<u32>) {
-    let mut ret = Vec::with_capacity(len);
-    for _ in 0..len {
-        ret.push((random(), random()))
-    }
-    ret.sort_unstable();
-    let keys = vec![ret[0].0, ret[len / 3].0, ret[len * 2 / 3].0, ret[len - 1].0];
+type VecMap = Vec<(u32, ValType)>;
 
-    (ret, keys)
+fn make_test_map(len: usize) -> (VecMap, Vec<u32>) {
+    // store results so all tests use the same data
+    static DATA: Mutex<Option<HashMap<usize, (VecMap, Vec<u32>)>>> = Mutex::new(None);
+    let mut tmp = DATA.lock().unwrap();
+    let map = tmp.get_or_insert(HashMap::new());
+    map.entry(len)
+        .or_insert_with(|| {
+            let mut ret = Vec::with_capacity(len);
+            for _ in 0..len {
+                ret.push((random(), random()))
+            }
+            ret.sort_unstable();
+            let keys = vec![ret[0].0, ret[len / 3].0, ret[len * 2 / 3].0, ret[len - 1].0];
+
+            (ret, keys)
+        })
+        .clone()
 }
 
-pub fn bench_vec_map(c: &mut Criterion) {
-    let (v_short, keys_short) = make_vec(CAP_SHORT);
-    let (v_med, keys_med) = make_vec(CAP_MED);
-    let (v_long, keys_long) = make_vec(CAP_LONG);
-    let (v_xlong, keys_xlong) = make_vec(CAP_XLONG);
+pub fn bench_vecmap_iter(c: &mut Criterion) {
+    let (v_short, keys_short) = make_test_map(CAP_SHORT);
+    let (v_med, keys_med) = make_test_map(CAP_MED);
+    let (v_long, keys_long) = make_test_map(CAP_LONG);
+    let (v_xlong, keys_xlong) = make_test_map(CAP_XLONG);
 
-    c.bench_function("Vec short get", |b| {
+    c.bench_function("VecMap short iter get", |b| {
         b.iter(|| {
             for key in &keys_short {
                 black_box(
@@ -60,7 +71,7 @@ pub fn bench_vec_map(c: &mut Criterion) {
             }
         })
     });
-    c.bench_function("Vec med get", |b| {
+    c.bench_function("VecMap med iter get", |b| {
         b.iter(|| {
             for key in &keys_med {
                 black_box(
@@ -72,7 +83,7 @@ pub fn bench_vec_map(c: &mut Criterion) {
             }
         })
     });
-    c.bench_function("Vec long get", |b| {
+    c.bench_function("VecMap long iter get", |b| {
         b.iter(|| {
             for key in &keys_long {
                 black_box(
@@ -84,7 +95,7 @@ pub fn bench_vec_map(c: &mut Criterion) {
             }
         })
     });
-    c.bench_function("Vec xlong get", |b| {
+    c.bench_function("VecMap xlong iter get", |b| {
         b.iter(|| {
             for key in &keys_xlong {
                 black_box(
@@ -98,13 +109,13 @@ pub fn bench_vec_map(c: &mut Criterion) {
     });
 }
 
-pub fn bench_vec_map_binsearch(c: &mut Criterion) {
-    let (v_short, keys_short) = make_vec(CAP_SHORT);
-    let (v_med, keys_med) = make_vec(CAP_MED);
-    let (v_long, keys_long) = make_vec(CAP_LONG);
-    let (v_xlong, keys_xlong) = make_vec(CAP_XLONG);
+pub fn bench_vecmap_binsearch(c: &mut Criterion) {
+    let (v_short, keys_short) = make_test_map(CAP_SHORT);
+    let (v_med, keys_med) = make_test_map(CAP_MED);
+    let (v_long, keys_long) = make_test_map(CAP_LONG);
+    let (v_xlong, keys_xlong) = make_test_map(CAP_XLONG);
 
-    c.bench_function("Vec short binsearch", |b| {
+    c.bench_function("VecMap short binsearch get", |b| {
         b.iter(|| {
             for key in &keys_short {
                 black_box(
@@ -116,7 +127,7 @@ pub fn bench_vec_map_binsearch(c: &mut Criterion) {
             }
         })
     });
-    c.bench_function("Vec med binsearch", |b| {
+    c.bench_function("VecMap med binsearch get", |b| {
         b.iter(|| {
             for key in &keys_med {
                 black_box(
@@ -128,7 +139,7 @@ pub fn bench_vec_map_binsearch(c: &mut Criterion) {
             }
         })
     });
-    c.bench_function("Vec long binsearch", |b| {
+    c.bench_function("VecMap long binsearch get", |b| {
         b.iter(|| {
             for key in &keys_long {
                 black_box(
@@ -140,7 +151,7 @@ pub fn bench_vec_map_binsearch(c: &mut Criterion) {
             }
         })
     });
-    c.bench_function("Vec xlong binsearch", |b| {
+    c.bench_function("VecMap xlong binsearch get", |b| {
         b.iter(|| {
             for key in &keys_xlong {
                 black_box(
@@ -154,11 +165,11 @@ pub fn bench_vec_map_binsearch(c: &mut Criterion) {
     });
 }
 
-pub fn bench_hash_map(c: &mut Criterion) {
-    let (v_short, keys_short) = make_vec(CAP_SHORT);
-    let (v_med, keys_med) = make_vec(CAP_MED);
-    let (v_long, keys_long) = make_vec(CAP_LONG);
-    let (v_xlong, keys_xlong) = make_vec(CAP_XLONG);
+pub fn bench_hashmap(c: &mut Criterion) {
+    let (v_short, keys_short) = make_test_map(CAP_SHORT);
+    let (v_med, keys_med) = make_test_map(CAP_MED);
+    let (v_long, keys_long) = make_test_map(CAP_LONG);
+    let (v_xlong, keys_xlong) = make_test_map(CAP_XLONG);
 
     let map_short: HashMap<u32, ValType> = HashMap::from_iter(v_short);
     let map_med: HashMap<u32, ValType> = HashMap::from_iter(v_med);
@@ -195,11 +206,11 @@ pub fn bench_hash_map(c: &mut Criterion) {
     });
 }
 
-pub fn bench_hashbrown_map(c: &mut Criterion) {
-    let (v_short, keys_short) = make_vec(CAP_SHORT);
-    let (v_med, keys_med) = make_vec(CAP_MED);
-    let (v_long, keys_long) = make_vec(CAP_LONG);
-    let (v_xlong, keys_xlong) = make_vec(CAP_XLONG);
+pub fn bench_hashbrownmap(c: &mut Criterion) {
+    let (v_short, keys_short) = make_test_map(CAP_SHORT);
+    let (v_med, keys_med) = make_test_map(CAP_MED);
+    let (v_long, keys_long) = make_test_map(CAP_LONG);
+    let (v_xlong, keys_xlong) = make_test_map(CAP_XLONG);
 
     let map_short: HashBrownMap<u32, ValType> = HashBrownMap::from_iter(v_short);
     let map_med: HashBrownMap<u32, ValType> = HashBrownMap::from_iter(v_med);
@@ -236,11 +247,11 @@ pub fn bench_hashbrown_map(c: &mut Criterion) {
     });
 }
 
-pub fn bench_btree_map(c: &mut Criterion) {
-    let (v_short, keys_short) = make_vec(CAP_SHORT);
-    let (v_med, keys_med) = make_vec(CAP_MED);
-    let (v_long, keys_long) = make_vec(CAP_LONG);
-    let (v_xlong, keys_xlong) = make_vec(CAP_XLONG);
+pub fn bench_btreemap(c: &mut Criterion) {
+    let (v_short, keys_short) = make_test_map(CAP_SHORT);
+    let (v_med, keys_med) = make_test_map(CAP_MED);
+    let (v_long, keys_long) = make_test_map(CAP_LONG);
+    let (v_xlong, keys_xlong) = make_test_map(CAP_XLONG);
 
     let map_short: BTreeMap<u32, ValType> = BTreeMap::from_iter(v_short);
     let map_med: BTreeMap<u32, ValType> = BTreeMap::from_iter(v_med);
@@ -279,10 +290,10 @@ pub fn bench_btree_map(c: &mut Criterion) {
 
 criterion_group!(
     small_map,
-    bench_vec_map,
-    bench_vec_map_binsearch,
-    bench_hash_map,
-    bench_hashbrown_map,
-    bench_btree_map,
+    bench_vecmap_iter,
+    bench_vecmap_binsearch,
+    bench_hashmap,
+    bench_hashbrownmap,
+    bench_btreemap,
 );
 criterion_main!(small_map);
