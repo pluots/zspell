@@ -706,7 +706,7 @@ pub fn affix_from_str(s: &str) -> Result<Vec<AffixNode>, ParseError> {
     let mut nlines: u32 = 1;
 
     'outer: while !working.is_empty() {
-        for (_idx, parse_fn) in ALL_PARSERS.iter().enumerate() {
+        for parse_fn in &ALL_PARSERS {
             let tmp = parse_fn(working).map_err(|e| e.add_offset_ret(nlines, 0))?;
             if let Some((node, residual, nl)) = tmp {
                 nlines += nl;

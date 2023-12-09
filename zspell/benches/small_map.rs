@@ -31,12 +31,13 @@ const CAP_LONG: usize = 80;
 const CAP_XLONG: usize = 400;
 
 type ValType = [i32; 8];
-
 type VecMap = Vec<(u32, ValType)>;
+/// A map to use and a list of entries to check
+type TestContext = (VecMap, Vec<u32>);
 
-fn make_test_map(len: usize) -> (VecMap, Vec<u32>) {
+fn make_test_map(len: usize) -> TestContext {
     // store results so all tests use the same data
-    static DATA: Mutex<Option<HashMap<usize, (VecMap, Vec<u32>)>>> = Mutex::new(None);
+    static DATA: Mutex<Option<HashMap<usize, TestContext>>> = Mutex::new(None);
     let mut tmp = DATA.lock().unwrap();
     let map = tmp.get_or_insert(HashMap::new());
     map.entry(len)
