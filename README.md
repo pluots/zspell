@@ -79,6 +79,19 @@ supported version. Our CI validates this for the library and examples.
 
 The CLI and test runner require newer features and do not keep a specific MSRV.
 
+## Test suite
+
+This project keeps a test suite located in `zspell/test-suite` (symlinked to
+`test-suite`). Each file has a simple format that combines a simple affix and
+dictionary file. To add a test, just duplicate and edit `0-example.test`.
+
+File names are as follows:
+
+- `0-*`: meta tests that do not get run
+- `b-*`: basic functionality tests
+- `h-*`: tests that come from the Hunspell test suite
+- `i000-*`: tests that address specific issues
+
 ## License
 
 See the LICENSE file for license information. The provided license does allow

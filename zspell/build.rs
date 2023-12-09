@@ -22,6 +22,7 @@ fn update_tests() {
     let test_paths = fs::read_dir(suite_dir).unwrap();
 
     let mut to_write = TEST_PREFIX.to_owned();
+    let mut all_test_names = Vec::new();
 
     for path in test_paths {
         let path = path.unwrap().path();
@@ -31,8 +32,12 @@ fn update_tests() {
             .strip_suffix(".test")
             .unwrap()
             .trim_start_matches(char::is_numeric)
-            .trim_start_matches('_')
+            .trim_start_matches(['_', '-'])
             .replace('-', "_");
+
+        if all_test_names.contains(&test_name) {
+            panic!("duplicate generated test name {test_name}");
+        }
 
         if test_name == "example" {
             continue;
@@ -55,6 +60,8 @@ fn update_tests() {
             fname = fname,
         )
         .unwrap();
+
+        all_test_names.push(test_name);
     }
 
     fs::write(out_path, to_write).unwrap();
