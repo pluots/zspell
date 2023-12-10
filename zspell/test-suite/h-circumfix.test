@@ -1,0 +1,48 @@
+%% SPDX-License-Identifier: MPL-1.1
+%% https://github.com/hunspell/hunspell/blob/3cfd539b5b1033620b12663ee3f1d673d193add0/tests/circumfix.aff
+
+==== afx ====
+# circumfixes: ~ obligate prefix/suffix combinations
+# superlative in Hungarian: leg- (prefix) AND -bb (suffix)
+
+CIRCUMFIX X
+
+PFX A Y 1
+PFX A 0 leg/X .
+
+PFX B Y 1
+PFX B 0 legesleg/X .
+
+SFX C Y 3
+SFX C 0 obb . is:COMPARATIVE
+SFX C 0 obb/AX . is:SUPERLATIVE
+SFX C 0 obb/BX . is:SUPERSUPERLATIVE
+
+==== dic ====
+1
+nagy/C	po:adj
+
+==== valid ====
+nagy
+nagyobb
+
+%% FIXME(circumfix): xfail
+%% legnagyobb
+%% legeslegnagyobb
+
+
+==== stem ====
+nagy > nagy
+nagyobb > nagy
+
+%% FIXME(circumfix): xfail
+%% legnagyobb > nagy
+%% legeslegnagyobb > nagy
+
+==== morph ====
+nagy > po:adj
+nagyobb > po:adj is:COMPARATIVE
+
+%% FIXME(circumfix): xfail
+%% legnagyobb > fl:A po:adj is:SUPERLATIVE
+%% legeslegnagyobb > fl:B po:adj is:SUPERSUPERLATIVE

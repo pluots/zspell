@@ -1,0 +1,30 @@
+%% SPDX-License-Identifier: GPL-2.0-or-later
+%% Flags that apply to dictionary items and flags that apply to other things in
+%% the affix file have separate namespaces.
+%%
+%% Examples come from the German dictionary
+%% <https://github.com/wooorm/dictionaries/blob/836d7c2032167880e639a1fe522748733e528c2d/dictionaries/de/index.aff>
+
+
+==== afx ====
+# Afffix using `f`
+SFX f Y 4
+SFX f   ph      f          ph
+SFX f   ph      fen        ph
+SFX f   phie    fie        phie
+SFX f   phie    fien       phie
+
+# Meta flag using `f`
+# Affixes  signed  with CIRCUMFIX flag may be on a word when this word also has
+# a prefix with CIRCUMFIX flag and vice versa.
+# for decapitalizing nouns with fogemorphemes
+CIRCUMFIX f
+
+# Affix that adds the flag `f`
+# for Uppercased end-words to prepend - and lowercase: (Tier/EPSm) (EX: Bettbezüge und *-laken*)
+# AND
+# for lowercased end-words to prepend - and re-uppercase : (tier/EPSozm) (EX: Arbeits*-Tier*)
+PFX m Y 1
+PFX m f -F/co f
+
+%% FIXME(added flags): affixes need to be able to add flags
