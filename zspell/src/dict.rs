@@ -16,13 +16,13 @@ use stringmetrics::try_levenshtein;
 use unicode_segmentation::UnicodeSegmentation;
 use xxhash_rust::xxh32::xxh32;
 
-pub use self::flags::FlagValue;
+pub use self::flags::{Flag, FlagValue};
 use self::meta::{Meta, PersonalMeta, Source};
 pub use self::parse::DictEntry;
 use self::parse::PersonalEntry;
 pub use self::rule::AfxRule;
 use self::rules_apply::{create_affixed_word_map, word_splitter};
-use crate::affix::FlagType;
+use crate::affix::{CompiledFlags, FlagType};
 use crate::error::{BuildError, Error};
 use crate::helpers::StrWrapper;
 use crate::morph::MorphInfo;
@@ -62,8 +62,9 @@ pub struct Dictionary {
     /* the following few types are used to store  meta information */
     /// A list of all stem words
     stems: HashSet<Arc<str>>,
-    /// Affix flags and rules
-    flags: BTreeMap<u32, FlagValue>,
+    /// Flags and rules that apply to affixes
+    affix_flags: BTreeMap<Flag, FlagValue>,
+    /// Flags that apply to other flags or rules
     /// Possible morphs
     morphs: HashSet<Arc<MorphInfo>>,
     /// Type of flags to expect in our file
@@ -80,13 +81,19 @@ impl Dictionary {
     /// Create a new empty dictionary with default config
     #[inline]
     fn new(cfg: ParsedCfg) -> Result<Self, Error> {
+        // FIXME: what do we do with rule flags?
+        let CompiledFlags {
+            affix_flags,
+            rule_flags: _,
+        } = cfg.compile_flags()?;
+
         Ok(Self {
             wordlist: WordList::new(),
             wordlist_nosuggest: WordList::new(),
             wordlist_forbidden: WordList::new(),
             stems: HashSet::new(),
             morphs: HashSet::new(),
-            flags: cfg.compile_flags()?,
+            affix_flags,
             flag_type: cfg.flag_type(),
             parsed_config: Box::new(cfg),
         })
@@ -283,7 +290,7 @@ impl Dictionary {
     /// this affix. Does not check if the flag is valid.
     ///
     /// May contain duplicates, does not contain the original word
-    fn create_affixed_words(&mut self, stem: &str, flags: &[u32], morph: &[Arc<MorphInfo>]) {
+    fn create_affixed_words(&mut self, stem: &str, flags: &[Flag], morph: &[Arc<MorphInfo>]) {
         let mut prefix_rules = Vec::new();
         let mut suffix_rules = Vec::new();
 
@@ -296,12 +303,12 @@ impl Dictionary {
         let mut nosuggest = false;
 
         for flag in flags {
-            if self.flags.get(flag).is_none() {
+            if self.affix_flags.get(flag).is_none() {
                 // FIXME: we get stuck on compound rules
                 continue;
             }
 
-            match self.flags.get(flag).unwrap() {
+            match self.affix_flags.get(flag).unwrap() {
                 FlagValue::ForbiddenWord => forbid = true,
                 FlagValue::NoSuggest => nosuggest = true,
                 FlagValue::Rule(rule) => {

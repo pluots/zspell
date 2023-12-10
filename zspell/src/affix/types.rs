@@ -6,6 +6,7 @@ use std::str::FromStr;
 use lazy_static::lazy_static;
 use regex::Regex;
 
+use crate::dict::Flag;
 use crate::error::ParseErrorKind;
 use crate::morph::MorphStr;
 
@@ -63,7 +64,7 @@ pub enum FlagType {
 
 impl FlagType {
     /// Convert a string flag to its u32 representation
-    pub(crate) fn str_to_flag(self, flag: &str) -> Result<u32, ParseErrorKind> {
+    pub(crate) fn str_to_flag(self, flag: &str) -> Result<Flag, ParseErrorKind> {
         match self {
             // Single ascii char
             FlagType::Ascii => Self::parse_as_ascii(flag),
@@ -80,7 +81,7 @@ impl FlagType {
     ///
     /// ASCII and UTF-8 flags just split by characters. Long splits every two
     /// characters, numbers split by commas
-    pub(crate) fn parse_str(self, s: &str) -> Result<Vec<u32>, ParseErrorKind> {
+    pub(crate) fn parse_str(self, s: &str) -> Result<Vec<Flag>, ParseErrorKind> {
         match self {
             FlagType::Ascii => s.chars().map(Self::parse_char_ascii).collect(),
             FlagType::Utf8 => Ok(s.chars().map(Self::parse_char_utf8).collect()),
@@ -97,71 +98,76 @@ impl FlagType {
         }
     }
 
-    fn parse_as_ascii(flag: &str) -> Result<u32, ParseErrorKind> {
+    fn parse_as_ascii(flag: &str) -> Result<Flag, ParseErrorKind> {
         if flag.len() == 1 {
-            Ok(u32::from(flag.bytes().next().unwrap()))
+            Ok(Flag(flag.bytes().next().unwrap().into()))
         } else {
             Err(ParseErrorKind::FlagParse(Self::Ascii))
         }
     }
 
-    fn parse_as_utf8(flag: &str) -> Result<u32, ParseErrorKind> {
-        if flag.chars().count() == 1 {
-            Ok(flag.chars().next().unwrap() as u32)
-        } else {
-            Err(ParseErrorKind::FlagParse(Self::Utf8))
+    fn parse_as_utf8(flag: &str) -> Result<Flag, ParseErrorKind> {
+        let mut chars = flag.chars();
+        let err = Err(ParseErrorKind::FlagParse(Self::Utf8));
+
+        let Some(ch) = chars.next() else {
+            return err;
+        };
+
+        if chars.next().is_some() {
+            return err;
         }
+
+        Ok(Flag(ch.into()))
     }
 
     /// Parse two ascii characters
-    fn parse_as_long(flag: &str) -> Result<u32, ParseErrorKind> {
+    fn parse_as_long(flag: &str) -> Result<Flag, ParseErrorKind> {
         if flag.len() != 2 || flag.chars().any(|c| !c.is_ascii()) {
             Err(ParseErrorKind::FlagParse(Self::Long))
         } else {
-            Ok(u32::from(u16::from_ne_bytes(
-                flag[0..=1].as_bytes().try_into().unwrap(),
-            )))
+            let v = u16::from_ne_bytes(flag[0..=1].as_bytes().try_into().unwrap());
+            Ok(Flag(v.into()))
         }
     }
 
     /// Parse as a number
-    fn parse_as_number(flag: &str) -> Result<u32, ParseErrorKind> {
+    fn parse_as_number(flag: &str) -> Result<Flag, ParseErrorKind> {
         flag.parse()
             .map_err(|_| ParseErrorKind::FlagParse(Self::Number))
+            .map(Flag)
     }
 
-    fn parse_char_ascii(c: char) -> Result<u32, ParseErrorKind> {
+    fn parse_char_ascii(c: char) -> Result<Flag, ParseErrorKind> {
         if c.is_ascii() {
-            Ok(c as u32)
+            Ok(Flag(c.into()))
         } else {
             Err(ParseErrorKind::FlagParse(Self::Ascii))
         }
     }
 
-    fn parse_char_utf8(c: char) -> u32 {
-        c as u32
+    fn parse_char_utf8(c: char) -> Flag {
+        Flag(c.into())
     }
 
-    fn parse_chars_long(chars: [char; 2]) -> Result<u32, ParseErrorKind> {
+    fn parse_chars_long(chars: [char; 2]) -> Result<Flag, ParseErrorKind> {
         if chars.iter().any(|ch| !ch.is_ascii()) {
             Err(ParseErrorKind::FlagParse(Self::Long))
         } else {
-            Ok(u32::from(u16::from_ne_bytes([
-                chars[0] as u8,
-                chars[1] as u8,
-            ])))
+            let arr = [chars[0].try_into().unwrap(), chars[1].try_into().unwrap()];
+            Ok(Flag(u16::from_ne_bytes(arr).into()))
         }
     }
 
     /// Given a specified flag type (self), turn the value back into a string
     #[inline]
-    pub fn flag_to_str(self, flag: u32) -> String {
+    pub fn flag_to_str(self, flag: Flag) -> String {
         match self {
             // Should be OK to unwrap because we created these flags from valid characters
-            FlagType::Ascii | FlagType::Utf8 => char::from_u32(flag).unwrap().to_string(),
-            FlagType::Number => flag.to_string(),
+            FlagType::Ascii | FlagType::Utf8 => char::from_u32(flag.0).unwrap().to_string(),
+            FlagType::Number => flag.0.to_string(),
             FlagType::Long => {
-                let bytes = (u16::try_from(flag).unwrap()).to_ne_bytes();
+                let bytes = (u16::try_from(flag.0).unwrap()).to_ne_bytes();
                 bytes.iter().map(|b| *b as char).collect::<String>()
             }
         }
