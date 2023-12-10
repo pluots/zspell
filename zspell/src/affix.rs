@@ -13,7 +13,7 @@ pub use self::types::{
     CompoundPattern, CompoundSyllable, Conversion, Encoding, FlagType, PartOfSpeech, Phonetic,
     RuleType,
 };
-use crate::dict::{AfxRule, FlagValue};
+use crate::dict::{AfxRule, Flag, FlagValue};
 use crate::error::{BuildError, Error, ParseError};
 
 /// A representation of an affix file
@@ -59,10 +59,10 @@ pub struct ParsedCfg {
     try_characters: String,
 
     /// Flag used to indicate words that should not be suggested
-    nosuggest_flag: Option<u32>,
+    nosuggest_flag: Option<Flag>,
 
     /// Note rare (i.e. commonly misspelled) words with this flag
-    warn_rare_flag: Option<u32>,
+    warn_rare_flag: Option<Flag>,
 
     /// Don't suggest anything with spaces
     no_split_suggestions: bool,
@@ -105,14 +105,14 @@ pub struct ParsedCfg {
     /*
         Other options
     */
-    afx_circumflex_flag: Option<u32>,
-    forbidden_word_flag: Option<u32>,
+    afx_circumflex_flag: Option<Flag>,
+    forbidden_word_flag: Option<Flag>,
     afx_full_strip: bool,
-    afx_keep_case_flag: Option<u32>,
+    afx_keep_case_flag: Option<Flag>,
     input_conversions: Vec<Conversion>,
     output_conversions: Vec<Conversion>,
-    afx_needed_flag: Option<u32>,
-    afx_substandard_flag: Option<u32>,
+    afx_needed_flag: Option<Flag>,
+    afx_substandard_flag: Option<Flag>,
     afx_word_chars: String,
     afx_check_sharps: bool,
     name: String,
@@ -137,25 +137,25 @@ pub struct CompoundConfig {
     min_length: u16,
 
     /// Words with this flag may be in compounds
-    flag: Option<u32>,
+    flag: Option<Flag>,
 
     /// Words with this flag may start a compound
-    begin_flag: Option<u32>,
+    begin_flag: Option<Flag>,
 
     /// Words with this flag may end a compound
-    end_flag: Option<u32>,
+    end_flag: Option<Flag>,
 
     /// Words with this flag may be in the middle of a compound
-    middle_flag: Option<u32>,
+    middle_flag: Option<Flag>,
 
-    /// Words with this flag can't be on their own, only in compounds
-    only_flag: Option<u32>,
+    /// Words with this Flagg can't be on their own, only in compounds
+    only_flag: Option<Flag>,
 
     /// Allow these words inside compounds
-    permit_flag: Option<u32>,
-    forbid_flag: Option<u32>,
+    permit_flag: Option<Flag>,
+    forbid_flag: Option<Flag>,
     more_suffixes: bool,
-    root_flag: Option<u32>,
+    root_flag: Option<Flag>,
     word_max: u16,
     forbid_dup: bool,
     forbid_repeat: bool,
@@ -163,7 +163,7 @@ pub struct CompoundConfig {
     check_triple: bool,
     simplify_triple: bool,
     forbid_pats: Vec<CompoundPattern>,
-    force_upper_flag: Option<u32>,
+    force_upper_flag: Option<Flag>,
     syllable: CompoundSyllable,
     syllable_num: String,
 }
@@ -378,7 +378,7 @@ impl ParsedCfg {
     }
 
     /// Convert a string to the internal flag type
-    pub(crate) fn convert_flag(&self, flag: &str) -> Result<u32, ParseError> {
+    pub(crate) fn convert_flag(&self, flag: &str) -> Result<Flag, ParseError> {
         self.flag_type
             .str_to_flag(flag)
             .map_err(|e| ParseError::new_nospan(e, flag))
@@ -386,8 +386,9 @@ impl ParsedCfg {
 
     /// Collect all relevant flags to a map. Returns an error if there are
     /// duplicates
-    pub fn compile_flags(&self) -> Result<BTreeMap<u32, FlagValue>, Error> {
-        let keysets = [
+    pub fn compile_flags(&self) -> Result<CompiledFlags, Error> {
+        // Map fields to flags
+        let affix_key_sets = [
             (self.afx_circumflex_flag, FlagValue::AfxCircumfix),
             (self.afx_keep_case_flag, FlagValue::AfxKeepCase),
             (self.afx_needed_flag, FlagValue::AfxNeeded),
@@ -409,14 +410,19 @@ impl ParsedCfg {
             (self.warn_rare_flag, FlagValue::WarnRare),
         ];
 
-        let mut map: BTreeMap<u32, FlagValue> = BTreeMap::new();
+        let rule_key_sets = [
+            
+        ]
 
-        for (key, value) in keysets
+        let mut affix_flags: BTreeMap<Flag, FlagValue> = BTreeMap::new();
+        let mut rule_flags: BTreeMap<Flag, FlagValue> = BTreeMap::new();
+
+        for (key, value) in affix_key_sets
             .iter()
             .filter_map(|(kopt, val)| kopt.map(|keyval| (keyval, val)))
         {
             // Check for duplicate values
-            if let Some(duplicate) = map.get(&key) {
+            if let Some(duplicate) = affix_flags.get(&key) {
                 return Err(BuildError::DuplicateFlag {
                     flag: self.flag_type.flag_to_str(key),
                     t1: duplicate.clone(),
@@ -424,7 +430,7 @@ impl ParsedCfg {
                 }
                 .into());
             }
-            map.insert(key, value.clone());
+            affix_flags.insert(key, value.clone());
         }
 
         for group in &self.afx_rule_groups {
@@ -434,7 +440,7 @@ impl ParsedCfg {
                 .map_err(|e| ParseError::new_nospan(e, &group.flag))?;
 
             // Check for duplicate values
-            if let Some(duplicate) = map.get(&flag) {
+            if let Some(duplicate) = affix_flags.get(&flag) {
                 return Err(BuildError::DuplicateFlag {
                     flag: group.flag.clone(),
                     t1: duplicate.clone(),
@@ -444,11 +450,22 @@ impl ParsedCfg {
             }
 
             let rule = AfxRule::from_parsed_group(self, group);
-            map.insert(flag, FlagValue::Rule(Arc::new(rule)));
+            affix_flags.insert(flag, FlagValue::Rule(Arc::new(rule)));
         }
 
-        Ok(map)
+        Ok(CompiledFlags {
+            affix_flags,
+            rule_flags,
+        })
     }
+}
+
+/// Output type of `compile_flags`
+pub struct CompiledFlags {
+    /// Flags and rules that apply to affixes
+    pub affix_flags: BTreeMap<Flag, FlagValue>,
+    /// Flags that apply to other flags or rules
+    pub rule_flags: BTreeMap<Flag, FlagValue>,
 }
 
 /// Indicate a kind of flag

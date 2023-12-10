@@ -19,10 +19,14 @@ fn test_dict_entry_ok() {
     let s8 = "abcd ip:m1 tp:m2 # comment";
 
     let r1 = DictEntry::new("abcd", &[], &[]);
-    let r2 = DictEntry::new("abcd", &['A' as u32, 'B' as u32, 'C' as u32], &[]);
+    let r2 = DictEntry::new(
+        "abcd",
+        &[Flag('A'.into()), Flag('B'.into()), Flag('C'.into())],
+        &[],
+    );
     let r3 = DictEntry::new(
         "abcd",
-        &['A' as u32, 'B' as u32, 'C' as u32],
+        &[Flag('A'.into()), Flag('B'.into()), Flag('C'.into())],
         &[
             MorphInfo::InflecPfx("m1".into()),
             MorphInfo::TermPfx("m2".into()),

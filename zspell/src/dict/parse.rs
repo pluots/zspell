@@ -2,6 +2,7 @@
 
 use std::sync::Arc;
 
+use super::Flag;
 use crate::affix::FlagType;
 use crate::error::ParseError;
 use crate::helpers::convertu32;
@@ -21,14 +22,14 @@ use crate::morph::MorphInfo;
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct DictEntry {
     pub(super) stem: Arc<str>,
-    pub(super) flags: Vec<u32>,
+    pub(super) flags: Vec<Flag>,
     pub(super) morph: Vec<Arc<MorphInfo>>,
 }
 
 impl DictEntry {
     /// Test config: create a new `DictEntry`
     #[cfg(test)]
-    pub(crate) fn new(stem: &str, flags: &[u32], morph: &[MorphInfo]) -> Self {
+    pub(crate) fn new(stem: &str, flags: &[Flag], morph: &[MorphInfo]) -> Self {
         Self {
             stem: stem.into(),
             flags: flags.to_owned(),
@@ -40,7 +41,7 @@ impl DictEntry {
     fn parse_single(value: &str, flag_type: FlagType, line_num: u32) -> Result<Self, ParseError> {
         let (stem, flagstr, morphstr) = separate_into_parts(value);
 
-        let flags: Vec<u32> = match flagstr {
+        let flags: Vec<Flag> = match flagstr {
             Some(s) => flag_type
                 .parse_str(s.trim())
                 .map_err(|e| ParseError::new_nocol(e, s, line_num))?,

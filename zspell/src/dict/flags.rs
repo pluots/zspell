@@ -3,7 +3,12 @@ use std::sync::Arc;
 
 use super::rule::AfxRule;
 
-/// A representation of what a flag represents
+/// A flag representation is either an ASCII char, unicode char, or number. We can fit
+/// any of those in a u32.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, PartialOrd, Ord)]
+pub struct Flag(pub u32);
+
+/// A representation of a flag value
 #[non_exhaustive]
 #[derive(Debug, Clone, Hash, PartialEq, Eq)]
 pub enum FlagValue {
