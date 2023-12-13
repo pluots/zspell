@@ -1,6 +1,6 @@
 [package]
 name = "zspell-cli"
-version = "0.5.2"
+version = "0.5.3"
 edition = "2021"
 publish = true
 description = "Command line interface for the ZSpell spellchecking library"
@@ -37,7 +37,7 @@ stringmetrics = "2.2"
 termcolor = "1.3.0"
 tokio = "1.33.0"
 anyhow = "1.0.75"
-zspell = { path = "../zspell", version = "0.5.2", features = ["zspell-unstable"] }
+zspell = { path = "../zspell", version = "0.5.3", features = ["zspell-unstable"] }
 
 [dev-dependencies]
 criterion = "0.5"
