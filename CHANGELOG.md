@@ -4,6 +4,16 @@
 
 ## [Unreleased] - ReleaseDate
 
+### Added
+
+### Changed
+
+### Removed
+
+
+
+## [0.5.3] - 2023-12-13
+
 ### Changed
 
 - Fix duplicate flag issue loading the German dictionary from
@@ -182,7 +192,8 @@ Minor bups in the dependency list
 - Behind the scenes work to prepare for automatic dictionary location
 
 <!-- next-url -->
-[Unreleased]: https://github.com/pluots/zspell/compare/v0.5.2...HEAD
+[Unreleased]: https://github.com/pluots/zspell/compare/v0.5.3...HEAD
+[0.5.3]: https://github.com/pluots/zspell/compare/v0.5.2...v0.5.3
 [0.5.2]: https://github.com/pluots/zspell/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/pluots/zspell/compare/v0.5.0...v0.5.1
 [0.5.0]: https://github.com/pluots/zspell/compare/v0.4.1...v0.5.0
