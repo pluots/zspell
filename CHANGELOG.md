@@ -4,12 +4,10 @@
 
 ## [Unreleased] - ReleaseDate
 
-### Added
-
 ### Changed
 
-### Removed
-
+- Fix duplicate flag issue loading the German dictionary from
+  [#93](https://github.com/pluots/zspell/issues/93)
 
 
 ## [0.5.2] - 2023-10-30
