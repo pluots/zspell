@@ -387,9 +387,10 @@ impl ParsedCfg {
     /// Collect all relevant flags to a map. Returns an error if there are
     /// duplicates
     pub fn compile_flags(&self) -> Result<CompiledFlags, Error> {
-        // Map fields to flags
-        let affix_key_sets = [
-            (self.afx_circumflex_flag, FlagValue::AfxCircumfix),
+        // FIXME(circumfix): these flags probably need to be split differently
+
+        // Map fields to flags for flags that can apply to stems
+        let stem_key_sets = [
             (self.afx_keep_case_flag, FlagValue::AfxKeepCase),
             (self.afx_needed_flag, FlagValue::AfxNeeded),
             (self.afx_substandard_flag, FlagValue::AfxSubstandard),
@@ -410,14 +411,13 @@ impl ParsedCfg {
             (self.warn_rare_flag, FlagValue::WarnRare),
         ];
 
-        let rule_key_sets = [
-            
-        ]
+        // Flags that apply to other rules, such as affixes
+        let rule_key_sets = [(self.afx_circumflex_flag, FlagValue::AfxCircumfix)];
 
         let mut affix_flags: BTreeMap<Flag, FlagValue> = BTreeMap::new();
         let mut rule_flags: BTreeMap<Flag, FlagValue> = BTreeMap::new();
 
-        for (key, value) in affix_key_sets
+        for (key, value) in stem_key_sets
             .iter()
             .filter_map(|(kopt, val)| kopt.map(|keyval| (keyval, val)))
         {
@@ -433,13 +433,29 @@ impl ParsedCfg {
             affix_flags.insert(key, value.clone());
         }
 
+        for (key, value) in rule_key_sets
+            .iter()
+            .filter_map(|(kopt, val)| kopt.map(|keyval| (keyval, val)))
+        {
+            // Check for duplicate values
+            if let Some(duplicate) = rule_flags.get(&key) {
+                return Err(BuildError::DuplicateFlag {
+                    flag: self.flag_type.flag_to_str(key),
+                    t1: duplicate.clone(),
+                    t2: Some(value.clone()),
+                }
+                .into());
+            }
+            rule_flags.insert(key, value.clone());
+        }
+
         for group in &self.afx_rule_groups {
             let flag = self
                 .flag_type
                 .str_to_flag(&group.flag)
                 .map_err(|e| ParseError::new_nospan(e, &group.flag))?;
 
-            // Check for duplicate values
+            // Check for duplicate values only in affix flags.
             if let Some(duplicate) = affix_flags.get(&flag) {
                 return Err(BuildError::DuplicateFlag {
                     flag: group.flag.clone(),
