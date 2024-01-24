@@ -2,7 +2,7 @@
 
 mod node;
 mod parse;
-mod rule;
+mod parse_rule;
 mod types;
 
 use std::collections::BTreeMap;

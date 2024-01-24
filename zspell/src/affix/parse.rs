@@ -8,10 +8,10 @@ use std::sync::Arc;
 
 use lazy_static::lazy_static;
 pub use node::AffixNode;
+pub use parse_rule::{ParsedRule, ParsedRuleGroup};
 use regex::Regex;
-pub use rule::{ParsedRule, ParsedRuleGroup};
 
-use super::{node, rule};
+use super::{node, parse_rule};
 use crate::affix::{
     CompoundPattern, CompoundSyllable, Conversion, Encoding, FlagType, Phonetic, RuleType,
 };

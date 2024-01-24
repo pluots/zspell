@@ -1,5 +1,6 @@
 //! Implementation for a stored rule
 
+use std::borrow::Cow;
 use std::hash::Hash;
 use std::sync::Arc;
 
@@ -90,6 +91,17 @@ impl AfxRule {
             .filter_map(|(idx, pat)| pat.apply_pattern(stem, self.kind).map(|s| (idx, s)))
     }
 
+    /// Do the opposite of [`apply_patterns`], try to strip this pattern from a word
+    pub fn strip_patterns<'a>(
+        &'a self,
+        word: &'a str,
+    ) -> impl Iterator<Item = (usize, Cow<'a, str>)> + 'a {
+        self.patterns
+            .iter()
+            .enumerate()
+            .filter_map(|(idx, pat)| pat.strip_pattern(word, self.kind).map(|s| (idx, s)))
+    }
+
     pub(crate) fn patterns(&self) -> &[AfxRulePattern] {
         &self.patterns
     }
@@ -98,6 +110,7 @@ impl AfxRule {
 /// A single affix rule application
 #[derive(Clone, Default, Debug, PartialEq, Eq, Hash)]
 pub struct AfxRulePattern {
+    /// The prefix or suffix to be added
     affix: Box<str>,
     /// Condition to be met to apply this rule.
     condition: Option<ReWrapper>,
@@ -139,7 +152,7 @@ impl AfxRulePattern {
         &self.morph_info
     }
 
-    // Verify the match condition and apply this rule
+    /// Verify the match condition and apply this rule
     #[allow(clippy::option_if_let_else)]
     fn apply_pattern(&self, s: &str, kind: RuleType) -> Option<String> {
         // No return if condition doesn't match
@@ -172,6 +185,41 @@ impl AfxRulePattern {
                 Some(working)
             }
         }
+    }
+
+    /// Remove this pattern
+    // FIXME:PERF: maybe keep a `String` in the parent stack, take a `&mut` reference to return?
+    fn strip_pattern<'a>(&self, word: &'a str, kind: RuleType) -> Option<Cow<'a, str>> {
+        dbg!(word, kind);
+        let ret = match kind {
+            RuleType::Prefix => {
+                let Some(base) = dbg!(word.strip_prefix(self.affix.as_ref())) else {
+                    return None;
+                };
+                self.strip.as_ref().map_or(Cow::Borrowed(base), |add_back| {
+                    Cow::Owned(format!("{add_back}{base}"))
+                })
+            }
+            RuleType::Suffix => {
+                let Some(base) = dbg!(word.strip_suffix(self.affix.as_ref())) else {
+                    return None;
+                };
+                self.strip.as_ref().map_or(Cow::Borrowed(base), |add_back| {
+                    Cow::Owned(format!("{base}{add_back}"))
+                })
+            }
+        };
+
+        if let Some(re) = &self.condition {
+            // FIXME: we probably want to change this to return `None` if it turns out
+            // these patterns come up
+            debug_assert!(
+                re.is_match(ret.as_ref()),
+                "created word {ret} does not match {re:?}!"
+            );
+        }
+
+        Some(ret)
     }
 }
 
