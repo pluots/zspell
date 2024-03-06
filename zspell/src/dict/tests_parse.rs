@@ -1,8 +1,6 @@
 use pretty_assertions::assert_eq;
 
-// use super::parser::DictEntry;
 use super::*;
-use crate::morph::MorphInfo;
 
 #[test]
 fn test_dict_entry_ok() {

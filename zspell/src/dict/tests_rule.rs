@@ -1,5 +1,4 @@
 use super::*;
-use crate::affix::RuleType;
 
 #[test]
 fn test_check_condition() {
