@@ -15,11 +15,11 @@ doc = false
 
 [dependencies]
 regex = "1.10"
-pyo3 = { version = "0.20.0", features = ["extension-module"] }
+pyo3 = { version = "0.20.3", features = ["extension-module"] }
 zspell = { path = "../zspell" }
 
 [build-dependencies]
-pyo3-build-config = "0.20.0"
+pyo3-build-config = "0.20.3"
 
 [package.metadata.release]
 shared-version = true
