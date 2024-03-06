@@ -90,6 +90,7 @@ jobs:
         env:
           CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
         with:
+          fail_ci_if_error: false
           files: lcov.info
 
   sanitizers:
