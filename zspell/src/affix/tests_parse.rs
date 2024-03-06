@@ -4,7 +4,7 @@ use pretty_assertions::assert_eq;
 use test_util::workspace_root;
 
 use super::*;
-use crate::affix::{PartOfSpeech, RuleType};
+use crate::affix::PartOfSpeech;
 use crate::error::Span;
 
 #[test]
