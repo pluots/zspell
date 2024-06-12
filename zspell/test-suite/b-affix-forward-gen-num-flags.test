@@ -13,23 +13,30 @@ SFX 999     0     bb         .
 SFX 12345 N 1
 SFX 12345   0     cc         .
 
+SFX 1234  N 1
+SFX 1234    0     dd         .
+
 ==== dic ====
 4
-xxx/1
-yyy/1,999,12345
-zzz/999,12345
+www/1
+xxx/1,999,12345
+yyy/999,12345
+zzz/999,1234
 
 
 ==== valid ====
+www
 xxx
 yyy
 zzz
+wwwaa
 xxxaa
-yyyaa
+xxxbb
+xxxcc
 yyybb
 yyycc
 zzzbb
-zzzcc
+zzzdd
 
 
 ==== invalid ====
@@ -37,12 +44,15 @@ zzzcc
 nothing
 
 ==== wordlist ====
+www
 xxx
 yyy
 zzz
+wwwaa
 xxxaa
-yyyaa
+xxxbb
+xxxcc
 yyybb
 yyycc
 zzzbb
-zzzcc
+zzzdd
