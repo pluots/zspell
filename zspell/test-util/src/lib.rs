@@ -90,7 +90,7 @@ impl TestManager {
             // check exhaustive matches)
             for line in content_iter
                 .next()
-                .expect("Section title with no content")
+                .unwrap_or_else(|| panic!("Section title '{sec_title}' has no content"))
                 .lines()
             {
                 match determine_line(line) {
@@ -261,7 +261,7 @@ impl TestManager {
 
         if valid_fail_msg.is_some() || invalid_fail_msg.is_some() {
             panic!(
-                "{}{}",
+                "{}{}\ndictionary: {dict:#?}",
                 valid_fail_msg.unwrap_or_default(),
                 invalid_fail_msg.unwrap_or_default()
             );

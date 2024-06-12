@@ -6,31 +6,60 @@ use super::*;
 fn test_dict_entry_ok() {
     let f1 = FlagType::Utf8;
     let f2 = FlagType::Ascii;
+    let f3 = FlagType::Long;
 
-    let s1 = "abcd";
-    let s2 = "abcd # comment";
-    let s3 = "abcd/ABC";
-    let s4 = "abcd/ABC # comment";
-    let s5 = "abcd/ABC ip:m1 tp:m2";
-    let s6 = "abcd/ABC ip:m1 tp:m2 # comment";
-    let s7 = "abcd ip:m1 tp:m2";
-    let s8 = "abcd ip:m1 tp:m2 # comment";
+    let s_0f0m_1 = "abcd";
+    let s_0f0m_2 = "abcd # comment";
+    let s_4f0m_1 = "abcd/ABCD";
+    let s_4f0m_2 = "abcd/ABCD # comment";
+    let s_4f2m_1 = "abcd/ABCD ip:m1 tp:m2";
+    let s_4f2m_2 = "abcd/ABCD ip:m1 tp:m2 # comment";
+    let s_0f2m_1 = "abcd ip:m1 tp:m2";
+    let s_0f2m_2 = "abcd ip:m1 tp:m2 # comment";
 
-    let r1 = DictEntry::new("abcd", &[], &[]);
-    let r2 = DictEntry::new(
+    // No flags
+    let r_0f0m = DictEntry::new("abcd", &[], &[]);
+
+    // All flags
+    let r_4f0m = DictEntry::new(
         "abcd",
-        &[Flag('A'.into()), Flag('B'.into()), Flag('C'.into())],
+        &[
+            Flag::new_ascii(b'A'),
+            Flag::new_ascii(b'B'),
+            Flag::new_ascii(b'C'),
+            Flag::new_ascii(b'D'),
+        ],
         &[],
     );
-    let r3 = DictEntry::new(
+
+    let r_2f0m = DictEntry::new("abcd", &[Flag::new_long("AB"), Flag::new_long("CD")], &[]);
+
+    // All flags plus morph info
+    let r_4f2m = DictEntry::new(
         "abcd",
-        &[Flag('A'.into()), Flag('B'.into()), Flag('C'.into())],
+        &[
+            Flag::new_ascii(b'A'),
+            Flag::new_ascii(b'B'),
+            Flag::new_ascii(b'C'),
+            Flag::new_ascii(b'D'),
+        ],
         &[
             MorphInfo::InflecPfx("m1".into()),
             MorphInfo::TermPfx("m2".into()),
         ],
     );
-    let r4 = DictEntry::new(
+
+    let r_2f2m = DictEntry::new(
+        "abcd",
+        &[Flag::new_long("AB"), Flag::new_long("CD")],
+        &[
+            MorphInfo::InflecPfx("m1".into()),
+            MorphInfo::TermPfx("m2".into()),
+        ],
+    );
+
+    // No flags, including morph info
+    let r_0f2m = DictEntry::new(
         "abcd",
         &[],
         &[
@@ -39,23 +68,32 @@ fn test_dict_entry_ok() {
         ],
     );
 
-    assert_eq!(DictEntry::parse_single(s1, f1, 0), Ok(r1.clone()));
-    assert_eq!(DictEntry::parse_single(s2, f1, 0), Ok(r1.clone()));
-    assert_eq!(DictEntry::parse_single(s3, f1, 0), Ok(r2.clone()));
-    assert_eq!(DictEntry::parse_single(s4, f1, 0), Ok(r2.clone()));
-    assert_eq!(DictEntry::parse_single(s5, f1, 0), Ok(r3.clone()));
-    assert_eq!(DictEntry::parse_single(s6, f1, 0), Ok(r3.clone()));
-    assert_eq!(DictEntry::parse_single(s7, f1, 0), Ok(r4.clone()));
-    assert_eq!(DictEntry::parse_single(s8, f1, 0), Ok(r4.clone()));
+    assert_eq!(DictEntry::parse_single(s_0f0m_1, f1, 0), Ok(r_0f0m.clone()));
+    assert_eq!(DictEntry::parse_single(s_0f0m_2, f1, 0), Ok(r_0f0m.clone()));
+    assert_eq!(DictEntry::parse_single(s_4f0m_1, f1, 0), Ok(r_4f0m.clone()));
+    assert_eq!(DictEntry::parse_single(s_4f0m_2, f1, 0), Ok(r_4f0m.clone()));
+    assert_eq!(DictEntry::parse_single(s_4f2m_1, f1, 0), Ok(r_4f2m.clone()));
+    assert_eq!(DictEntry::parse_single(s_4f2m_2, f1, 0), Ok(r_4f2m.clone()));
+    assert_eq!(DictEntry::parse_single(s_0f2m_1, f1, 0), Ok(r_0f2m.clone()));
+    assert_eq!(DictEntry::parse_single(s_0f2m_2, f1, 0), Ok(r_0f2m.clone()));
 
-    assert_eq!(DictEntry::parse_single(s1, f2, 0), Ok(r1.clone()));
-    assert_eq!(DictEntry::parse_single(s2, f2, 0), Ok(r1));
-    assert_eq!(DictEntry::parse_single(s3, f2, 0), Ok(r2.clone()));
-    assert_eq!(DictEntry::parse_single(s4, f2, 0), Ok(r2));
-    assert_eq!(DictEntry::parse_single(s5, f2, 0), Ok(r3.clone()));
-    assert_eq!(DictEntry::parse_single(s6, f2, 0), Ok(r3));
-    assert_eq!(DictEntry::parse_single(s7, f2, 0), Ok(r4.clone()));
-    assert_eq!(DictEntry::parse_single(s8, f2, 0), Ok(r4));
+    assert_eq!(DictEntry::parse_single(s_0f0m_1, f2, 0), Ok(r_0f0m.clone()));
+    assert_eq!(DictEntry::parse_single(s_0f0m_2, f2, 0), Ok(r_0f0m.clone()));
+    assert_eq!(DictEntry::parse_single(s_4f0m_1, f2, 0), Ok(r_4f0m.clone()));
+    assert_eq!(DictEntry::parse_single(s_4f0m_2, f2, 0), Ok(r_4f0m));
+    assert_eq!(DictEntry::parse_single(s_4f2m_1, f2, 0), Ok(r_4f2m.clone()));
+    assert_eq!(DictEntry::parse_single(s_4f2m_1, f2, 0), Ok(r_4f2m));
+    assert_eq!(DictEntry::parse_single(s_0f2m_2, f2, 0), Ok(r_0f2m.clone()));
+    assert_eq!(DictEntry::parse_single(s_0f2m_2, f2, 0), Ok(r_0f2m.clone()));
+
+    assert_eq!(DictEntry::parse_single(s_0f0m_1, f3, 0), Ok(r_0f0m.clone()));
+    assert_eq!(DictEntry::parse_single(s_0f0m_2, f3, 0), Ok(r_0f0m));
+    assert_eq!(DictEntry::parse_single(s_4f0m_1, f3, 0), Ok(r_2f0m.clone()));
+    assert_eq!(DictEntry::parse_single(s_4f0m_2, f3, 0), Ok(r_2f0m));
+    assert_eq!(DictEntry::parse_single(s_4f2m_1, f3, 0), Ok(r_2f2m.clone()));
+    assert_eq!(DictEntry::parse_single(s_4f2m_1, f3, 0), Ok(r_2f2m));
+    assert_eq!(DictEntry::parse_single(s_0f2m_1, f3, 0), Ok(r_0f2m.clone()));
+    assert_eq!(DictEntry::parse_single(s_0f2m_2, f3, 0), Ok(r_0f2m));
 }
 
 #[test]

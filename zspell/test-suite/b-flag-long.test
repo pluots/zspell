@@ -1,0 +1,29 @@
+%% Verify that multicharacter flags work
+
+==== afx ====
+FLAG long
+
+NEEDAFFIX ()
+FORBIDDENWORD {}
+KEEPCASE ||
+NOSUGGEST --
+
+%% Test same first character but different second
+SFX -+ Y 1
+SFX -+   0  aa  .
+
+==== dic ====
+foo/--
+bar/||--
+baz/-+
+
+==== valid ====
+foo bar baz bazaa
+
+==== wordlist ====
+baz
+bazaa
+
+==== nosuggest ====
+foo
+bar
