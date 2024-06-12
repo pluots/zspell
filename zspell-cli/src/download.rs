@@ -113,6 +113,7 @@ fn open_new_file(path: &Path, overwrite: bool) -> anyhow::Result<File> {
             .write(true)
             .read(true)
             .create(true)
+            .truncate(true)
             .open(path)
             .context(format!("unable to open '{fname}' in '{dir}'"))
     } else {
