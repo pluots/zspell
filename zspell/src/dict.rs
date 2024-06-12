@@ -303,7 +303,7 @@ impl Dictionary {
         let mut nosuggest = false;
 
         for flag in flags {
-            if self.affix_flags.get(flag).is_none() {
+            if !self.affix_flags.contains_key(flag) {
                 // FIXME: we get stuck on compound rules
                 continue;
             }

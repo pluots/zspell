@@ -1,3 +1,5 @@
+#![allow(clippy::incompatible_msrv)]
+
 use std::fs;
 use std::hint::black_box;
 

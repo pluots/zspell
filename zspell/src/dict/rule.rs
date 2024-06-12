@@ -58,7 +58,9 @@ impl AfxRule {
             ret.patterns.push(AfxRulePattern {
                 affix: rule.affix.as_str().into(),
                 condition: rule.condition.clone(),
-                strip: rule.strip.as_ref().map(Arc::clone),
+                // FIXME: `rule.strip.as_ref().map(Arc::clone)` is more accurate, but flagged by
+                // clippy
+                strip: rule.strip.clone(),
                 morph_info,
             });
         }
