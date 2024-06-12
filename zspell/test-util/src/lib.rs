@@ -1,5 +1,7 @@
 //! Utilities intended to help with test collection
+
 #![forbid(unsafe_code)]
+#![allow(clippy::assigning_clones)]
 
 use std::collections::BTreeMap;
 use std::fmt::Write;

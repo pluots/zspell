@@ -79,4 +79,5 @@ fn emit_autocfg() {
 
     // check if we have `Box<[T]>: From<&[T: Clone]>` loosened from `T: Copy` (1.71)
     ac.emit_expression_cfg(PROBE_BOX, "box_from_slice_has_clone_bound");
+    println!("cargo:rustc-check-cfg=cfg(box_from_slice_has_clone_bound)");
 }

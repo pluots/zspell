@@ -16,6 +16,7 @@
 //! situ (should only affect compile times)
 
 #![allow(clippy::disallowed_types)]
+#![allow(clippy::incompatible_msrv)]
 
 use std::collections::{BTreeMap, HashMap};
 use std::hint::black_box;

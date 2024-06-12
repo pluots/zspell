@@ -2,6 +2,7 @@
 //! might use in our spellchecker
 
 #![allow(clippy::disallowed_types)]
+#![allow(clippy::incompatible_msrv)]
 
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::fs::File;
