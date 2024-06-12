@@ -137,7 +137,7 @@ where
 
         // Max length is 10 for u32::max. We will validate our flag later
         if count <= 10 && valid {
-            Ok(f(s.chars().next().unwrap().to_string()))
+            Ok(f(s.to_owned()))
         } else {
             Err(ParseError::new_nospan(ParseErrorKind::InvalidFlag, s))
         }
