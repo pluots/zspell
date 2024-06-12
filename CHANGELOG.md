@@ -4,12 +4,11 @@
 
 ## [Unreleased] - ReleaseDate
 
-### Added
-
 ### Changed
 
-### Removed
-
+- Fix the parsing of long (double ASCII) flags in
+  [#109](https://github.com/pluots/zspell/pull/109) and
+  [#111](https://github.com/pluots/zspell/pull/111).
 
 
 ## [0.5.3] - 2023-12-13
