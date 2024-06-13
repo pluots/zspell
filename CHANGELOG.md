@@ -4,6 +4,16 @@
 
 ## [Unreleased] - ReleaseDate
 
+### Added
+
+### Changed
+
+### Removed
+
+
+
+## [0.5.5] - 2024-06-13
+
 ### Changed
 
 - Fix the parsing of long (double ASCII) flags in
@@ -191,7 +201,8 @@ Minor bups in the dependency list
 - Behind the scenes work to prepare for automatic dictionary location
 
 <!-- next-url -->
-[Unreleased]: https://github.com/pluots/zspell/compare/v0.5.3...HEAD
+[Unreleased]: https://github.com/pluots/zspell/compare/v0.5.5...HEAD
+[0.5.5]: https://github.com/pluots/zspell/compare/v0.5.3...v0.5.5
 [0.5.3]: https://github.com/pluots/zspell/compare/v0.5.2...v0.5.3
 [0.5.2]: https://github.com/pluots/zspell/compare/v0.5.1...v0.5.2
 [0.5.1]: https://github.com/pluots/zspell/compare/v0.5.0...v0.5.1
