@@ -1,0 +1,19 @@
+# .readthedocs.yaml
+# Read the Docs configuration file
+# See https://docs.readthedocs.io/en/stable/config-file/v2.html for details
+
+# Required
+version: 2
+
+build:
+   os: ubuntu-22.04
+   tools:
+      # Use the latest stable
+      python: "3.11"
+      rust: "1.61"
+
+python:
+   install:
+   - requirements: zspell-py/docs/requirements.txt
+   - method: pip
+     path: zspell-py/

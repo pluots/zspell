@@ -1,0 +1,185 @@
+---
+name: Rust Validation
+
+on:
+  push:
+    branches:
+    - main
+  pull_request:
+  workflow_call: # allow this to be run from other workflows
+
+env:
+  RUSTDOCFLAGS: -D warnings
+  RUSTFLAGS: -D warnings
+  RUST_BACKTRACE: 1
+  CARGO_UNSTABLE_SPARSE_REGISTRY: true
+
+jobs:
+  clippy:
+    name: clippy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@beta
+        with:
+          components: clippy
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo clippy --all-features --all-targets -- -D warnings
+      - run: cargo clippy --no-default-features --all-targets --features unstable-bench -- -D warnings
+
+  min_versions:
+    name: check minimum rustc version
+    runs-on: ubuntu-latest
+    env:
+      # we don't care about unused with these feature configurations
+      RUSTFLAGS: -A unused
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@1.65
+      - uses: Swatinem/rust-cache@v2
+        # check only zspell; we can use later for the CLI
+      - run: cargo check -p zspell --all-features
+      - run: cargo check -p zspell --no-default-features --features unstable-bench
+
+  test:
+    strategy:
+        fail-fast: true
+        matrix:
+          os: [ubuntu-latest, windows-latest, macos-latest]
+          include:
+            - os: ubuntu-latest
+              name: linux
+              coverage: true
+            - os: windows-latest
+              name: windows
+            - os: macos-latest
+              name: mac
+    name: "test on ${{ matrix.name }}"
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: List files
+        run: |
+          pwd
+          ls
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: ${{ matrix.coverage && 'llvm-tools-preview' || '' }}
+      - uses: taiki-e/install-action@cargo-llvm-cov
+      - name: Install nextest
+        uses: taiki-e/install-action@nextest
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: ${{ matrix.os }}
+      - name: run tests without coverage
+        if: ${{ ! matrix.coverage }}
+        run: |
+          cargo nextest run
+          cargo test --doc
+      - name: run tests with coverage
+        if: ${{ matrix.coverage }}
+        # nextest can't run doctests so we run coverage on those separately
+        # and do a combined report
+        run: |
+          cargo llvm-cov --no-report nextest
+          cargo llvm-cov --no-report --doc
+          cargo llvm-cov report --doctests --lcov --output-path lcov.info
+      - name: Upload coverage data to codecov
+        if: ${{ matrix.coverage }}
+        uses: codecov/codecov-action@v3
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+        with:
+          fail_ci_if_error: false
+          files: lcov.info
+
+  sanitizers:
+    name: Test with leak sanitizer
+    runs-on: ubuntu-latest
+    env:
+      RUSTFLAGS: -Zsanitizer=leak
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: rust-src
+      - name: Install nextest
+        uses: taiki-e/install-action@nextest
+      - uses: Swatinem/rust-cache@v2
+      - run: >
+          cargo nextest run -p zspell
+          --target=x86_64-unknown-linux-gnu
+          -Zbuild-std
+      - run: >
+          cargo test -p zspell --doc
+          --target=x86_64-unknown-linux-gnu
+          -Zbuild-std
+
+  miri:
+    name: Miri
+    runs-on: ubuntu-latest
+    # basically only run this if we're sure we don't cancel since it eats so much CPU
+    needs: ["clippy", "test", "fmt", "doc"]
+    env:
+      # Can't interact with files in isolation
+      MIRIFLAGS: -Zmiri-disable-isolation
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+          components: miri
+      - name: Install nextest
+        uses: taiki-e/install-action@nextest
+      - uses: Swatinem/rust-cache@v2
+      - name: Run Miri
+        # Miri is _slow_ for our use case, only run a few comprehensive tests
+        run: >
+          cargo miri nextest run -p zspell -E '
+            test(=test_stemming_morph) +
+            test(=test_pfxsfx)
+          '
+
+  fmt:
+    name: formatting
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+        with:
+            components: rustfmt
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo fmt --all -- --check
+      - uses: actions/setup-python@v3
+      - name: Validate pre-commit
+        uses: pre-commit/action@v3.0.0
+
+  doc:
+    name: docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo doc
+
+  book:
+    name: book
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@nightly
+      - uses: Swatinem/rust-cache@v2
+      - run: |
+          mkdir -p ~/mdbook
+          # Tar is weird with ~ as home
+          curl -sSL https://github.com/rust-lang/mdBook/releases/download/v0.4.21/mdbook-v0.4.21-x86_64-unknown-linux-gnu.tar.gz \
+          | tar -xz --directory=$(echo ~)/mdbook
+      - run: ~/mdbook/mdbook test
+
+  # Make sure we turned the clippy lint off
+  verify_fixme_critical:
+    name: verify critical fixmes
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: grep -r "FIXME:CRIT" --exclude-dir="target" --exclude-dir=".git" --exclude="validation-rust.yaml" && exit 1 || exit 0
